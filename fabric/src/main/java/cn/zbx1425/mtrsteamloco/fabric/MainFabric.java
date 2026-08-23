@@ -1,7 +1,7 @@
 package cn.zbx1425.mtrsteamloco.fabric;
 
 import cn.zbx1425.mtrsteamloco.Main;
-import cn.zbx1425.mtrsteamloco.mappings.FabricRegistryUtilities;
+import mtr.mappings.FabricRegistryUtilities;
 import mtr.CreativeModeTabs;
 import mtr.RegistryObject;
 import mtr.mappings.BlockEntityMapper;

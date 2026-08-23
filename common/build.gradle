@@ -1,5 +1,5 @@
 plugins {
-	id "com.github.johnrengelman.shadow"
+	id "com.gradleup.shadow"
 }
 
 apply from: "../process_access_widener.gradle"
@@ -13,7 +13,7 @@ dependencies {
 
 architectury {
 	injectInjectables = false
-	common("fabric", "forge")
+	common("fabric", "neoforge")
 }
 
 loom {

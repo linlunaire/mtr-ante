@@ -8,7 +8,7 @@ import mtr.Registry;
 import mtr.RegistryObject;
 import mtr.mappings.BlockEntityMapper;
 import mtr.mappings.DeferredRegisterHolder;
-import cn.zbx1425.mtrsteamloco.mappings.ForgeUtilities;
+import mtr.neoforge.mappings.ForgeUtilities;
 import mtr.mappings.RegistryUtilities;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;

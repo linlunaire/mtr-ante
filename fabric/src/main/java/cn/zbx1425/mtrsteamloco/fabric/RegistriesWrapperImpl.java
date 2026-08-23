@@ -1,6 +1,6 @@
 package cn.zbx1425.mtrsteamloco.fabric;
 
-import cn.zbx1425.mtrsteamloco.mappings.FabricRegistryUtilities;
+import mtr.mappings.FabricRegistryUtilities;
 import net.fabricmc.fabric.api.particle.v1.FabricParticleTypes;
 import mtr.CreativeModeTabs;
 import mtr.RegistryObject;

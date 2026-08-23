@@ -2,7 +2,7 @@ package cn.zbx1425.mtrsteamloco.forge;
 
 import cn.zbx1425.mtrsteamloco.Main;
 import cn.zbx1425.mtrsteamloco.RegistriesWrapper;
-import cn.zbx1425.mtrsteamloco.mappings.ForgeUtilities;
+import mtr.neoforge.mappings.ForgeUtilities;
 import mtr.CreativeModeTabs;
 import mtr.Registry;
 import mtr.RegistryObject;
