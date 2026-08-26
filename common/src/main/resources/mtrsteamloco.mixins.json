@@ -40,7 +40,6 @@
   },
   "mixins": [
     "ItemWithCreativeTabBaseMixin",
-    "PackMixin",
     "RailActionsMixin",
     "RailMixin",
     "RailwayDataAccessor",

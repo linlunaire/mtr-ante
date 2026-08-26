@@ -63,15 +63,8 @@ public abstract class CameraMixin {
 
 #if MC_VERSION >= "11903"
     @Inject(
-        method = "setRotation",
-        at = @At(
-            value = "INVOKE",
-            target = "Lorg/joml/Quaternionf;rotationYXZ(FFF)Lorg/joml/Quaternionf;",
-            ordinal = 0,
-            shift = At.Shift.AFTER,
-            remap = false
-        ),
-        locals = LocalCapture.CAPTURE_FAILHARD
+        method = "setRotation(FF)V",
+        at = @At("TAIL")
     )
     private void injectSetRotation(float p_90573_, float p_90574_, CallbackInfo ci) {
         rotation.mul(roll);

@@ -267,7 +267,7 @@ public class DirectNodeScreen extends Screen {
                 }
             });
             textField.setValue(String.format("%.1f", now));
-            textField.moveCursorToStart();
+            textField.moveCursorToStart(false);
         }
 
 

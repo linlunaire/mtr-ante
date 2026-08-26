@@ -5,6 +5,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.FallbackResourceManager;
 import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
 import java.io.ByteArrayInputStream;
@@ -193,10 +196,15 @@ public class DynamicResource {
             return map.get(loc);
         }
 
-        @Override
-        public String packId() {
-            return name;
-        }
+		@Override
+		public String packId() {
+			return name;
+		}
+
+		@Override
+		public PackLocationInfo location() {
+			return new PackLocationInfo(name, Component.literal(name), PackSource.DEFAULT, Optional.empty());
+		}
 
         @Override
         public void listResources(PackType type, String namespace, String path, PackResources.ResourceOutput output) {

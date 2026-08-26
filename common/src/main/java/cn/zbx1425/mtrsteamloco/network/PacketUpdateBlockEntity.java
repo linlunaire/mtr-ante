@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class PacketUpdateBlockEntity {
 
-    public static ResourceLocation PACKET_UPDATE_BLOCK_ENTITY = new ResourceLocation(Main.MOD_ID, "update_block_entity");
+    public static ResourceLocation PACKET_UPDATE_BLOCK_ENTITY = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "update_block_entity");
 
     public static void sendUpdateC2S(BlockEntityMapper blockEntity) {
         Level level = blockEntity.getLevel();
@@ -29,7 +29,7 @@ public class PacketUpdateBlockEntity {
         packet.writeResourceLocation(level.dimension().location());
         packet.writeBlockPos(blockEntity.getBlockPos());
 #if MC_VERSION >= "11903"
-        packet.writeId(net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE, blockEntity.getType());
+        packet.writeVarInt(net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
 #else
         packet.writeVarInt(net.minecraft.core.Registry.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
 #endif
@@ -48,7 +48,7 @@ public class PacketUpdateBlockEntity {
 #endif
         BlockPos blockPos = packet.readBlockPos();
 #if MC_VERSION >= "11903"
-        BlockEntityType<?> blockEntityType = packet.readById(net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE);
+        BlockEntityType<?> blockEntityType = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.byId(packet.readVarInt());
 #else
         BlockEntityType<?> blockEntityType = net.minecraft.core.Registry.BLOCK_ENTITY_TYPE.byId(packet.readVarInt());
 #endif
@@ -60,7 +60,9 @@ public class PacketUpdateBlockEntity {
             if (level == null || blockEntityType == null) return;
             level.getBlockEntity(blockPos, blockEntityType).ifPresent(blockEntity -> {
                 if (compoundTag != null) {
-                    blockEntity.load(compoundTag);
+                    if (blockEntity instanceof BlockEntityMapper mapper) {
+                        mapper.readCompoundTag(compoundTag);
+                    }
                     BlockState state = blockEntity.getBlockState();
                     if (blockEntity instanceof BlockEyeCandy.BlockEntityEyeCandy && state != null) {
                         int newValue = ((BlockEyeCandy.BlockEntityEyeCandy) blockEntity).getLightLevel();

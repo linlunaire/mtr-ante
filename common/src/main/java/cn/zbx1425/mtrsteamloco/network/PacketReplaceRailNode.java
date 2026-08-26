@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.Block;
 
 
 public class PacketReplaceRailNode {
-    public static ResourceLocation C2S = new ResourceLocation(Main.MOD_ID, "replace_rail_node");
+    public static ResourceLocation C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "replace_rail_node");
 
     public static void sendUpdateC2S(Level level, BlockPos pos, BlockState state, String screenName) {
         Block block = state.getBlock();

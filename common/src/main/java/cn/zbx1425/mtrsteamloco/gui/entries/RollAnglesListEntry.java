@@ -108,8 +108,8 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
     //     }
     // );
     private final List<AbstractWidget> widgets;
-    private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/block/white_concrete_powder.png");
-    private static final ResourceLocation POS = new ResourceLocation(Main.MOD_ID, "textures/gui/rail/ante.png");
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
+    private static final ResourceLocation POS = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/ante.png");
     private final boolean flag;
     private int sliderWidth, sliderStartX;
     private Consumer<Map<Double, Float>> updateFunction;
@@ -500,8 +500,8 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         private int y;
         private boolean dragged = false;
         // private static final ResourceLocation P = new ResourceLocation(Main.MOD_ID, "textures/gui/rail/p.png");
-        private static final ResourceLocation P = new ResourceLocation(Main.MOD_ID, "textures/gui/rail/pi.png");
-        private static final ResourceLocation Y = new ResourceLocation(Main.MOD_ID, "textures/gui/rail/y.png");
+        private static final ResourceLocation P = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/pi.png");
+        private static final ResourceLocation Y = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/y.png");
         private static final int NW = 6;
         private static final int NH = 10;
         
@@ -671,7 +671,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
                 setValue(f, false);
             });
             textField.setValue(Float.toString(now));
-            textField.moveCursorToStart();
+            textField.moveCursorToStart(false);
 
             slider = new WidgetSlider(20, step, getLevel(now), i -> {
                 float f = getValue(i);
@@ -715,7 +715,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             if (flag) {
                 slider.setValue(getLevel(value));
                 textField.setValue(Float.toString(value));
-                textField.moveCursorToStart();
+                textField.moveCursorToStart(false);
             }
             if (now == value) return;
             now = value;
@@ -782,7 +782,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         }
 
         public void setEditable(boolean editable) {
-            textField.moveCursorToStart();
+            textField.moveCursorToStart(false);
             textField.setEditable(editable);
             slider.setEditable(editable);
             btnReset.active = editable;

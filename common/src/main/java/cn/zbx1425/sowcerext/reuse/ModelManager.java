@@ -116,7 +116,7 @@ public class ModelManager {
         if (rawModel.sourceLocation == null) {
             Model result = rawModel.upload(DEFAULT_MAPPING);
             vboCount += result.meshList.size();
-            uploadedModels.put(new ResourceLocation("sowcerext-anonymous:model/" + UUID.randomUUID()), result);
+			uploadedModels.put(ResourceLocation.parse("sowcerext-anonymous:model/" + UUID.randomUUID()), result);
             return result;
         } else {
             if (uploadedModels.containsKey(rawModel.sourceLocation)) return uploadedModels.get(rawModel.sourceLocation);
@@ -131,7 +131,7 @@ public class ModelManager {
         if (rawModel.sourceLocation == null) {
             ModelCluster result = new ModelCluster(rawModel, DEFAULT_MAPPING, this);
             vaoCount += result.uploadedOpaqueParts == null ? 0 : result.uploadedOpaqueParts.meshList.size();
-            uploadedVertArrays.put(new ResourceLocation("sowcerext-anonymous:vertarrays/" + UUID.randomUUID()), result);
+			uploadedVertArrays.put(ResourceLocation.parse("sowcerext-anonymous:vertarrays/" + UUID.randomUUID()), result);
             return result;
         } else {
             if (uploadedVertArrays.containsKey(rawModel.sourceLocation)) return uploadedVertArrays.get(rawModel.sourceLocation);

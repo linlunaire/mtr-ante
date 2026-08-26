@@ -58,7 +58,7 @@ public class DynamicTrainModelLoader {
             if (target.properties.has("atlasIndex")) {
                 MainClient.atlasManager.load(
                         MtrModelRegistryUtil.resourceManager,
-                        new ResourceLocation(target.properties.get("atlasIndex").getAsString())
+                        ResourceLocation.parse(target.properties.get("atlasIndex").getAsString())
                 );
             }
 
@@ -73,7 +73,7 @@ public class DynamicTrainModelLoader {
                             .forEach(elem -> previousParts.add(elem.getAsJsonObject()));
                     JsonArray newParts = new JsonArray();
                     for (int i = 0; i < rlListPairs.length / 2; i++) {
-                        ResourceLocation modelLocation = new ResourceLocation(rlListPairs[i * 2]);
+                        ResourceLocation modelLocation = ResourceLocation.parse(rlListPairs[i * 2]);
                         String[] extraAttribs = rlListPairs[i * 2 + 1].split(";", -1)[2].split(",");
                         boolean isModelReversed = Arrays.asList(extraAttribs).contains("reversed");
                         String modelLocationName = modelLocation.getPath().substring(modelLocation.getPath().lastIndexOf('/') + 1)
@@ -87,7 +87,7 @@ public class DynamicTrainModelLoader {
                         );
                         for (Map.Entry<String, RawModel> entry : modelParts.entrySet()) {
                             if (isModelReversed) {
-                                entry.getValue().sourceLocation = new ResourceLocation(
+                                entry.getValue().sourceLocation = ResourceLocation.parse(
                                         entry.getValue().sourceLocation.toString().substring(0, entry.getValue().sourceLocation.toString().lastIndexOf("/"))
                                                 + "/reversed"
                                                 + entry.getValue().sourceLocation.toString().substring(entry.getValue().sourceLocation.toString().lastIndexOf("/"))
@@ -106,7 +106,7 @@ public class DynamicTrainModelLoader {
                         previousParts.removeIf(elem -> elem.get("name").getAsString().startsWith(modelLocationName));
                     }
                     for (int i = 0; i < rlListPairs.length / 2; i++) {
-                        ResourceLocation modelLocation = new ResourceLocation(rlListPairs[i * 2]);
+                        ResourceLocation modelLocation = ResourceLocation.parse(rlListPairs[i * 2]);
                         String[] extraAttribs = rlListPairs[i * 2 + 1].split(";", -1)[2].split(",");
                         boolean isModelReversed = Arrays.asList(extraAttribs).contains("reversed");
                         String modelLocationName = modelLocation.getPath().substring(modelLocation.getPath().lastIndexOf('/') + 1)
@@ -168,7 +168,7 @@ public class DynamicTrainModelLoader {
                 } else {
                     models = ObjModelLoader.loadModels(
                             MtrModelRegistryUtil.resourceManager,
-                            new ResourceLocation(modelLocations),
+                            ResourceLocation.parse(modelLocations),
                             MainClient.atlasManager
                     );
                 }
@@ -194,7 +194,7 @@ public class DynamicTrainModelLoader {
             String repaintTexture = MtrModelRegistryUtil.getTextureIdFromDummyBbData(model);
             if (!StringUtils.isEmpty(repaintTexture)) {
                 for (RawModel partModel : models.values()) {
-                    partModel.replaceTexture("default.png", new ResourceLocation(repaintTexture));
+                    partModel.replaceTexture("default.png", ResourceLocation.parse(repaintTexture));
                 }
             }
             // Apply FlipV
@@ -427,7 +427,7 @@ public class DynamicTrainModelLoader {
 
     private static ResourceLocation resolveTexture(String textureId, Function<String, String> formatter) {
         final String textureString = formatter.apply(textureId);
-        final ResourceLocation id = new ResourceLocation(textureString);
+        final ResourceLocation id = ResourceLocation.parse(textureString);
         final boolean available;
 
         if (!RenderTrains.AVAILABLE_TEXTURES.contains(textureString) && !RenderTrains.UNAVAILABLE_TEXTURES.contains(textureString)) {
@@ -443,7 +443,7 @@ public class DynamicTrainModelLoader {
         if (available) {
             return id;
         } else {
-            return new ResourceLocation("mtr:textures/block/transparent.png");
+            return ResourceLocation.parse("mtr:textures/block/transparent.png");
         }
     }
 }

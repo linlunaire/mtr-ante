@@ -2,6 +2,7 @@ package cn.zbx1425.mtrsteamloco.gui;
 
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.mappings.UtilitiesClient;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -33,6 +34,7 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import mtr.mappings.Text;
 import net.minecraft.world.level.block.state.BlockState;
 import cn.zbx1425.mtrsteamloco.network.PacketUpdateHoldingItem;
@@ -97,8 +99,8 @@ public class CompoundCreatorScreen extends Screen {
     }
 
     private static final String TAG_TASKS = "tasks";
-    public static final ResourceLocation BACKGROUND_LOCATION = new ResourceLocation("textures/gui/options_background.png");
-    private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/block/white_concrete_powder.png");
+    public static final ResourceLocation BACKGROUND_LOCATION = ResourceLocation.withDefaultNamespace("textures/gui/options_background.png");
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
     private Screen parent;
     private List<Entry> entries = new ArrayList<>();
     private Entry selectedEntry = null;
@@ -148,16 +150,16 @@ public class CompoundCreatorScreen extends Screen {
         if (Minecraft.getInstance().player == null) return null;
         ItemStack item = Minecraft.getInstance().player.getMainHandItem();
         if (!item.is(Main.COMPOUND_CREATOR.get())) return null;
-        CompoundTag tag = item.getOrCreateTag();
-        return tag;
+        return ItemStackUtilities.getCustomData(item);
     }
 
     public static void updateTag(Consumer<CompoundTag> modifier) {
         if (Minecraft.getInstance().player == null) return;
         ItemStack item = Minecraft.getInstance().player.getMainHandItem();
         if (!item.is(Main.COMPOUND_CREATOR.get())) return;
-        CompoundTag tag = item.getOrCreateTag();
+        CompoundTag tag = ItemStackUtilities.getCustomData(item);
         modifier.accept(tag);
+        ItemStackUtilities.setCustomData(item, tag);
         PacketUpdateHoldingItem.sendUpdateC2S();
     }
 
@@ -273,13 +275,13 @@ public class CompoundCreatorScreen extends Screen {
 
 
     @Override
-    public boolean mouseScrolled(double x, double y, double amount) {
-        if (!canScoll()) return super.mouseScrolled(x, y, amount);
+    public boolean mouseScrolled(double x, double y, double horizontalAmount, double verticalAmount) {
+        if (!canScoll()) return super.mouseScrolled(x, y, horizontalAmount, verticalAmount);
         if (scissor.x <= x && x <= scissor.x + scissor.width && scissor.y <= y && y <= scissor.y + scissor.height) {
-            checkAndScroll(scroll + 10 * (int) amount);
+            checkAndScroll(scroll + 10 * (int) verticalAmount);
             return true;
         }
-        return super.mouseScrolled(x, y, amount);
+        return super.mouseScrolled(x, y, horizontalAmount, verticalAmount);
     }
 
     @Override
@@ -364,7 +366,7 @@ public class CompoundCreatorScreen extends Screen {
     }
 
     public static void renderDirtBackground(Screen screen, GuiGraphics guiGraphics) {
-        screen.renderDirtBackground(guiGraphics);
+        screen.renderBackground(guiGraphics, 0, 0, 0);
     }
 #else
     private static void drawText(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
@@ -408,7 +410,7 @@ public class CompoundCreatorScreen extends Screen {
             this.task = task;
             nameField.setResponder(this::updateName);
             nameField.setValue(task.name);
-            nameField.moveCursorToStart();
+            nameField.moveCursorToStart(false);
         }
 
         public List<? extends GuiEventListener> children() {
@@ -743,7 +745,7 @@ public class CompoundCreatorScreen extends Screen {
     #else
         public void render(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
     #endif
-            this.renderBackground(guiGraphics);
+            this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
             super.render(guiGraphics, mouseX, mouseY, partialTick);
 
             renderSelectPage(guiGraphics);
@@ -829,7 +831,7 @@ public class CompoundCreatorScreen extends Screen {
         @Override
         protected void init() {
             nameField.setValue(task.name);
-            nameField.moveCursorToStart();
+            nameField.moveCursorToStart(false);
 
             nameField.setResponder(str -> {
                 task.name = str;
@@ -1125,7 +1127,7 @@ public class CompoundCreatorScreen extends Screen {
             float v = (float) (3 * Math.PI / 180F);
             PoseStackUtil.rotX(poseStack, v);
 
-            MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+            MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(new ByteBufferBuilder(256));
             RenderSystem.enableDepthTest();
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, InventoryMenu.BLOCK_ATLAS);
@@ -1154,9 +1156,9 @@ public class CompoundCreatorScreen extends Screen {
             public boolean fixed = false;
             public boolean replacement = false;
 
-            public static ResourceLocation PURPLE_CIRCLE = new ResourceLocation("mtrsteamloco:textures/gui/compound_creator/purple_circle.png");
-            public static ResourceLocation BLUE_CIRCLE = new ResourceLocation("mtrsteamloco:textures/gui/compound_creator/blue_circle.png");
-            public static ResourceLocation MID_CIRCLE = new ResourceLocation("mtrsteamloco:textures/gui/compound_creator/mid_circle.png");
+            public static ResourceLocation PURPLE_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/purple_circle.png");
+            public static ResourceLocation BLUE_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/blue_circle.png");
+            public static ResourceLocation MID_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/mid_circle.png");
 
             public Square(Square other) {
                 this.x = other.x;
@@ -1348,7 +1350,7 @@ public class CompoundCreatorScreen extends Screen {
                 }
                 searchedList = new ArrayList<>(blocksList);
 
-                searchField.moveCursorToStart();
+                searchField.moveCursorToStart(false);
                 searchField.setResponder(this::search);
             }
 
@@ -1442,10 +1444,10 @@ public class CompoundCreatorScreen extends Screen {
             }
 
             @Override
-            public boolean mouseScrolled(double x, double y, double amount) {
+            public boolean mouseScrolled(double x, double y, double horizontalAmount, double verticalAmount) {
                 if (!canScoll()) return false;
                 if (isMouseOver(x, y)) {
-                    checkAndScroll(scroll + 20 * (int) amount);
+                    checkAndScroll(scroll + 20 * (int) verticalAmount);
                     return true;
                 }
                 return false;

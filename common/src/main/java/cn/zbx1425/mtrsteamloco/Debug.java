@@ -36,7 +36,7 @@ public class Debug {
                 try {
                     String textureName = FilenameUtils.getBaseName(renderer.textureId);
                     TrainModelCapture.CaptureResult result = TrainModelCapture.captureModels(
-                            renderer.model, new ResourceLocation(renderer.textureId + ".png"));
+							renderer.model, ResourceLocation.parse(renderer.textureId + ".png"));
                     result.getNamedModels().values().forEach(RawModel::distinct);
                     ObjModelLoader.saveModels(result.getNamedModels(),
                             outputDir.resolve(trainId + ".obj"),
@@ -44,7 +44,7 @@ public class Debug {
 
                     if (!Files.exists(outputDir.resolve(textureName + ".png"))) {
                         final List<Resource> resources = UtilitiesClient.getResources(Minecraft.getInstance().getResourceManager(),
-                                new ResourceLocation(renderer.textureId + ".png"));
+								ResourceLocation.parse(renderer.textureId + ".png"));
                         if (!resources.isEmpty()) {
                             try {
                                 try (InputStream is = Utilities.getInputStream(resources.get(0))) {

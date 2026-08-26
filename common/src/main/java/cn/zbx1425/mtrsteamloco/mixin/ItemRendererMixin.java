@@ -27,6 +27,7 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -113,7 +114,7 @@ public class ItemRendererMixin {
         if (item instanceof BlockItem bi) {
             Block block = bi.getBlock();
             if (block instanceof BlockEyeCandy) {
-                CompoundTag et = itemStack.getTagElement("BlockEntityTag");
+                CompoundTag et = ItemStackUtilities.getCustomData(itemStack).getCompound("BlockEntityTag");
                 if (et == null || !et.contains("prefabId")) return;
                 String prefabId = et.getString("prefabId");
                 if (EyeCandyRegistry.ELEMENTS.containsKey(prefabId)) {

@@ -12,9 +12,14 @@
 
 您可以去往[Github](https://github.com/aphrodite281/mtr-ante/releases) 或 [Modrinth](https://modrinth.com/mod/mtr-ante/) 下载最新版本的模组。
 
-MTR 版本要求: 3.1.12
+当前移植测试版要求：
 
-本模组支持 Fabric 及 Forge 的 1.17.1、1.18.2、1.19.2 和 1.19.3 版本，下载时请根据您的需要对应选择。
+- Minecraft 1.21.1
+- MTR `1.21.1-3.3.0-beta-1` 或更高版本
+- Fabric Loader + Fabric API，或 NeoForge `21.1.248` 或更高版本
+- Architectury API 13 或更高版本
+
+本分支仅提供 Fabric 与 NeoForge 的 Minecraft 1.21.1 构建；不要将旧 Forge 版本与 NeoForge 版本混用。
 
 
 

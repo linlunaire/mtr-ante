@@ -1,6 +1,8 @@
 # MTR-ANTE
 
-Aphrodite's Nemo's Transit Expansion (MTR-ANTE) 是一个基于Minecraft Transit Railway Mod的实验性功能扩展，目前仅支持MTR 3.1.2 ~ 3.2.2 版本，不支持4.0.0或其他版本。
+Aphrodite's Nemo's Transit Expansion (MTR-ANTE) 是一个基于 Minecraft Transit Railway（MTR）的实验性功能扩展。
+
+此分支为 **Minecraft 1.21.1** 移植测试版，要求 MTR `1.21.1-3.3.0-beta-1` 或更高版本；仅支持 Fabric 与 NeoForge。
 
 ## 支持
 
@@ -11,12 +13,9 @@ Aphrodite's Nemo's Transit Expansion (MTR-ANTE) 是一个基于Minecraft Transit
 
 ## 构建
 
-在执行`build`任务前须先执行`setupLibrary`，可以用类似-PbuildVersion="1.18.2"参数指定版本(1.17.1 1.18.2 1.19.2 1.19.3 1.19.4 1.20.1)。
-以1.18.2为例，  
-第一次构建前执行：  
+使用 Java 21 和项目自带的 Gradle Wrapper 构建：
 
-- `./gradlew setupLibrary -PbuildVersion="1.18.2"`   
+- Windows：`./gradlew.bat build --console=plain`
+- macOS / Linux：`./gradlew build --console=plain`
 
-每次构建时执行：  
-
-- `./gradlew build -PbuildVersion="1.18.2"`  
+`setupLibrary` 是旧构建流程的任务，当前 1.21.1 分支不再使用。

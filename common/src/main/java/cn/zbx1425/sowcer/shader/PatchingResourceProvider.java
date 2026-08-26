@@ -36,7 +36,7 @@ public class PatchingResourceProvider implements ResourceProvider {
 #endif
         try {
             if (resourceLocation.getPath().contains("_modelmat"))
-                resourceLocation = new ResourceLocation(resourceLocation.getNamespace(),
+                resourceLocation = ResourceLocation.fromNamespaceAndPath(resourceLocation.getNamespace(),
                         resourceLocation.getPath().replace("_modelmat", ""));
 
             InputStream srcInputStream;
@@ -58,12 +58,18 @@ public class PatchingResourceProvider implements ResourceProvider {
                 JsonObject data = Main.JSON_PARSER.parse(srcContent).getAsJsonObject();
                 data.addProperty("vertex", data.get("vertex").getAsString() + "_modelmat");
 
-                JsonArray attribArray = data.get("attributes").getAsJsonArray();
-                int dummyAttribCount = 6 - attribArray.size();
-                for (int i = 0; i < dummyAttribCount; i++) {
-                    attribArray.add("Dummy" + i);
+                // Since 1.21 vanilla shader JSON no longer declares vertex
+                // attributes; they are supplied by ShaderInstance's
+                // VertexFormat instead.  Older versions still need this
+                // padding to align the custom ModelMat attribute.
+                if (data.has("attributes")) {
+                    JsonArray attribArray = data.getAsJsonArray("attributes");
+                    int dummyAttribCount = 6 - attribArray.size();
+                    for (int i = 0; i < dummyAttribCount; i++) {
+                        attribArray.add("Dummy" + i);
+                    }
+                    attribArray.add("ModelMat");
                 }
-                attribArray.add("ModelMat");
                 returningContent = data.toString();
                 srcInputStream.close();
             } else if (resourceLocation.getPath().endsWith(".vsh")) {

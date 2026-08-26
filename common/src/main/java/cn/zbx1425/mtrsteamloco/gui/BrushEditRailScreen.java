@@ -26,6 +26,7 @@ import mtr.data.Rail;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.client.gui.screens.Screen;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import mtr.screen.WidgetBetterCheckbox;
@@ -452,9 +453,9 @@ public class BrushEditRailScreen {
         ItemStack offHandItem = Minecraft.getInstance().player.getOffhandItem();
         CompoundTag nteTag = null;
         if (mainHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = mainHandItem.getTagElement("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompound("NTERailBrush");
         } else if (offHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = offHandItem.getTagElement("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompound("NTERailBrush");
         }
         return nteTag;
     }
@@ -466,10 +467,10 @@ public class BrushEditRailScreen {
         CompoundTag nteTag = null;
         InteractionHand hand = null;
         if (mainHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = mainHandItem.getOrCreateTagElement("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompound("NTERailBrush");
             hand = InteractionHand.MAIN_HAND;
         } else if (offHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = offHandItem.getOrCreateTagElement("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompound("NTERailBrush");
             hand = InteractionHand.OFF_HAND;
         }
         if (nteTag == null) return;
@@ -538,7 +539,7 @@ public class BrushEditRailScreen {
             }
             if (!expectedText.equals(radiusInput.getValue())) {
                 radiusInput.setValue(expectedText);
-                radiusInput.moveCursorToStart();
+				radiusInput.moveCursorToStart(false);
             }
             vertCurveRadius = newRadius;
             screen.updateRadius(newRadius, send);

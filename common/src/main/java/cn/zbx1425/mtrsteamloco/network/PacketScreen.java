@@ -20,7 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 public class PacketScreen {
 
-    public static ResourceLocation PACKET_SHOW_SCREEN = new ResourceLocation(Main.MOD_ID, "show_screen");
+    public static ResourceLocation PACKET_SHOW_SCREEN = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "show_screen");
 
     public static void sendScreenS2C(ServerPlayer player, String screenName) {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());

@@ -10,6 +10,7 @@ import mtr.data.TransportMode;
 import mtr.block.BlockNode;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.Mth;
@@ -92,7 +93,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
         stateEnd = tempState;
 
         if (player == null) return;
-        CompoundTag tag = stack.getOrCreateTag();
+        CompoundTag tag = ItemStackUtilities.getCustomData(stack);
         if (tag.contains(TAG_TASKS)) {
             RailActionsModuleExtraSupplier acc = (RailActionsModuleExtraSupplier) (Object) railwayData.railwayDataRailActionsModule;
             List<Task> tasks = new ArrayList<>();

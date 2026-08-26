@@ -22,7 +22,7 @@ import java.util.HashSet;
 
 public class PacketUpdateTrainCustomConfigs {
     
-    public static ResourceLocation C2S = new ResourceLocation(Main.MOD_ID, "update_train_custom_configs");
+    public static ResourceLocation C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "update_train_custom_configs");
 
     public static void sendUpdateC2S(Train train) {
         sendUpdateC2S(train.sidingId, train.id, ((TrainExtraSupplier) train).getCustomConfigs());

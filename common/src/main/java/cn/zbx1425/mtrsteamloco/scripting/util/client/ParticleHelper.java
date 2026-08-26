@@ -48,7 +48,7 @@ public class ParticleHelper {
     public static <T extends ParticleType> T getParticleType(String particleName) throws Exception {
         switch (particleName.toUpperCase()) { 
         case "AMBIENT_ENTITY_EFFECT":
-            return (T)  ParticleTypes.AMBIENT_ENTITY_EFFECT;
+            return (T) ParticleTypes.ENTITY_EFFECT;
         case "ANGRY_VILLAGER":
             return (T)  ParticleTypes.ANGRY_VILLAGER;
         case "BLOCK":

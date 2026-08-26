@@ -39,6 +39,6 @@ side = "BOTH"
 [[dependencies.mtrsteamloco]]
 modId = "mtr"
 mandatory = true
-versionRange = "[0,)"
+versionRange = "[${mtr_min_version},)"
 ordering = "AFTER"
 side = "BOTH"

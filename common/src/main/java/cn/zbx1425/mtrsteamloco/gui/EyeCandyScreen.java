@@ -12,6 +12,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.datafixers.util.Pair;
 import mtr.client.IDrawing;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 import mtr.mappings.UtilitiesClient;
 import mtr.screen.WidgetBetterCheckbox;
 import mtr.screen.WidgetBetterTextField;
@@ -59,7 +60,7 @@ public class EyeCandyScreen {
         if (itemStack.isEmpty() || !(itemStack.getItem() instanceof BlockItemEyeCandy)) {
             return parent;
         }
-        VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> Minecraft.getInstance().player.getItemInHand(hand).getOrCreateTagElement("BlockEntityTag"), hand);
+        VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> ItemStackUtilities.getCustomData(Minecraft.getInstance().player.getItemInHand(hand)).getCompound("BlockEntityTag"), hand);
         return createScreen(virtualEyeCandy, parent);
     }
 

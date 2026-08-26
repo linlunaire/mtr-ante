@@ -44,7 +44,7 @@ public class ObjModelLoader {
         for (Map.Entry<String, Obj> groupEntry : groupObjs.entrySet()) {
             RawModel model = loadModel(groupEntry.getValue(), location, materials, atlasManager);
             String compliantKey = groupEntry.getKey().toLowerCase(Locale.ROOT).replace('\\', '/').replaceAll("[^a-z0-9/._-]", "_");
-            model.sourceLocation = new ResourceLocation(location.getNamespace(), location.getPath() + "/" + compliantKey);
+            model.sourceLocation = ResourceLocation.fromNamespaceAndPath(location.getNamespace(), location.getPath() + "/" + compliantKey);
             result.put(groupEntry.getKey(), model);
         }
         return result;
@@ -68,7 +68,7 @@ public class ObjModelLoader {
         for (Map.Entry<String, Obj> groupEntry : groupObjs.entrySet()) {
             RawModel model = loadModel(groupEntry.getValue(), objLocation, materials, atlasManager);
             String compliantKey = groupEntry.getKey().toLowerCase(Locale.ROOT).replace('\\', '/').replaceAll("[^a-z0-9/._-]", "_");
-            model.sourceLocation = new ResourceLocation(objLocation.getNamespace(), objLocation.getPath() + "/" + compliantKey);
+            model.sourceLocation = ResourceLocation.fromNamespaceAndPath(objLocation.getNamespace(), objLocation.getPath() + "/" + compliantKey);
             result.put(groupEntry.getKey(), model);
         }
         return result;
@@ -84,7 +84,7 @@ public class ObjModelLoader {
                 RawModel model = loadModel(groupEntry.getValue(), null, null, atlasManager);
                 String compliantPath = path.toLowerCase(Locale.ROOT).replace('\\', '/').replaceAll("[^a-z0-9/._-]", "_");
                 String compliantKey = groupEntry.getKey().toLowerCase(Locale.ROOT).replace('\\', '/').replaceAll("[^a-z0-9/._-]", "_");
-                model.sourceLocation = new ResourceLocation("mtrsteamloco-external", compliantPath + "/" + compliantKey);
+                model.sourceLocation = ResourceLocation.fromNamespaceAndPath("mtrsteamloco-external", compliantPath + "/" + compliantKey);
                 result.put(groupEntry.getKey(), model);
             }
             return result;

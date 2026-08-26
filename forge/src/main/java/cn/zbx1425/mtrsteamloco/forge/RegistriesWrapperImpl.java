@@ -24,10 +24,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
 import mtr.mappings.Text;
 import net.minecraft.resources.ResourceLocation;
 import java.util.List;
@@ -84,7 +80,7 @@ public class RegistriesWrapperImpl implements RegistriesWrapper {
     public void registerItem(String id, RegistryObject<Item> item, CreativeModeTab creativeModeTab) {
         ITEMS.register(id, () -> {
             Item itemObject = item.get();
-            Registry.registerCreativeModeTab(new ResourceLocation(Main.MOD_ID, id), itemObject);
+            Registry.registerCreativeModeTab(ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), itemObject);
             return itemObject;
         });
     }

@@ -80,7 +80,7 @@ public class Main {
 	public static RegistriesWrapper REGISTERIES;
 
 #if MC_VERSION <= "12000"
-	public static CreativeModeTab EYE_CANDY_TAB = Registry.getCreativeModeTab(new ResourceLocation(MOD_ID, "eye_candy"), () -> new ItemStack(ITEM_EYE_CANDY.get())).get();
+	public static CreativeModeTab EYE_CANDY_TAB = Registry.getCreativeModeTab(ResourceLocation.fromNamespaceAndPath(MOD_ID, "eye_candy"), () -> new ItemStack(ITEM_EYE_CANDY.get())).get();
 #else
 	public static CreativeModeTab EYE_CANDY_TAB = CreativeModeTab.builder(null, -1).title(Text.translatable("itemGroup.mtrsteamloco.eye_candy")).icon(() -> new ItemStack(ITEM_EYE_CANDY.get())).displayItems((v1, v2) -> {
 		NonNullList<ItemStack> items = NonNullList.create();
@@ -89,7 +89,7 @@ public class Main {
 	}).build();
 #endif
 
-	public static final SoundEvent SOUND_EVENT_BELL = RegistryUtilities.createSoundEvent(new ResourceLocation("mtrsteamloco:bell"));
+	public static final SoundEvent SOUND_EVENT_BELL = RegistryUtilities.createSoundEvent(ResourceLocation.parse("mtrsteamloco:bell"));
 
 	public static SimpleParticleType PARTICLE_STEAM_SMOKE;
 

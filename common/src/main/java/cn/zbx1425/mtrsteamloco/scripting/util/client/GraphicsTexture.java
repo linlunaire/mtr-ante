@@ -47,7 +47,7 @@ public class GraphicsTexture implements Closeable {
     }
 
     public GraphicsTexture(int width, int height){
-        this(width, height, new ResourceLocation(Main.MOD_ID, String.format("dynamic/graphics/%s", UUID.randomUUID().toString().replace("-", "_"))));
+        this(width, height, ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, String.format("dynamic/graphics/%s", UUID.randomUUID().toString().replace("-", "_"))));
     }
 
     public static BufferedImage createArgbBufferedImage(BufferedImage src) {

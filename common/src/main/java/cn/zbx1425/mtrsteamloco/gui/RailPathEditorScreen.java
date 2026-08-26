@@ -10,6 +10,7 @@ import mtr.client.IDrawing;
 import mtr.data.IGui;
 import net.minecraft.client.gui.components.Button;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -128,7 +129,7 @@ public class RailPathEditorScreen extends Screen implements IGraphics{
         public void render(PoseStack in, int mouseX, int mouseY, float partialTick) {
     #endif
             super.render(in, mouseX, mouseY, partialTick);
-            final MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
+            final MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(new ByteBufferBuilder(256));
 
             
 

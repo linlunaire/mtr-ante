@@ -32,16 +32,15 @@ public class FaceList {
                     -Float.compare(a.sortingVector.distanceSq(Vector3f.ZERO), b.sortingVector.distanceSq(Vector3f.ZERO))
             );
         }
-        for (TransformedFace face : queuedFaces) {
-            for (Vertex vertex : face.vertices) {
-                vertexConsumer
-                        .vertex(vertex.position.x(), vertex.position.y(), vertex.position.z())
-                        .color((byte)(face.color >>> 24), (byte)(face.color >>> 16), (byte)(face.color >>> 8), (byte)(int)face.color)
-                        .uv(vertex.u, vertex.v)
-                        .overlayCoords(face.overlay)
-                        .uv2(face.light)
-                        .normal(vertex.normal.x(), vertex.normal.y(), vertex.normal.z())
-                        .endVertex();
+		for (TransformedFace face : queuedFaces) {
+			for (Vertex vertex : face.vertices) {
+				vertexConsumer
+						.addVertex(vertex.position.x(), vertex.position.y(), vertex.position.z())
+						.setColor(face.color)
+						.setUv(vertex.u, vertex.v)
+						.setOverlay(face.overlay)
+						.setLight(face.light)
+						.setNormal(vertex.normal.x(), vertex.normal.y(), vertex.normal.z());
             }
         }
     }

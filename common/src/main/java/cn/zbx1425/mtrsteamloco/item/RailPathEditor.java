@@ -23,6 +23,7 @@ import mtr.data.RailType;
 import mtr.data.RailwayData;
 import mtr.item.ItemWithCreativeTabBase;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 
 import java.util.*;
 
@@ -39,7 +40,7 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
         ItemStack itemStack = player.getItemInHand(usedHand);
         if (level.isClientSide) return InteractionResultHolder.success(itemStack);
 
-        CompoundTag tag = itemStack.getOrCreateTag();
+        CompoundTag tag = ItemStackUtilities.getCustomData(itemStack);
         if (tag.contains("start") && tag.contains("end")) {
             BlockPos posStart = BlockPos.of(tag.getLong("start"));
             BlockPos posEnd = BlockPos.of(tag.getLong("end"));
@@ -94,9 +95,10 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
             posEnd = rPosStart;
         }
         ItemStack itemStack = ctx.getItemInHand();
-        CompoundTag tag = itemStack.getOrCreateTag();
+        CompoundTag tag = ItemStackUtilities.getCustomData(itemStack);
         tag.putLong("start", posStart.asLong());
         tag.putLong("end", posEnd.asLong());
+        ItemStackUtilities.setCustomData(itemStack, tag);
         if (ctx.getPlayer() != null) {
             if (ctx.getPlayer() instanceof ServerPlayer sp) {
                 sp.setItemSlot(EquipmentSlot.MAINHAND, itemStack);

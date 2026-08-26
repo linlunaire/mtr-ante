@@ -59,7 +59,7 @@ public class RailModelRegistry {
 
         try {
             RawModel railNodeRawModel = MainClient.modelManager.loadRawModel(resourceManager,
-                    new ResourceLocation("mtrsteamloco:models/rail_node.csv"), MainClient.atlasManager);
+					ResourceLocation.parse("mtrsteamloco:models/rail_node.csv"), MainClient.atlasManager);
             railNodeModel = MainClient.modelManager.uploadVertArrays(railNodeRawModel);
         } catch (Exception ex) {
             Main.LOGGER.error("Failed loading rail node model", ex);
@@ -110,7 +110,7 @@ public class RailModelRegistry {
     private static RailModelProperties loadFromJson(ResourceManager resourceManager, String key, JsonObject obj, String baseGroup) throws Exception {
         if (obj.has("atlasIndex")) {
             MainClient.atlasManager.load(
-                    MtrModelRegistryUtil.resourceManager,  new ResourceLocation(obj.get("atlasIndex").getAsString())
+					MtrModelRegistryUtil.resourceManager, ResourceLocation.parse(obj.get("atlasIndex").getAsString())
             );
         }
         
@@ -118,16 +118,16 @@ public class RailModelRegistry {
 
         if (obj.has("model")) {
             rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-                    new ResourceLocation(obj.get("model").getAsString()), MainClient.atlasManager).copy();
+					ResourceLocation.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
 
             if (obj.has("textureId")) {
-                rawModel.replaceTexture("default.png", new ResourceLocation(obj.get("textureId").getAsString()));
+				rawModel.replaceTexture("default.png", ResourceLocation.parse(obj.get("textureId").getAsString()));
             }
             if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
                 rawModel.applyUVMirror(false, true);
             }
 
-            rawModel.sourceLocation = new ResourceLocation(rawModel.sourceLocation.toString() + "/" + key);
+			rawModel.sourceLocation = ResourceLocation.parse(rawModel.sourceLocation + "/" + key);
         }
         
         float repeatInterval = obj.has("repeatInterval") ? obj.get("repeatInterval").getAsFloat() : 0.5f;
@@ -141,13 +141,13 @@ public class RailModelRegistry {
             if (obj.has("scriptTexts")) {
                 JsonArray scriptTexts = obj.get("scriptTexts").getAsJsonArray();
                 for (int i = 0; i < scriptTexts.size(); i++) {
-                    scripts.put(new ResourceLocation("mtrsteamloco", "script_texts/" + key + "/" + i),
+					scripts.put(ResourceLocation.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
                             scriptTexts.get(i).getAsString());
                 }
             }
             JsonArray scriptFiles = obj.get("scriptFiles").getAsJsonArray();
             for (int i = 0; i < scriptFiles.size(); i++) {
-                ResourceLocation scriptLocation = new ResourceLocation(scriptFiles.get(i).getAsString());
+				ResourceLocation scriptLocation = ResourceLocation.parse(scriptFiles.get(i).getAsString());
                 scripts.put(scriptLocation, ResourceUtil.readResource(resourceManager, scriptLocation));
             }
             script.load("Rail " + key, "Rail", resourceManager, scripts, obj, key, "create", "render", "dispose");

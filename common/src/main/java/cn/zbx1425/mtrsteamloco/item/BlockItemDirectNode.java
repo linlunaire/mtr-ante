@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.TooltipFlag;
 import mtr.mappings.RegistryUtilities;
+import mtr.mappings.ItemStackUtilities;
 
 import java.util.function.Function;
 import java.util.List;
@@ -27,9 +28,9 @@ public class BlockItemDirectNode extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> list, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext tooltipContext, List<Component> list, TooltipFlag flag) {
         if (stack.getItem() instanceof BlockItemDirectNode bi) {
-            CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompound("BlockEntityTag");
             if (tag == null) {
                 list.add(Text.translatable("tooltip.mtrsteamloco.direct_node.unbound"));
                 return;

@@ -44,9 +44,9 @@ public class ScriptResourceUtilClient extends ScriptResourceUtil {
 
     private static boolean hasNotoSansCjk = false;
     private static Font NOTO_SANS_MAYBE_CJK;
-    private static final ResourceLocation NOTO_SANS_CJK_LOCATION = new ResourceLocation(mtr.MTR.MOD_ID, "font/noto-sans-cjk-tc-medium.otf");
-    private static final ResourceLocation NOTO_SANS_LOCATION = new ResourceLocation(mtr.MTR.MOD_ID, "font/noto-sans-semibold.ttf");
-    private static final ResourceLocation NOTO_SERIF_LOCATION = new ResourceLocation(mtr.MTR.MOD_ID, "font/noto-serif-cjk-tc-semibold.ttf");
+    private static final ResourceLocation NOTO_SANS_CJK_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-cjk-tc-medium.otf");
+    private static final ResourceLocation NOTO_SANS_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-semibold.ttf");
+    private static final ResourceLocation NOTO_SERIF_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-serif-cjk-tc-semibold.ttf");
 
     public static void init(ResourceManager resourceManager) {
         hasNotoSansCjk = hasResource(NOTO_SANS_CJK_LOCATION);

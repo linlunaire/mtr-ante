@@ -116,7 +116,7 @@ public class SliderOrTextFieldListEntry extends TooltipListEntry<Float> implemen
                 save(f);
             }
         });
-        this.textFieldWidget.moveCursorToStart();
+        this.textFieldWidget.moveCursorToStart(false);
 
         this.btnSwitches = UtilitiesClient.newButton(Text.literal("⇄"), btn -> switchMode(this.mode + 1));
         this.btnSwitches.setWidth(Minecraft.getInstance().font.width(resetButtonKey) + 6);

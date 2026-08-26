@@ -2,9 +2,9 @@ package cn.zbx1425.mtrsteamloco.mixin;
 
 import cn.zbx1425.mtrsteamloco.MainClient;
 import cn.zbx1425.sowcerext.model.integration.BufferSourceProxy;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import cn.zbx1425.mtrsteamloco.render.ShadersModHandler;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -27,24 +27,8 @@ public class LevelRendererMixin {
 
     @Shadow @Final private RenderBuffers renderBuffers;
 
-    @Inject(method = "renderLevel", at = @At(value = "CONSTANT", args = "stringValue=destroyProgress", ordinal = 0))
-#if MC_VERSION >= "11903"
-    private void afterBlockEntities(PoseStack poseStack, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, org.joml.Matrix4f matrix4f, CallbackInfo ci) {
-#else
-    private void afterBlockEntities(PoseStack matrices, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, com.mojang.math.Matrix4f matrix4f, CallbackInfo ci) {
-#endif
-        // Minecraft.getInstance().level.getProfiler().popPush("NTEBlockEntities");
-        // BufferSourceProxy vertexConsumersProxy = new BufferSourceProxy(renderBuffers.bufferSource());
-        // MainClient.drawScheduler.commit(vertexConsumersProxy, MainClient.drawContext);
-        // vertexConsumersProxy.commit();
-    }
-
     @Inject(method = "renderLevel", at = @At("TAIL"))
-#if MC_VERSION >= "11903"
-    private void renderLevelLast(PoseStack poseStack, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, org.joml.Matrix4f matrix4f, CallbackInfo ci) {
-#else
-    private void renderLevelLast(PoseStack matrices, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, com.mojang.math.Matrix4f matrix4f, CallbackInfo ci) {
-#endif
+    private void renderLevelLast(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, org.joml.Matrix4f frustumMatrix, org.joml.Matrix4f projectionMatrix, CallbackInfo ci) {
         BlockEntityEyeCandyRenderer.exchange();
         BlockEntityDirectNodeRenderer.exchange();
         MainClient.drawContext.resetFrameProfiler();

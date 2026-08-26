@@ -16,6 +16,7 @@ import net.minecraft.world.item.TooltipFlag;
 import cn.zbx1425.mtrsteamloco.block.BlockEyeCandy;
 import  net.minecraft.world.item.CreativeModeTab;
 import mtr.mappings.RegistryUtilities;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.core.NonNullList;
 import cn.zbx1425.mtrsteamloco.data.EyeCandyRegistry;
 import cn.zbx1425.mtrsteamloco.Main;
@@ -56,9 +57,9 @@ public class BlockItemEyeCandy extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> list, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext tooltipContext, List<Component> list, TooltipFlag flag) {
         if (stack.getItem() instanceof BlockItemEyeCandy bi) {
-            CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompound("BlockEntityTag");
             if (tag == null) {
                 return;
             }
@@ -85,10 +86,13 @@ public class BlockItemEyeCandy extends BlockItem {
             items.add(new ItemStack(Main.ITEM_EYE_CANDY.get()));
             for (EyeCandyProperties prop : EyeCandyRegistry.ELEMENTS.values()) {
                 ItemStack stack = new ItemStack(Main.ITEM_EYE_CANDY.get());
-                CompoundTag tag = stack.getOrCreateTagElement("BlockEntityTag");
-                VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> stack.getOrCreateTagElement("BlockEntityTag"));
+                CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompound("BlockEntityTag");
+                VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> tag);
                 virtualEyeCandy.setPrefabId(prop.key);
                 virtualEyeCandy.sendUpdateC2S();
+                CompoundTag itemTag = ItemStackUtilities.getCustomData(stack);
+                itemTag.put("BlockEntityTag", tag);
+                ItemStackUtilities.setCustomData(stack, itemTag);
                 items.add(stack);
             }
         }
@@ -97,7 +101,7 @@ public class BlockItemEyeCandy extends BlockItem {
             private Supplier<CompoundTag> tagSupplier;
 
             public VirtualEyeCandy(Supplier<CompoundTag> tagSupplier) {
-                super(new BlockPos(0, -1145141919, 0), null);
+                super(new BlockPos(0, -1145141919, 0), Main.BLOCK_EYE_CANDY.get().defaultBlockState());
                 readCompoundTag(tagSupplier.get());
                 this.tagSupplier = tagSupplier;
             }

@@ -34,59 +34,59 @@ public class RegistriesWrapperImpl implements RegistriesWrapper {
 #if MC_VERSION >= "12000"
     @Override
     public void registerCreativeModeTab(String id, CreativeModeTab creativeModeTab) {
-        net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.CREATIVE_MODE_TAB, new ResourceLocation(Main.MOD_ID, id), creativeModeTab);
+        net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), creativeModeTab);
     }
 #endif
 
     @Override
     public void registerBlock(String id, RegistryObject<Block> block) {
-        Registry.register(RegistryUtilities.registryGetBlock(), new ResourceLocation(Main.MOD_ID, id), block.get());
+        Registry.register(RegistryUtilities.registryGetBlock(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), block.get());
     }
 
     @Override
     public void registerBlockAndItem(String id, RegistryObject<Block> block, CreativeModeTabs.Wrapper tab) {
-        Registry.register(RegistryUtilities.registryGetBlock(), new ResourceLocation(Main.MOD_ID, id), block.get());
+        Registry.register(RegistryUtilities.registryGetBlock(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), block.get());
         final BlockItem blockItem = new BlockItem(block.get(), RegistryUtilities.createItemProperties(tab::get));
-        Registry.register(RegistryUtilities.registryGetItem(), new ResourceLocation(Main.MOD_ID, id), blockItem);
+        Registry.register(RegistryUtilities.registryGetItem(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), blockItem);
         FabricRegistryUtilities.registerCreativeModeTab(tab.get(), blockItem);
     }
 
     @Override
     public void registerItem(String id, RegistryObject<ItemWithCreativeTabBase> item) {
-        Registry.register(RegistryUtilities.registryGetItem(), new ResourceLocation(Main.MOD_ID, id), item.get());
+        Registry.register(RegistryUtilities.registryGetItem(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), item.get());
         FabricRegistryUtilities.registerCreativeModeTab(item.get().creativeModeTab.get(), item.get());
     }
 
     @Override
     public void registerItem(String id, RegistryObject<Item> item, CreativeModeTabs.Wrapper creativeModeTab) {
-        Registry.register(RegistryUtilities.registryGetItem(), new ResourceLocation(Main.MOD_ID, id), item.get());
+        Registry.register(RegistryUtilities.registryGetItem(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), item.get());
         FabricRegistryUtilities.registerCreativeModeTab(creativeModeTab.get(), item.get());
     }
 
     @Override
     public void registerItem(String id, RegistryObject<Item> item, CreativeModeTab creativeModeTab) {
-        Registry.register(RegistryUtilities.registryGetItem(), new ResourceLocation(Main.MOD_ID, id), item.get());
+        Registry.register(RegistryUtilities.registryGetItem(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), item.get());
         FabricRegistryUtilities.registerCreativeModeTab(creativeModeTab, item.get());
     }
 
     @Override
     public void registerBlockEntityType(String id, RegistryObject<? extends BlockEntityType<? extends BlockEntity>> blockEntityType) {
-        Registry.register(RegistryUtilities.registryGetBlockEntityType(), new ResourceLocation(Main.MOD_ID, id), blockEntityType.get());
+        Registry.register(RegistryUtilities.registryGetBlockEntityType(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), blockEntityType.get());
     }
 
     @Override
     public void registerEntityType(String id, RegistryObject<? extends EntityType<? extends Entity>> entityType) {
-        Registry.register(RegistryUtilities.registryGetEntityType(), new ResourceLocation(Main.MOD_ID, id), entityType.get());
+        Registry.register(RegistryUtilities.registryGetEntityType(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), entityType.get());
     }
 
     @Override
     public void registerSoundEvent(String id, SoundEvent soundEvent) {
-        Registry.register(RegistryUtilities.registryGetSoundEvent(), new ResourceLocation(Main.MOD_ID, id), soundEvent);
+        Registry.register(RegistryUtilities.registryGetSoundEvent(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), soundEvent);
     }
 
     @Override
     public void registerParticleType(String id, ParticleType<?> particleType) {
-        Registry.register(RegistryUtilities.registryGetParticleType(), new ResourceLocation(Main.MOD_ID, id), particleType);
+        Registry.register(RegistryUtilities.registryGetParticleType(), ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, id), particleType);
     }
 
     @Override

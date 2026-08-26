@@ -24,8 +24,8 @@ import net.minecraft.world.entity.player.Player;
 
 public class PacketRoutePathCreator {
 
-    public static ResourceLocation ROUTE_C2S = new ResourceLocation(Main.MOD_ID, "route_path_creator/route_c2s");
-    public static ResourceLocation ROUTE_S2C = new ResourceLocation(Main.MOD_ID, "route_path_creator/route_s2c");
+    public static ResourceLocation ROUTE_C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_c2s");
+    public static ResourceLocation ROUTE_S2C = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_s2c");
 
     public static void sendRouteC2S(Route route) {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());

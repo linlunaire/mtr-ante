@@ -62,7 +62,7 @@ public class SelectScreen extends Screen {
         }
         scrolling = SCROLLING_MAP.getOrDefault(screenKey.getString(), 0);
         searchField.setResponder(this::filter);
-        searchField.moveCursorToStart();
+        searchField.moveCursorToStart(false);
 
         lblInstruction = new WidgetLabel(0, 0, 0, screenKey.copy().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
             this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
@@ -86,7 +86,7 @@ public class SelectScreen extends Screen {
         }
         scrolling = SCROLLING_MAP.getOrDefault(screenKey.getString(), 0);
         searchField.setResponder(this::filter);
-        searchField.moveCursorToStart();
+        searchField.moveCursorToStart(false);
         lblInstruction = new WidgetLabel(0, 0, 0, screenKey.copy().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
             this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
@@ -117,7 +117,7 @@ public class SelectScreen extends Screen {
         }
         scrolling = SCROLLING_MAP.getOrDefault(screenKey.getString(), 0);
         searchField.setResponder(this::filter);
-        searchField.moveCursorToStart();
+        searchField.moveCursorToStart(false);
         lblInstruction = new WidgetLabel(0, 0, 0, tree.getPathName().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
             this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
@@ -257,12 +257,12 @@ public class SelectScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double amount) {
+    public boolean mouseScrolled(double x, double y, double horizontalAmount, double verticalAmount) {
         if (x <= width / 3) {
-            scrolling = Math.min(Math.max(scrolling - (int) (amount * realityMaxScroll / 5), 0), realityMaxScroll);
+            scrolling = Math.min(Math.max(scrolling - (int) (verticalAmount * realityMaxScroll / 5), 0), realityMaxScroll);
             return true;
         }
-        return super.mouseScrolled(x, y, amount);
+        return super.mouseScrolled(x, y, horizontalAmount, verticalAmount);
     }
 
     @Override
@@ -273,7 +273,6 @@ public class SelectScreen extends Screen {
 
     @Override
     public void tick() {
-        searchField.tick();
     }
 
     @Override

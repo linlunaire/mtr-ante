@@ -52,8 +52,8 @@ import java.util.Map;
 
 public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<BlockEntityDirectNode> {
 
-    private static final ResourceLocation VERTICAL_MODEL_LOCATION = new ResourceLocation(Main.MOD_ID, "models/block/rail_node_vertical.obj");
-    private static final ResourceLocation CONNECTION_MODEL_LOCATION = new ResourceLocation(Main.MOD_ID, "models/block/rail_node_connection.obj");
+    private static final ResourceLocation VERTICAL_MODEL_LOCATION = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_vertical.obj");
+    private static final ResourceLocation CONNECTION_MODEL_LOCATION = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_connection.obj");
 
     private static ModelCluster VERTICAL_MODEL = null;
     private static ModelCluster CONNECTION_MODEL = null;

@@ -10,6 +10,7 @@ import mtr.data.RailAngle;
 import mtr.data.RailwayData;
 import mtr.data.TransportMode;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import cn.zbx1425.mtrsteamloco.data.RailCalculator;
@@ -61,10 +62,11 @@ public abstract class ItemRailModifierMixin extends Item{
 		HitResult hitResult = player.pick(20.0, 0.0f, false);
 		ItemStack stack = player.getItemInHand(hand);
         if (hitResult.getType() == HitResult.Type.BLOCK) return InteractionResultHolder.pass(stack);
-		CompoundTag compoundTag = stack.getOrCreateTag();
+		CompoundTag compoundTag = ItemStackUtilities.getCustomData(stack);
 		int pathMode = compoundTag.getInt("path_mode");
 		pathMode = (pathMode + 1) % 2;
 		compoundTag.putInt("path_mode", pathMode);
+		ItemStackUtilities.setCustomData(stack, compoundTag);
 		Component comp;
 		switch (pathMode) {
 			case 1: comp = Text.translatable("tooltip.mtrsteamloco.rail.path_mode.bezier"); break;
@@ -115,7 +117,7 @@ public abstract class ItemRailModifierMixin extends Item{
             }
 
 			final boolean goodRadius = rail1.goodRadius() && rail2.goodRadius();
-			int pathMode = stack.getOrCreateTag().getInt("path_mode");
+			int pathMode = ItemStackUtilities.getCustomData(stack).getInt("path_mode");
 			if (pathMode != 0) {
 				((RailExtraSupplier) (Object) rail1).changePathMode(pathMode);
 				((RailExtraSupplier) (Object) rail2).changePathMode(pathMode);

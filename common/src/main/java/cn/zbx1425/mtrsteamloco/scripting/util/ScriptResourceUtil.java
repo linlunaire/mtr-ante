@@ -108,10 +108,10 @@ public class ScriptResourceUtil {
     }
 
     public static ResourceLocation identifier(String textForm) {
-        return new ResourceLocation(textForm);
+        return ResourceLocation.parse(textForm);
     }
     public static ResourceLocation id(String textForm) {
-        return new ResourceLocation(textForm);
+        return ResourceLocation.parse(textForm);
     }
 
     public static ResourceLocation idRelative(String textForm) {

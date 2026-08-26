@@ -71,7 +71,7 @@ public class EyeCandyRegistry {
                         if (rootObj.has("itemModel")) {
                             String itemModelPath = rootObj.get("itemModel").getAsString();
                             String[] parts = itemModelPath.split("/");
-                            ResourceLocation loc = new ResourceLocation(itemModelPath);
+							ResourceLocation loc = ResourceLocation.parse(itemModelPath);
                             if (itemModelPath.endsWith(".png")) modelLocations.add(addImgModel(loc));
                             else if (parts[parts.length - 1].contains("."));
                             else modelLocations.add(loc);
@@ -83,7 +83,7 @@ public class EyeCandyRegistry {
                             if (obj.has("itemModel")) {
                                 String itemModelPath = obj.get("itemModel").getAsString();
                                 String[] parts = itemModelPath.split("/");
-                                ResourceLocation loc = new ResourceLocation(itemModelPath);
+								ResourceLocation loc = ResourceLocation.parse(itemModelPath);
                                 if (itemModelPath.endsWith(".png")) modelLocations.add(addImgModel(loc));
                                 else if (parts[parts.length - 1].contains("."));
                                 else modelLocations.add(loc);
@@ -100,7 +100,7 @@ public class EyeCandyRegistry {
     }
 
     private static ResourceLocation mappingItem(ResourceLocation img) {
-        return new ResourceLocation(
+		return ResourceLocation.fromNamespaceAndPath(
             "dynamic___item__" + img.getNamespace(), img.getPath().replaceAll(".png", "_png")
         );
     }
@@ -121,7 +121,7 @@ public class EyeCandyRegistry {
     }
 
     private static ResourceLocation prefix(ResourceLocation loc, String prefix, String suffix) {
-        return new ResourceLocation(loc.getNamespace(), prefix + loc.getPath() + suffix);
+		return ResourceLocation.fromNamespaceAndPath(loc.getNamespace(), prefix + loc.getPath() + suffix);
     }
 
     public static void reload(ResourceManager resourceManager) {
@@ -174,7 +174,7 @@ public class EyeCandyRegistry {
 
         if (obj.has("atlasIndex")) {
             MainClient.atlasManager.load(
-                    MtrModelRegistryUtil.resourceManager,  new ResourceLocation(obj.get("atlasIndex").getAsString())
+					MtrModelRegistryUtil.resourceManager, ResourceLocation.parse(obj.get("atlasIndex").getAsString())
             );
         }
 
@@ -186,10 +186,10 @@ public class EyeCandyRegistry {
         ModelCluster cluster = null;
         if (obj.has("model")) {
             RawModel rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-                    new ResourceLocation(obj.get("model").getAsString()), MainClient.atlasManager).copy();
+					ResourceLocation.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
 
             if (obj.has("textureId")) {
-                rawModel.replaceTexture("default.png", new ResourceLocation(obj.get("textureId").getAsString()));
+				rawModel.replaceTexture("default.png", ResourceLocation.parse(obj.get("textureId").getAsString()));
             }
             if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
                 rawModel.applyUVMirror(false, true);
@@ -217,7 +217,7 @@ public class EyeCandyRegistry {
                 );
             }
 
-            rawModel.sourceLocation = new ResourceLocation(rawModel.sourceLocation.toString() + "/" + key);
+			rawModel.sourceLocation = ResourceLocation.parse(rawModel.sourceLocation + "/" + key);
 
             cluster = MainClient.modelManager.uploadVertArrays(rawModel);
         }
@@ -226,7 +226,7 @@ public class EyeCandyRegistry {
         BakedModel itemBakedModel = null;
         if (obj.has("itemModel")) {
             String path = obj.get("itemModel").getAsString();
-            ResourceLocation loc = new ResourceLocation(path);
+			ResourceLocation loc = ResourceLocation.parse(path);
             String[] parts = path.split("/");
             if (path.endsWith(".png")) {
                 loc = mappingItem(loc);
@@ -277,13 +277,13 @@ public class EyeCandyRegistry {
             if (obj.has("scriptTexts")) {
                 JsonArray scriptTexts = obj.get("scriptTexts").getAsJsonArray();
                 for (int i = 0; i < scriptTexts.size(); i++) {
-                    scripts.put(new ResourceLocation("mtrsteamloco", "script_texts/" + key + "/" + i),
+					scripts.put(ResourceLocation.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
                             scriptTexts.get(i).getAsString());
                 }
             }
             JsonArray scriptFiles = obj.get("scriptFiles").getAsJsonArray();
             for (int i = 0; i < scriptFiles.size(); i++) {
-                ResourceLocation scriptLocation = new ResourceLocation(scriptFiles.get(i).getAsString());
+				ResourceLocation scriptLocation = ResourceLocation.parse(scriptFiles.get(i).getAsString());
                 scripts.put(scriptLocation, ResourceUtil.readResource(resourceManager, scriptLocation));
             }
             script.load("EyeCandy " + key, "Block", resourceManager, scripts, obj, key, "create", "render", "dispose", "use");

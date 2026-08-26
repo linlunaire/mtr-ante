@@ -88,10 +88,6 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(ModelBakery.class)
 public abstract class ModelBakeryMixin { 
-    @Shadow private void loadTopLevel(ModelResourceLocation location) {
-        throw new AssertionError();
-    }
-
     @Redirect(
         method = "<init>",
         at = @At(

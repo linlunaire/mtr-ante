@@ -27,7 +27,6 @@ import org.graalvm.polyglot.PolyglotAccess;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import org.graalvm.polyglot.io.FileSystem;
 import org.graalvm.polyglot.io.FileSystem.Selector;
-import com.oracle.truffle.polyglot.FileSystems;
 
 import java.io.IOException;
 import java.util.*;
@@ -83,8 +82,9 @@ public abstract class ScriptHolderBase {
 
         boolean trust = false;
 
-        final FileSystem defFileSystem = FileSystems.newDefaultFileSystem("./ante/script_data/");
         final Path basicFolder = Path.of("./ante/script_data/").toAbsolutePath().normalize();
+        final FileSystem defFileSystem = FileSystem.newDefaultFileSystem();
+        defFileSystem.setCurrentWorkingDirectory(basicFolder);
 
         context = Context.newBuilder("js")  
             .allowNativeAccess(false)

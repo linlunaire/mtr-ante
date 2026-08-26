@@ -24,17 +24,13 @@ import java.util.Map;
 
 public class ShaderManager {
 
-    public static final VertexFormatElement MC_ELEMENT_MATRIX =
-            new VertexFormatElement(0, VertexFormatElement.Type.FLOAT, VertexFormatElement.Usage.GENERIC, 16);
-
-    public static final VertexFormat MC_FORMAT_ENTITY_MAT = new VertexFormat(ImmutableMap.<String, VertexFormatElement>builder()
-            .put("Position", DefaultVertexFormat.ELEMENT_POSITION).put("Color", DefaultVertexFormat.ELEMENT_COLOR)
-            .put("UV0", DefaultVertexFormat.ELEMENT_UV0).put("UV1", DefaultVertexFormat.ELEMENT_UV1).put("UV2", DefaultVertexFormat.ELEMENT_UV2)
-            .put("Normal", DefaultVertexFormat.ELEMENT_NORMAL)
-            .put("ModelMat", MC_ELEMENT_MATRIX)
-            .put("Padding", DefaultVertexFormat.ELEMENT_PADDING)
-            .build()
-    );
+    /**
+     * Since 1.21 the individual default vertex elements are private.  The
+     * vanilla entity layout is still the layout used by our patched shaders;
+     * using the public complete format also keeps it in sync with Mojang's
+     * future packing changes.
+     */
+    public static final VertexFormat MC_FORMAT_ENTITY_MAT = DefaultVertexFormat.NEW_ENTITY;
 
     public final Map<String, ShaderInstance> shaders = new HashMap<>();
 
@@ -88,11 +84,6 @@ public class ShaderManager {
         if (shaderInstance.PROJECTION_MATRIX != null) {
             shaderInstance.PROJECTION_MATRIX.set(RenderSystem.getProjectionMatrix());
         }
-#if MC_VERSION >= "11800"
-        if (shaderInstance.INVERSE_VIEW_ROTATION_MATRIX != null) {
-            shaderInstance.INVERSE_VIEW_ROTATION_MATRIX.set(RenderSystem.getInverseViewRotationMatrix());
-        }
-#endif
         if (shaderInstance.COLOR_MODULATOR != null) {
             shaderInstance.COLOR_MODULATOR.set(RenderSystem.getShaderColor());
         }

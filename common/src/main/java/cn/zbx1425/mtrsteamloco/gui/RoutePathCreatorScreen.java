@@ -2,6 +2,7 @@ package cn.zbx1425.mtrsteamloco.gui;
 
 import net.minecraft.client.gui.screens.Screen;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
 import cn.zbx1425.mtrsteamloco.Main;
@@ -56,12 +57,12 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
     Button btnNextPage = UtilitiesClient.newButton(Text.literal(">"), btn -> {
         currentPage++;
         pageIn.setValue(String.format("%d", currentPage));
-        pageIn.moveCursorToStart();    
+        pageIn.moveCursorToStart(false);    
     });
     Button btnPrevPage = UtilitiesClient.newButton(Text.literal("<"), btn -> {
         currentPage--;
         pageIn.setValue(String.format("%d", currentPage));
-        pageIn.moveCursorToStart();
+        pageIn.moveCursorToStart(false);
     });
 
     Button btnReturn = UtilitiesClient.newButton(Text.literal("X"), btn -> onClose());
@@ -164,7 +165,7 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
             }
         });
         pageIn.setValue("0");
-        pageIn.moveCursorToStart();
+        pageIn.moveCursorToStart(false);
     }
 
     private int maxPage() {
@@ -180,14 +181,16 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
     private boolean pullTag() {
         ItemStack itemStack = Minecraft.getInstance().player.getMainHandItem();
         if (!itemStack.is(Main.ROUTE_PATH_CREATOR.get())) return false;
-        tag = itemStack.getOrCreateTagElement("ANTE-Data").copy();
+        tag = ItemStackUtilities.getCustomData(itemStack).getCompound("ANTE-Data").copy();
         return true;
     }
 
     private boolean pushTag() {
         ItemStack itemStack = Minecraft.getInstance().player.getMainHandItem();
         if (!itemStack.is(Main.ROUTE_PATH_CREATOR.get())) return false;
-        itemStack.getOrCreateTag().put("ANTE-Data", tag.copy());
+        CompoundTag itemTag = ItemStackUtilities.getCustomData(itemStack);
+        itemTag.put("ANTE-Data", tag.copy());
+        ItemStackUtilities.setCustomData(itemStack, itemTag);
         PacketUpdateHoldingItem.sendUpdateC2S();
         return true;
     }
@@ -246,8 +249,8 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
             dwellTimeIn.setValue(String.format("%.1f", data.dwellTime * 0.5f));
         }
 
-        railTypeIn.moveCursorToStart();
-        dwellTimeIn.moveCursorToStart();
+        railTypeIn.moveCursorToStart(false);
+        dwellTimeIn.moveCursorToStart(false);
     }
 
     private static BlockPos getPos(Rail rail, boolean isStart) {
@@ -405,7 +408,5 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
 
     @Override
     public void tick() {
-        railTypeIn.tick();
-        dwellTimeIn.tick();
     }
 }

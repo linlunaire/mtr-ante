@@ -38,7 +38,7 @@ public class CapturingVertexConsumer implements VertexConsumer {
                 poseStack.pushPose();
                 modelPart.translateAndRotate(poseStack);
                 for (ModelPart.Cube cube : ((ModelPartAccessor)(Object)modelPart).getCubes()) {
-                    cube.compile(poseStack.last(), vertexConsumer, packedLight,packedOverlay, 1, 1, 1, 1);
+                    cube.compile(poseStack.last(), vertexConsumer, packedLight, packedOverlay, -1);
                 }
                 for (ModelPart child : ((ModelPartAccessor)(Object)modelPart).getChildren().values()) {
                     dumpModelPartQuads(child, poseStack, vertexConsumer, packedLight, packedOverlay);
@@ -86,43 +86,43 @@ public class CapturingVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public @NotNull VertexConsumer vertex(double x, double y, double z) {
-        buildingVertex.position = new Vector3f((float) x, (float) y, (float) z);
+    public @NotNull VertexConsumer addVertex(float x, float y, float z) {
+        buildingVertex.position = new Vector3f(x, y, z);
         return this;
     }
 
     @Override
-    public @NotNull VertexConsumer color(int red, int green, int blue, int alpha) {
+    public @NotNull VertexConsumer setColor(int red, int green, int blue, int alpha) {
         // Unused
         return this;
     }
 
     @Override
-    public @NotNull VertexConsumer uv(float u, float v) {
+    public @NotNull VertexConsumer setUv(float u, float v) {
         buildingVertex.u = u;
         buildingVertex.v = v;
         return this;
     }
 
     @Override
-    public @NotNull VertexConsumer overlayCoords(int u, int v) {
+    public @NotNull VertexConsumer setUv1(int u, int v) {
         // Unused
         return this;
     }
 
     @Override
-    public @NotNull VertexConsumer uv2(int u, int v) {
+    public @NotNull VertexConsumer setUv2(int u, int v) {
         // Unused
         return this;
     }
 
     @Override
-    public @NotNull VertexConsumer normal(float x, float y, float z) {
+    public @NotNull VertexConsumer setNormal(float x, float y, float z) {
         buildingVertex.normal = new Vector3f(x, y, z);
+        endVertex();
         return this;
     }
 
-    @Override
     public void endVertex() {
         int meshToUse;
         if (Math.abs(buildingVertex.position.z()) > TrainModelCapture.DOOR_OFFSET / 2) {
@@ -144,13 +144,4 @@ public class CapturingVertexConsumer implements VertexConsumer {
         buildingVertex = new Vertex();
     }
 
-    @Override
-    public void defaultColor(int defaultR, int defaultG, int defaultB, int defaultA) {
-
-    }
-
-    @Override
-    public void unsetDefaultColor() {
-
-    }
 }

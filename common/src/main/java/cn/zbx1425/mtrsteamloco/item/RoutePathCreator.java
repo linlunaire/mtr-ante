@@ -16,6 +16,7 @@ import mtr.data.RailAngle;
 import mtr.data.RailwayData;
 import net.minecraft.nbt.CompoundTag;
 import mtr.mappings.Text;
+import mtr.mappings.ItemStackUtilities;
 import cn.zbx1425.mtrsteamloco.mixin.RailwayDataAccessor;
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.data.Rail;
@@ -54,8 +55,8 @@ public class RoutePathCreator extends ItemWithCreativeTabBase {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> list, TooltipFlag flag) {
-        CompoundTag tag = stack.getOrCreateTagElement("ANTE-Data");
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext tooltipContext, List<Component> list, TooltipFlag flag) {
+        CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompound("ANTE-Data");
         List<PathData> path = readPath(tag);
         if (path.isEmpty()) {
             list.add(Text.translatable("tooltip.mtrsteamloco.route_path_creator.empty"));
@@ -105,7 +106,8 @@ CompoundTag {
         Player player = ctx.getPlayer();
         
         ItemStack itemStack = ctx.getItemInHand();
-        CompoundTag compoundTag = itemStack.getOrCreateTagElement("ANTE-Data");
+        CompoundTag itemTag = ItemStackUtilities.getCustomData(itemStack);
+        CompoundTag compoundTag = itemTag.getCompound("ANTE-Data");
         
         RailwayData data = RailwayData.getInstance(ctx.getLevel());
         if (data == null) {

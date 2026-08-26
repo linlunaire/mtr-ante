@@ -6,6 +6,7 @@ import cn.zbx1425.mtrsteamloco.render.RailPicker;
 import mtr.item.ItemWithCreativeTabBase;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import mtr.mappings.ItemStackUtilities;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -53,7 +54,7 @@ public abstract class ItemWithCreativeTabBaseMixin extends Item {
                 } else {
                     if (level.isClientSide) {
                         // BrushEditRailScreen.acquirePickInfoWhenUse();
-                        CompoundTag railBrushProp = context.getPlayer().getMainHandItem().getTagElement("NTERailBrush");
+                        CompoundTag railBrushProp = ItemStackUtilities.getCustomData(context.getPlayer().getMainHandItem()).getCompound("NTERailBrush");
                         BrushEditRailScreen.applyBrushToPickedRail(railBrushProp, true);
                     } else {
                         return super.useOn(context);

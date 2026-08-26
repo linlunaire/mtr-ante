@@ -301,15 +301,15 @@ public interface IScreen {
         }
 
         @Override
-        public boolean mouseScrolled(double p_94734_, double p_94735_, double p_94736_) {
+        public boolean mouseScrolled(double p_94734_, double p_94735_, double horizontalAmount, double verticalAmount) {
             boolean flag = false;
             try {
-                flag = mouseScrolledFunction.mouseScrolled(this, p_94734_, p_94735_, p_94736_);
+                flag = mouseScrolledFunction.mouseScrolled(this, p_94734_, p_94735_, verticalAmount);
             } catch (Exception e) {
                 print ("mouseScrolledFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.mouseScrolled(p_94734_, p_94735_, p_94736_);
+            return flag || super.mouseScrolled(p_94734_, p_94735_, horizontalAmount, verticalAmount);
         }
 
         @Override

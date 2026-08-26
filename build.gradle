@@ -10,6 +10,8 @@ plugins {
 
 apply from: "build_dep_ver.gradle"
 
+rootProject.ext.assetExcludeFont = rootProject.hasProperty("assetExcludeFont")
+
 def mtrProjectDir = file("../Minecraft-Transit-Railway-3.x.x")
 def mtrVersion = "1.21.1-3.3.0-beta-1"
 def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
@@ -28,7 +30,6 @@ architectury {
 }
 
 allprojects {
-	apply plugin: "architectury-plugin"
 	version = rootProject.mod_version
 	group = rootProject.maven_group
 	repositories {
@@ -36,6 +37,8 @@ allprojects {
 		maven { url = "https://maven.terraformersmc.com/" }
 		maven { url = "https://maven.parchmentmc.org/" }
 		maven { url = "https://maven.shedaniel.me/" }
+		maven { url = "https://neoforged.forgecdn.net/releases" }
+		maven { url = "https://maven.neoforged.net/releases" }
 	}
 }
 
@@ -77,6 +80,12 @@ subprojects {
 		options.release.set(21)
 		options.compilerArgs += ["-Xplugin:Manifold", "-AMC_VERSION=${minecraft_version_int}"]
 	}
+}
+
+// Match MTR's initialization order: Loom is applied to every platform first,
+// then Architectury configures Fabric/NeoForge-specific dependency buckets.
+allprojects {
+	apply plugin: "architectury-plugin"
 }
 
 tasks.register("setupFiles") {

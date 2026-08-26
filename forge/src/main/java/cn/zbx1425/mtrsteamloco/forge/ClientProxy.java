@@ -9,9 +9,8 @@ import cn.zbx1425.mtrsteamloco.render.train.SteamSmokeParticle;
 import mtr.mappings.Text;
 import net.minecraft.client.Minecraft;
 #if MC_VERSION >= "11900"
-import net.minecraftforge.client.event.CustomizeGuiOverlayEvent;
-import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.neoforge.client.event.CustomizeGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 #else
 import net.minecraftforge.client.event.ParticleFactoryRegisterEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
@@ -19,10 +18,10 @@ import net.minecraft.Util;
 #endif
 import net.minecraft.commands.Commands;
 #if MC_VERSION >= "11800"
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 #endif
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import cn.zbx1425.mtrsteamloco.gui.ScriptDebugOverlay;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptContextManager;
 
@@ -54,7 +53,7 @@ public class ClientProxy {
 
         @SubscribeEvent
 #if MC_VERSION >= "11900"
-        public static void onOverlayRender(CustomizeGuiOverlayEvent event) {
+        public static void onOverlayRender(CustomizeGuiOverlayEvent.Chat event) {
     #if MC_VERSION >= "12000"
         ScriptDebugOverlay.render(event.getGuiGraphics());
     #else
@@ -74,7 +73,7 @@ public class ClientProxy {
 #else
         public static void onDebugOverlay(RenderGameOverlayEvent.Text event) {
 #endif
-            if (Minecraft.getInstance().options.renderDebug) {
+            if (Minecraft.getInstance().getDebugOverlay().showDebugScreen()) {
                 event.getLeft().add(
                         "[NTE] Calls: " + MainClient.drawContext.drawCallCount
                                 + ", Batches: " + MainClient.drawContext.batchCount

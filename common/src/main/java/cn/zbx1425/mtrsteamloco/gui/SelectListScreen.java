@@ -43,7 +43,7 @@ public abstract class SelectListScreen extends ScreenMapper {
 
         IDrawing.setPositionAndWidth(textFieldSearch, 1, 1, width / 2 - 2);
         textFieldSearch.setResponder(changed -> updateEntries());
-        textFieldSearch.moveCursorToStart();
+        textFieldSearch.moveCursorToStart(false);
 
         updateEntries();
     }
@@ -82,7 +82,6 @@ public abstract class SelectListScreen extends ScreenMapper {
 
     @Override
     public void tick() {
-        textFieldSearch.tick();
         super.tick();
     }
 
@@ -120,12 +119,12 @@ public abstract class SelectListScreen extends ScreenMapper {
 
     @Override
 #if MC_VERSION >= "12000"
-    public void renderBackground(GuiGraphics guiGraphics) {
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 #else
     public void renderBackground(PoseStack guiGraphics) {
 #endif
         if (scrollList.visible) return;
-        super.renderBackground(guiGraphics);
+        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     public boolean isSelecting() {

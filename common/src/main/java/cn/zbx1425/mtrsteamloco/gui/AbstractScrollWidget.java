@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.BufferUploader;
 import net.minecraft.client.Minecraft;
 #if MC_VERSION >= "12000"
 import net.minecraft.client.gui.GuiGraphics;
@@ -61,13 +62,12 @@ public abstract class AbstractScrollWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (!this.visible || !this.isFocused()) return false;
-        this.setOffset(this.offset - delta * this.getScrollInterval());
+        this.setOffset(this.offset - verticalAmount * this.getScrollInterval());
         return true;
     }
 
-    @Override
 #if MC_VERSION >= "12000"
     public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         PoseStack poseStack = guiGraphics.pose();
@@ -139,18 +139,16 @@ public abstract class AbstractScrollWidget extends AbstractWidget {
         int l = Math.max(this.getY(), (int)this.offset * (this.height - i) / this.getMaxOffset() + this.getY());
         int m = l + i;
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder bufferBuilder = tesselator.getBuilder();
-        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        bufferBuilder.vertex(j, m, 0.0).color(128, 128, 128, 255).endVertex();
-        bufferBuilder.vertex(k, m, 0.0).color(128, 128, 128, 255).endVertex();
-        bufferBuilder.vertex(k, l, 0.0).color(128, 128, 128, 255).endVertex();
-        bufferBuilder.vertex(j, l, 0.0).color(128, 128, 128, 255).endVertex();
-        bufferBuilder.vertex(j, m - 1, 0.0).color(192, 192, 192, 255).endVertex();
-        bufferBuilder.vertex(k - 1, m - 1, 0.0).color(192, 192, 192, 255).endVertex();
-        bufferBuilder.vertex(k - 1, l, 0.0).color(192, 192, 192, 255).endVertex();
-        bufferBuilder.vertex(j, l, 0.0).color(192, 192, 192, 255).endVertex();
-        tesselator.end();
+        BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        bufferBuilder.addVertex(j, m, 0.0F).setColor(128, 128, 128, 255);
+        bufferBuilder.addVertex(k, m, 0.0F).setColor(128, 128, 128, 255);
+        bufferBuilder.addVertex(k, l, 0.0F).setColor(128, 128, 128, 255);
+        bufferBuilder.addVertex(j, l, 0.0F).setColor(128, 128, 128, 255);
+        bufferBuilder.addVertex(j, m - 1, 0.0F).setColor(192, 192, 192, 255);
+        bufferBuilder.addVertex(k - 1, m - 1, 0.0F).setColor(192, 192, 192, 255);
+        bufferBuilder.addVertex(k - 1, l, 0.0F).setColor(192, 192, 192, 255);
+        bufferBuilder.addVertex(j, l, 0.0F).setColor(192, 192, 192, 255);
+        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
     }
 
     protected boolean isMouseInside(double x, double y) {
