@@ -99,6 +99,7 @@ static boolean matchInnerClass(String path, String... names) {
 remapJar {
 	input.set shadowJar.archiveFile
 	dependsOn shadowJar
+	archiveBaseName.set("MTR-ANTE-fabric")
 	archiveClassifier.set("")
 }
 
@@ -108,7 +109,7 @@ components.java {
 	}
 }
 
-task moveFabricBuilds() {
+tasks.register("moveFabricBuilds") {
 	doLast {
 		delete fileTree("../build").matching {
 			include "**/MTR-ANTE-fabric*"
@@ -117,7 +118,12 @@ task moveFabricBuilds() {
 			from "build/libs"
 			into "../build"
 			exclude "*dev-shadow.jar"
-			rename "(.+)", "MTR-ANTE-\$1"
+			include "MTR-ANTE-fabric-*.jar"
 		}
 	}
+}
+
+
+tasks.named("build") {
+	finalizedBy(tasks.named("moveFabricBuilds"))
 }

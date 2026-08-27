@@ -6,7 +6,6 @@ import cn.zbx1425.sowcer.batch.ShaderProp;
 import cn.zbx1425.sowcer.util.AttrUtil;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.shaders.ProgramManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -114,12 +113,10 @@ public class ShaderManager {
 
         RenderSystem.setupShaderLights(shaderInstance);
 
+        // ShaderInstance.apply() binds the program and uploads its uniforms.
+        // Do not access its internal programId: NeoForge does not apply access wideners
+        // to this Minecraft class at runtime.
         shaderInstance.apply();
-
-        if (shaderInstance.programId != ShaderInstance.lastProgramId) {
-            ProgramManager.glUseProgram(shaderInstance.programId);
-            ShaderInstance.lastProgramId = shaderInstance.programId;
-        }
     }
 
     public void cleanupShaderBatchState(MaterialProp materialProp, ShaderProp shaderProp) {
