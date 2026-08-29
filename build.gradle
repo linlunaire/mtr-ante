@@ -13,7 +13,9 @@ apply from: "build_dep_ver.gradle"
 rootProject.ext.assetExcludeFont = rootProject.hasProperty("assetExcludeFont")
 
 def mtrProjectDir = file("../Minecraft-Transit-Railway-3.x.x")
-def mtrVersion = "1.21.1-3.3.0-beta-1"
+def mtrProperties = new Properties()
+mtrProjectDir.toPath().resolve("gradle.properties").toFile().withInputStream { mtrProperties.load(it) }
+def mtrVersion = "${minecraft_version}-${mtrProperties.getProperty("mod_version")}"
 def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
 def mtrFabricDevJar = file("${mtrProjectDir}/fabric/build/devlibs/fabric-${mtrVersion}-dev.jar")
 def mtrNeoForgeDevJar = file("${mtrProjectDir}/forge/build/devlibs/neoforge-${mtrVersion}-dev.jar")
