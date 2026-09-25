@@ -117,8 +117,7 @@ tasks.register("moveFabricBuilds") {
 		copy {
 			from "build/libs"
 			into "../build"
-			exclude "*dev-shadow.jar"
-			include "MTR-ANTE-fabric-*.jar"
+			include "MTR-ANTE-fabric-${project.version}.jar"
 		}
 	}
 }

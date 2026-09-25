@@ -104,8 +104,7 @@ tasks.register("moveForgeBuilds") {
 		copy {
 			from "build/libs"
 			into "../build"
-			exclude "*dev-shadow.jar"
-			include "MTR-ANTE-neoforge-*.jar"
+			include "MTR-ANTE-neoforge-${project.version}.jar"
 		}
 	}
 }

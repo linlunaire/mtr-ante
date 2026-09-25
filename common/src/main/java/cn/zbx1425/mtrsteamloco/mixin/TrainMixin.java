@@ -47,11 +47,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(Train.class)
 public abstract class TrainMixin implements TrainExtraSupplier{
 
 	private int doorDelay = 20;
+	@Unique private boolean anteDoorScanPrechecked;
 
 	@Shadow(remap = false) protected float speed;
 	@Shadow(remap = false) protected double railProgress;
@@ -118,8 +120,18 @@ public abstract class TrainMixin implements TrainExtraSupplier{
 			final double realSpacing = pos2.distanceTo(pos1);
 			final float yaw = (float) Mth.atan2(pos2.x - pos1.x, pos2.z - pos1.z);
 			final float pitch = realSpacing == 0 ? 0 : (float) asin((pos2.y - pos1.y) / realSpacing);
-			final boolean doorLeftOpen = scanDoors(world, x, y, z, (float) Math.PI + yaw, pitch, realSpacing / 2, dwellTicks) && doorValue > 0;
-			final boolean doorRightOpen = scanDoors(world, x, y, z, yaw, pitch, realSpacing / 2, dwellTicks) && doorValue > 0;
+			boolean doorLeftOpen = false;
+			boolean doorRightOpen = false;
+			if (!skipScanBlocks(world, x, y, z)) {
+				final boolean wasPrechecked = anteDoorScanPrechecked;
+				anteDoorScanPrechecked = true;
+				try {
+					doorLeftOpen = scanDoors(world, x, y, z, (float) Math.PI + yaw, pitch, realSpacing / 2, dwellTicks) && doorValue > 0;
+					doorRightOpen = scanDoors(world, x, y, z, yaw, pitch, realSpacing / 2, dwellTicks) && doorValue > 0;
+				} finally {
+					anteDoorScanPrechecked = wasPrechecked;
+				}
+			}
 
 			calculateCarCallback.calculateCarCallback(x, y, z, yaw, pitch, realSpacing, doorLeftOpen, doorRightOpen);
 		}
@@ -258,8 +270,9 @@ public abstract class TrainMixin implements TrainExtraSupplier{
 
     @Inject(method = "scanDoors", at = @At("HEAD"), cancellable = true)
     private void onScanDoors(Level world, double trainX, double trainY, double trainZ, float checkYaw, float pitch, double halfSpacing, int dwellTicks, CallbackInfoReturnable<Boolean> ci) {
-        if (skipScanBlocks(world, trainX, trainY, trainZ)) {
-            ci.setReturnValue(false);
+		// Other MTR versions/callers still need the original per-side guard.
+		if (!anteDoorScanPrechecked && skipScanBlocks(world, trainX, trainY, trainZ)) {
+			ci.setReturnValue(false);
 			return;
 		}
 

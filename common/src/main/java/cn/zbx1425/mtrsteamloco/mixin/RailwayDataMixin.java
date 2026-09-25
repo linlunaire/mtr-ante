@@ -133,8 +133,9 @@ public class RailwayDataMixin implements IPacket {
 		});
 
 		updateNearbyTrains.startTick();
-		trainPositions.remove(0);
-		trainPositions.add(new HashMap<>());
+		final Map<UUID, Long> oldestTrainPositions = trainPositions.remove(0);
+		oldestTrainPositions.clear();
+		trainPositions.add(oldestTrainPositions);
 		schedulesForPlatform.clear();
 		signalBlocks.resetOccupied();
 		sidings.forEach(siding -> {
