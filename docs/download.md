@@ -10,16 +10,14 @@
 
 ## ……下载
 
-您可以去往[Github](https://github.com/aphrodite281/mtr-ante/releases) 或 [Modrinth](https://modrinth.com/mod/mtr-ante/) 下载最新版本的模组。
+本社区移植版的源码和构建记录见 [GitHub](https://github.com/linlunaire/mtr-ante) 与 [Actions](https://github.com/linlunaire/mtr-ante/actions)。目前上传源码和 tag，不自动向 Modrinth 发布；上游 [Releases](https://github.com/aphrodite281/mtr-ante/releases) / [Modrinth](https://modrinth.com/mod/mtr-ante/) 的旧版产物不能当作本分支的 26.2 版本使用。
 
-当前移植测试版要求：
+`master` 默认目标为 26.2，保留 1.21.1 构建入口。两版都需要同一 Minecraft 版本的 MTR、Architectury API，并选择 Fabric Loader + Fabric API 或 NeoForge；版本要求以对应构建产物的模组元数据为准。
 
-- Minecraft 1.21.1
-- MTR `1.21.1-3.3.0-beta-1` 或更高版本
-- Fabric Loader + Fabric API，或 NeoForge `21.1.248` 或更高版本
-- Architectury API 13 或更高版本
+- 26.2：Java 25，配合本仓库 README 指定的 MTR 26.2 源码基线；仍为移植测试版。
+- 1.21.1：Java 21，使用 [ANTE tag `1.1.1-1.21.1-beta.2`](https://github.com/linlunaire/mtr-ante/tree/1.1.1-1.21.1-beta.2) 与 [MTR tag `1.21.1-3.3.2`](https://github.com/linlunaire/Minecraft-Transit-Railway/tree/1.21.1-3.3.2)。
 
-本分支仅提供 Fabric 与 NeoForge 的 Minecraft 1.21.1 构建；不要将旧 Forge 版本与 NeoForge 版本混用。
+不要混用两个 Minecraft 版本的 JAR，也不要将旧 Forge 版本与 NeoForge 版本混用。游戏与多人服务器验证尚未完成，升级前请备份世界、配置和资源包。
 
 
 

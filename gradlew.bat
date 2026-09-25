@@ -24,6 +24,12 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
+@rem Route the requested Minecraft version while keeping the usual Gradle command.
+if "%ANTE_INTERNAL_GRADLE_WRAPPER%"=="1" goto anteGradleWrapper
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\build-target.ps1" %*
+exit /b %ERRORLEVEL%
+
+:anteGradleWrapper
 set DIRNAME=%~dp0
 if "%DIRNAME%" == "" set DIRNAME=.
 set APP_BASE_NAME=%~n0

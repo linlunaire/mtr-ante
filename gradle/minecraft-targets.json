@@ -1,0 +1,17 @@
+{
+  "defaultVersion": "26.2",
+  "targets": {
+    "1.21.1": {
+      "javaVersion": 21,
+      "projectDirectory": ".",
+      "gradleVersion": "8.14.5",
+      "status": "release"
+    },
+    "26.2": {
+      "javaVersion": 25,
+      "projectDirectory": "versions/26.2",
+      "gradleVersion": "9.5.1",
+      "status": "in-development"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+// Architectury transforms the common JAR separately in development. The access
+// widener must also be under this loader mod's own resource root for Fabric.
+processResources {
+    from(project(':common').file('src/main/resources')) {
+        include 'mtrsteamloco.accesswidener', 'mtrsteamloco.mixins.json'
+    }
+}
+configurations {
+    common
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentFabric.extendsFrom common
+}
+dependencies {
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    api "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    api "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
+    implementation files(new File(rootProject.mtrRoot, "build/release/MTR-fabric-${rootProject.mtrVersion}.jar"))
+    compileOnly "com.terraformersmc:modmenu:${rootProject.mod_menu_version}"
+    common(project(':common')) { transitive = false }
+    shadowCommon(project(path: ':common', configuration: 'transformProductionFabric')) { transitive = false }
+    api("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive = false }
+    clothConfigJar("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive = false }
+    clothConfigJar('me.shedaniel.cloth:basic-math:0.6.1') { transitive = false }
+}
+
+tasks.register('checkMixinTargetCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn ':common:compileMixinTargetCompatibility', tasks.named('compileJava')
+    classpath = files(project(':common').layout.buildDirectory.dir('classes/mixinTargetCompatibility')) +
+            sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.MixinTargetCompatibilityCheck'
+    args new File(rootProject.sharedRoot, 'fabric/src/main/resources/mtrsteamloco_fabric.mixins.json').absolutePath
+}
+
+tasks.named('check') { dependsOn 'checkMixinTargetCompatibility' }

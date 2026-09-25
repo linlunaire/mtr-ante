@@ -1,0 +1,64 @@
+// Reviewed NBT receivers only. This is deliberately not a Java type resolver:
+// new classes/ambiguous declarations remain compiler errors until reviewed.
+rootProject.ext.transformAnte26DataSource = { String source ->
+    def receivers = [
+        'block.BlockDirectNode': ['compoundTag'],
+        'block.BlockEyeCandy': ['compoundTag'],
+        'gui.BrushEditRailScreen': ['brushTag', 'railBrushProp'],
+        'gui.CompoundCreatorScreen': ['tag', 'tasksTag'],
+        'gui.EyeCandyScreen': [],
+        'gui.RoutePathCreatorScreen': ['tag'],
+        'item.BlockItemDirectNode': ['tag'],
+        'item.BlockItemEyeCandy': ['tag'],
+        'item.CompoundCreator': ['tag', 'tasksTag', 'taskTag', 'compoundTag'],
+        'item.RailPathEditor': ['tag'],
+        'item.RoutePathCreator': ['tag', 'itemTag', 'compoundTag'],
+        'mixin.ItemNodeModifierBaseMixin': ['compoundTag'],
+        'mixin.ItemRailModifierMixin': ['compoundTag'],
+        'mixin.ItemRendererMixin': ['et'],
+        'mixin.ItemWithCreativeTabBaseMixin': ['railBrushProp'],
+        'mixin.TrainMixin': ['compoundTag'],
+        'scripting.util.JsonStringTagVisitor': ['p_178166_']
+    ]
+    def target = receivers.find { path, names ->
+        int separator = path.lastIndexOf('.')
+        source.contains("package cn.zbx1425.mtrsteamloco.${path.substring(0, separator)};") &&
+            (source =~ /\bclass\s+${path.substring(separator + 1)}\b/).find()
+    }
+    if (target == null) return source
+
+    def result = source
+    target.value.each { name ->
+        // Refuse a receiver that is also declared with another type. In
+        // particular, CompoundCreatorScreen.task is NOT a file-wide receiver.
+        def declarations = (source =~ /\b([\w.$]+(?:<[^;{}()]*>)?(?:\[\])?)\s+${name}\s*(?=[=,;):])/)
+            .collect { it[1] }.findAll { !(it in ['return', 'throw', 'case']) }
+        if (declarations.isEmpty() || declarations.any { it != 'CompoundTag' }) return
+        result = result.replaceAll(/(?<![\w.$])${name}\.(getInt|getLong|getFloat|getDouble|getBoolean|getString|getByteArray|getLongArray|getUUID)\(/) { match, method ->
+            "mtr.mappings.CompoundTagMapper.${method}(${name}, "
+        }.replaceAll(/(?<![\w.$])${name}\.getCompound\(/, "${name}.getCompoundOrEmpty(")
+            .replaceAll(/(?<![\w.$])${name}\.getAllKeys\(\)/, "${name}.keySet()")
+    }
+
+    if (target.key == 'gui.CompoundCreatorScreen') {
+        // Keep this declaration and its immediately following read together;
+        // later Task task locals and Entry.task fields are business objects.
+        result = result.replaceAll(/(CompoundTag task = tasksTag\.getCompoundOrEmpty\(key\);\s*String type = )task\.getString\(Task\.TAG_TYPE\)/) { match, prefix ->
+            prefix + 'mtr.mappings.CompoundTagMapper.getString(task, Task.TAG_TYPE)'
+        }
+    }
+
+    // These are the actual ItemStackUtilities call shapes in the reviewed
+    // sources, including two nested player expressions. Avoid a greedy regex
+    // that could consume other expressions, JSON getters or packet readers.
+    if (source.contains('import mtr.mappings.ItemStackUtilities;')) {
+        ['stack', 'itemStack', 'mainHandItem', 'offHandItem',
+         'Minecraft.getInstance().player.getItemInHand(hand)',
+         'context.getPlayer().getMainHandItem()'].each { argument ->
+            def receiver = "ItemStackUtilities.getCustomData(${argument})"
+            result = result.replace("${receiver}.getCompound(", "${receiver}.getCompoundOrEmpty(")
+            result = result.replace("${receiver}.getInt(\"path_mode\")", "mtr.mappings.CompoundTagMapper.getInt(${receiver}, \"path_mode\")")
+        }
+    }
+    return result
+}

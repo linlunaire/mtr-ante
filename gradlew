@@ -40,6 +40,12 @@ cd "`dirname \"$PRG\"`/" >/dev/null
 APP_HOME="`pwd -P`"
 cd "$SAVED" >/dev/null
 
+# Route public calls through the Minecraft target selector. The selected 1.21.1
+# build calls this wrapper again with the guard set to retain its Gradle runtime.
+if [ "${ANTE_INTERNAL_GRADLE_WRAPPER:-}" != "1" ]; then
+    exec bash "$APP_HOME/scripts/build-target.sh" "$@"
+fi
+
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
 
