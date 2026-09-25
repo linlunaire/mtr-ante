@@ -1,13 +1,8 @@
 package cn.zbx1425.mtrsteamloco.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack.Pose;
-#if MC_VERSION >= "11903"
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
-#else 
-import com.mojang.math.Matrix3f;
-import com.mojang.math.Matrix4f;
-#endif
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

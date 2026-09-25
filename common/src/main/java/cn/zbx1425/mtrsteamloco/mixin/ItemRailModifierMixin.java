@@ -34,7 +34,7 @@ import mtr.data.Rail;
 import mtr.packet.PacketTrainDataGuiServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -58,12 +58,12 @@ public abstract class ItemRailModifierMixin extends Item{
     @Shadow(remap = false) boolean isOneWay;
 
 	@Override
-	public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+	public net.minecraft.world.InteractionResult use(Level world, Player player, InteractionHand hand) {
 		HitResult hitResult = player.pick(20.0, 0.0f, false);
 		ItemStack stack = player.getItemInHand(hand);
-        if (hitResult.getType() == HitResult.Type.BLOCK) return InteractionResultHolder.pass(stack);
+        if (hitResult.getType() == HitResult.Type.BLOCK) return net.minecraft.world.InteractionResult.PASS;
 		CompoundTag compoundTag = ItemStackUtilities.getCustomData(stack);
-		int pathMode = compoundTag.getInt("path_mode");
+		int pathMode = mtr.mappings.CompoundTagMapper.getInt(compoundTag, "path_mode");
 		pathMode = (pathMode + 1) % 2;
 		compoundTag.putInt("path_mode", pathMode);
 		ItemStackUtilities.setCustomData(stack, compoundTag);
@@ -72,14 +72,14 @@ public abstract class ItemRailModifierMixin extends Item{
 			case 1: comp = Text.translatable("tooltip.mtrsteamloco.rail.path_mode.bezier"); break;
 			default: comp = Text.translatable("tooltip.mtrsteamloco.rail.path_mode.original");
 		}
-		player.displayClientMessage(comp, true);
-		return InteractionResultHolder.success(stack);
+		player.sendOverlayMessage(comp);
+		return net.minecraft.world.InteractionResult.SUCCESS.heldItemTransformedTo(stack);
 	}
 
     protected void onConnect(Level world, ItemStack stack, TransportMode transportMode, BlockState stateStart, BlockState stateEnd, BlockPos posStart, BlockPos posEnd, RailAngle facingStart, RailAngle facingEnd, Player player, RailwayData railwayData) {
 		if (railType.hasSavedRail && (railwayData.hasSavedRail(posStart) || railwayData.hasSavedRail(posEnd))) {
 			if (player != null) {
-				player.displayClientMessage(Text.translatable("gui.mtr.platform_or_siding_exists"), true);
+				player.sendOverlayMessage(Text.translatable("gui.mtr.platform_or_siding_exists"));
 			}
 		} else {
 			boolean isValidContinuousMovement;
@@ -117,7 +117,7 @@ public abstract class ItemRailModifierMixin extends Item{
             }
 
 			final boolean goodRadius = rail1.goodRadius() && rail2.goodRadius();
-			int pathMode = ItemStackUtilities.getCustomData(stack).getInt("path_mode");
+			int pathMode = mtr.mappings.CompoundTagMapper.getInt(ItemStackUtilities.getCustomData(stack), "path_mode");
 			if (pathMode != 0) {
 				((RailExtraSupplier) (Object) rail1).changePathMode(pathMode);
 				((RailExtraSupplier) (Object) rail2).changePathMode(pathMode);
@@ -131,7 +131,7 @@ public abstract class ItemRailModifierMixin extends Item{
 				world.setBlockAndUpdate(posEnd, stateEnd.setValue(BlockNode.IS_CONNECTED, true));
 				PacketTrainDataGuiServer.createRailS2C(world, transportMode, posStart, posEnd, rail1, rail2, newId);
 			} else if (player != null) {
-				player.displayClientMessage(Text.translatable(isValidContinuousMovement ? goodRadius ? "gui.mtr.invalid_orientation" : "gui.mtr.radius_too_small" : "gui.mtr.cable_car_invalid_orientation"), true);
+				player.sendOverlayMessage(Text.translatable(isValidContinuousMovement ? goodRadius ? "gui.mtr.invalid_orientation" : "gui.mtr.radius_too_small" : "gui.mtr.cable_car_invalid_orientation"));
 			}
 		}
 	}

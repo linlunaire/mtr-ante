@@ -15,7 +15,7 @@ import mtr.data.TransportMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,11 +26,11 @@ import java.util.Map;
 
 public class PacketUpdateRail {
 
-    public static ResourceLocation PACKET_UPDATE_RAIL = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "update_rail");
+    public static Identifier PACKET_UPDATE_RAIL = Identifier.fromNamespaceAndPath(Main.MOD_ID, "update_rail");
 
     public static void sendUpdateC2S(Rail newState, BlockPos posStart, BlockPos posEnd) {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-        packet.writeResourceLocation(Minecraft.getInstance().level.dimension().location());
+        packet.writeIdentifier(Minecraft.getInstance().level.dimension().identifier());
         packet.writeBlockPos(posStart);
         packet.writeBlockPos(posEnd);
         newState.writePacket(packet);
@@ -39,11 +39,7 @@ public class PacketUpdateRail {
     }
 
     public static void receiveUpdateC2S(MinecraftServer server, ServerPlayer player, FriendlyByteBuf packet) {
-#if MC_VERSION >= "11903"
         ResourceKey<Level> levelKey = packet.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION);
-#else
-        ResourceKey<Level> levelKey = ResourceKey.create(net.minecraft.core.Registry.DIMENSION_REGISTRY, packet.readResourceLocation());
-#endif
         BlockPos posStart = packet.readBlockPos();
         BlockPos posEnd = packet.readBlockPos();
         Rail forward = new Rail(packet);

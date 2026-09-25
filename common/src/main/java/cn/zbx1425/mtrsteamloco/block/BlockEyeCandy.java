@@ -22,10 +22,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import net.minecraft.world.level.block.state.StateDefinition;
-#if MC_VERSION < "12000"
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-#endif
 import net.minecraft.world.phys.BlockHitResult;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -80,11 +76,7 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
 
     public BlockEyeCandy() {
         super(
-#if MC_VERSION < "12000"
-                BlockBehaviour.Properties.of(Material.METAL, MaterialColor.COLOR_GRAY)
-#else
                 BlockBehaviour.Properties.of()
-#endif
                         .strength(2).lightLevel(LIGHT_EMISSION).dynamicShape()
         );
     }
@@ -105,14 +97,14 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
     @Override
 	protected InteractionResult useWithoutItem(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hit) {
         if (player.getMainHandItem().is(mtr.Items.BRUSH.get())) {
-            if (!level.isClientSide) {
+            if (!level.isClientSide()) {
                 PacketScreen.sendScreenBlockS2C((ServerPlayer) player, "eye_candy", pos);
             } else {
                 return InteractionResult.PASS;
             }
             return InteractionResult.SUCCESS;
         } else {
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
                 if (blockEntity instanceof BlockEntityEyeCandy) {
                     BlockEntityEyeCandy blockEntityEyeCandy = (BlockEntityEyeCandy) blockEntity;
@@ -135,7 +127,7 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
 
     @Override
     public RenderShape getRenderShape(@NotNull BlockState blockState) {
-        return RenderShape.ENTITYBLOCK_ANIMATED;
+        return RenderShape.INVISIBLE;
     }
 
     @Override
@@ -173,12 +165,12 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
     }
 
     @Override
-    public VoxelShape getOcclusionShape(BlockState state, BlockGetter world, BlockPos pos) {
+    public VoxelShape getOcclusionShape(BlockState state) {
         return Shapes.empty();
     }
 
 	@Override
-	public void entityInside(BlockState state, Level world, BlockPos pos, Entity entity) {
+	public void entityInside(BlockState state, Level world, BlockPos pos, Entity entity, net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean intersected) {
         final BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof BlockEntityEyeCandy) {
             if (((BlockEntityEyeCandy) blockEntity).isTicketBarrier() == false) return;
@@ -186,7 +178,7 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
             return;
         }
         boolean isEntrance = ((BlockEntityEyeCandy) blockEntity).isEntrance;
-		if (!world.isClientSide && entity instanceof Player) {
+		if (!world.isClientSide() && entity instanceof Player) {
 			final Direction facing = IBlock.getStatePropertySafe(state, FACING);
 			final Vec3 playerPosRotated = entity.position().subtract(pos.getX() + 0.5, 0, pos.getZ() + 0.5).yRot((float) Math.toRadians(facing.toYRot()));
 			final TicketSystem.EnumTicketBarrierOpen open = IBlock.getStatePropertySafe(state, OPEN);
@@ -244,39 +236,39 @@ public class BlockEyeCandy extends BlockDirectionalMapper implements EntityBlock
 
         @Override
         public void readCompoundTag(CompoundTag compoundTag) {
-            String id = compoundTag.getString("prefabId");
+            String id = mtr.mappings.CompoundTagMapper.getString(compoundTag, "prefabId");
             if (StringUtils.isEmpty(id)) id = null;
             setPrefabId(id);
-            fullLight = compoundTag.getBoolean("fullLight");
+            fullLight = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "fullLight");
             try {
                 if (compoundTag.contains("customConfigs")) {
-                    byte[] dataBytes = compoundTag.getByteArray("customConfigs");
+                    byte[] dataBytes = mtr.mappings.CompoundTagMapper.getByteArray(compoundTag, "customConfigs");
                     customConfigs = StringMapSerializer.deserialize(dataBytes);
                 } else if (compoundTag.contains("data")) {
-                    byte[] configBytes = compoundTag.getByteArray("data");
+                    byte[] configBytes = mtr.mappings.CompoundTagMapper.getByteArray(compoundTag, "data");
                     customConfigs = StringMapSerializer.deserialize(configBytes);
                 }
             }catch (IOException e) {
             }
             
-            translateX = compoundTag.contains("translateX") ? compoundTag.getFloat("translateX") : 0;
-            translateY = compoundTag.contains("translateY") ? compoundTag.getFloat("translateY") : 0;
-            translateZ = compoundTag.contains("translateZ") ? compoundTag.getFloat("translateZ") : 0;
-            rotateX = compoundTag.contains("rotateX") ? compoundTag.getFloat("rotateX") : 0;
-            rotateY = compoundTag.contains("rotateY") ? compoundTag.getFloat("rotateY") : 0;
-            rotateZ = compoundTag.contains("rotateZ") ? compoundTag.getFloat("rotateZ") : 0;
-            scaleX = compoundTag.contains("scaleX") ? compoundTag.getFloat("scaleX") : 1;
-            scaleY = compoundTag.contains("scaleY") ? compoundTag.getFloat("scaleY") : 1;
-            scaleZ = compoundTag.contains("scaleZ") ? compoundTag.getFloat("scaleZ") : 1;
-            asPlatform = compoundTag.contains("asPlatform") ? compoundTag.getBoolean("asPlatform") : false;
-            // doorValue = compoundTag.contains("doorValue") ? compoundTag.getFloat("doorValue") : 0;
-            // doorTarget = compoundTag.contains("doorTarget") ? compoundTag.getBoolean("doorTarget") : false;
-            shape = compoundTag.contains("shape") ? compoundTag.getString("shape") : "0, 0, 0, 16, 16, 16";
-            collisionShape = compoundTag.contains("collisionShape") ? compoundTag.getString("collisionShape") : "0, 0, 0, 0, 0, 0";
-            fixedMatrix = compoundTag.contains("fixedMatrix") ? compoundTag.getBoolean("fixedMatrix") : false;
-            lightLevel = compoundTag.contains("lightLevel") ? compoundTag.getInt("lightLevel") : 0;
-            isTicketBarrier = compoundTag.contains("isTicketBarrier") ? compoundTag.getBoolean("isTicketBarrier") : false;
-            isEntrance = compoundTag.contains("isEntrance") ? compoundTag.getBoolean("isEntrance") : false;
+            translateX = compoundTag.contains("translateX") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "translateX") : 0;
+            translateY = compoundTag.contains("translateY") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "translateY") : 0;
+            translateZ = compoundTag.contains("translateZ") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "translateZ") : 0;
+            rotateX = compoundTag.contains("rotateX") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "rotateX") : 0;
+            rotateY = compoundTag.contains("rotateY") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "rotateY") : 0;
+            rotateZ = compoundTag.contains("rotateZ") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "rotateZ") : 0;
+            scaleX = compoundTag.contains("scaleX") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "scaleX") : 1;
+            scaleY = compoundTag.contains("scaleY") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "scaleY") : 1;
+            scaleZ = compoundTag.contains("scaleZ") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "scaleZ") : 1;
+            asPlatform = compoundTag.contains("asPlatform") ? mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "asPlatform") : false;
+            // doorValue = compoundTag.contains("doorValue") ? mtr.mappings.CompoundTagMapper.getFloat(compoundTag, "doorValue") : 0;
+            // doorTarget = compoundTag.contains("doorTarget") ? mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "doorTarget") : false;
+            shape = compoundTag.contains("shape") ? mtr.mappings.CompoundTagMapper.getString(compoundTag, "shape") : "0, 0, 0, 16, 16, 16";
+            collisionShape = compoundTag.contains("collisionShape") ? mtr.mappings.CompoundTagMapper.getString(compoundTag, "collisionShape") : "0, 0, 0, 0, 0, 0";
+            fixedMatrix = compoundTag.contains("fixedMatrix") ? mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "fixedMatrix") : false;
+            lightLevel = compoundTag.contains("lightLevel") ? mtr.mappings.CompoundTagMapper.getInt(compoundTag, "lightLevel") : 0;
+            isTicketBarrier = compoundTag.contains("isTicketBarrier") ? mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "isTicketBarrier") : false;
+            isEntrance = compoundTag.contains("isEntrance") ? mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, "isEntrance") : false;
         }
 
         @Override

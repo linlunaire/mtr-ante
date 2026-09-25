@@ -2,11 +2,7 @@ package cn.zbx1425.mtrsteamloco.gui.entries;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.Window;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#else
-import com.mojang.blaze3d.vertex.PoseStack;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import mtr.mappings.UtilitiesClient;
@@ -83,20 +79,12 @@ public class ButtonListEntry extends TooltipListEntry<String> implements Contain
     }
     
     @Override
-#if MC_VERSION >= "12000"
-    public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-#else
-    public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-#endif
-        super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+    public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+        super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         processor.process(this, buttonWidget, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         this.buttonWidget.active = isEditable();
-#if MC_VERSION >= "11903"
         this.buttonWidget.setY(y);
-#else
-        this.buttonWidget.y = y;
-#endif
-        buttonWidget.render(matrices, mouseX, mouseY, delta);
+        buttonWidget.extractRenderState(matrices, mouseX, mouseY, delta);
     }
 
     @Override

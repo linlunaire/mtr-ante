@@ -10,8 +10,8 @@ import mtr.data.Rail;
 import mtr.mappings.Text;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.util.LightCoordsUtil;
+import mtr.mappings.RenderBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -52,7 +52,7 @@ public class RailPicker {
         pickedRail = closestEntry.get().getValue();
     }
 
-    public static void render(PoseStack matrices, MultiBufferSource vertexConsumers) {
+    public static void render(PoseStack matrices, RenderBufferSource vertexConsumers) {
         if (pickedRail == null) return;
 
         RailAccessor rail = (RailAccessor)pickedRail;
@@ -87,7 +87,7 @@ public class RailPicker {
         matrices.pushPose();
         matrices.translate(pickedPosStart.getX(), pickedPosStart.getY(), pickedPosStart.getZ());
         matrices.translate(0.5, 0.5, 0.5);
-        matrices.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+        matrices.mulPose(Minecraft.getInstance().gameRenderer.mainCamera().rotation());
         matrices.scale(-0.025F, -0.025F, 0.025F);
         float opacity = Minecraft.getInstance().options.getBackgroundOpacity(0.25F);
         int bgColor = (int)(opacity * 255.0F) << 24;
@@ -96,11 +96,7 @@ public class RailPicker {
         for (var text : contents) {
             if (text != null && !StringUtils.isEmpty(text)) {
                 float xOffset = (float) (-font.width(text) / 2);
-#if MC_VERSION >= "11904"
-                font.drawInBatch(text, xOffset, yOffset, 0xFFFFFFFF, false, matrices.last().pose(), vertexConsumers, Font.DisplayMode.SEE_THROUGH, bgColor, LightTexture.FULL_BRIGHT, false);
-#else
-                font.drawInBatch(text, xOffset, yOffset, 0xFFFFFFFF, false, matrices.last().pose(), vertexConsumers, false, bgColor, LightTexture.FULL_BRIGHT);
-#endif
+                vertexConsumers.drawText(text, xOffset, yOffset, 0xFFFFFFFF, false, matrices.last().pose(), Font.DisplayMode.SEE_THROUGH, bgColor, LightCoordsUtil.FULL_BRIGHT);
             }
             yOffset += font.lineHeight + 2;
         }

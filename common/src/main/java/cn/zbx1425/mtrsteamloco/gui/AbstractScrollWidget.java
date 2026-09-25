@@ -1,180 +1,83 @@
 package cn.zbx1425.mtrsteamloco.gui;
 
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import net.minecraft.client.Minecraft;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
+/** Scroll contents and bars are extracted into GUI state, including nested clipping. */
 public abstract class AbstractScrollWidget extends AbstractWidget {
     private double offset;
     private boolean holdingScrollBar;
 
-    public AbstractScrollWidget(int i, int j, int k, int l, Component component) {
-        super(i, j, k, l, component);
+    public AbstractScrollWidget(int x, int y, int width, int height, Component component) {
+        super(x, y, width, height, component);
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!this.visible) return false;
-        boolean clickInside = this.isMouseInside(mouseX, mouseY);
-        boolean clickBar = this.getScrollBarVisible() && mouseX >= (double)(this.getX() + this.width) && mouseX <= (double)(this.getX() + this.width + 8) && mouseY >= (double)this.getY() && mouseY < (double)(this.getY() + this.height);
-        this.setFocused(clickInside || clickBar);
-        if (clickBar && button == 0) {
-            this.holdingScrollBar = true;
-            return true;
-        }
-        return false;
+    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (!visible || !active) return false;
+        boolean inside = isMouseInside(event.x(), event.y());
+        boolean bar = getScrollBarVisible() && event.x() >= getRight() && event.x() < getRight() + 8
+                && event.y() >= getY() && event.y() < getBottom();
+        setFocused(inside || bar);
+        holdingScrollBar = bar && event.button() == 0;
+        return holdingScrollBar;
     }
 
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            this.holdingScrollBar = false;
-        }
-        return super.mouseReleased(mouseX, mouseY, button);
+    @Override public boolean mouseReleased(MouseButtonEvent event) {
+        boolean held = holdingScrollBar;
+        if (event.button() == 0) holdingScrollBar = false;
+        return held || super.mouseReleased(event);
     }
 
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (!(this.visible && this.isFocused() && this.holdingScrollBar)) return false;
-        if (mouseY < (double)this.getY()) {
-            this.setOffset(0.0);
-        } else if (mouseY > (double)(this.getY() + this.height)) {
-            this.setOffset(this.getMaxOffset());
-        } else {
-            int i = this.getScrollBarHeight();
-            double d = Math.max(1, this.getMaxOffset() / (this.height - i));
-            this.setOffset(this.offset + dragY * d);
-        }
+    @Override public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (!visible || !active || !isFocused() || !holdingScrollBar || event.button() != 0) return false;
+        if (event.y() < getY()) setOffset(0);
+        else if (event.y() > getBottom()) setOffset(getMaxOffset());
+        else setOffset(offset + dragY * Math.max(1D, (double) getMaxOffset() / Math.max(1, height - getScrollBarHeight())));
         return true;
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (!this.visible || !this.isFocused()) return false;
-        this.setOffset(this.offset - verticalAmount * this.getScrollInterval());
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (!visible || !active || !isMouseInside(mouseX, mouseY)) return false;
+        setFocused(true);
+        setOffset(offset - vertical * getScrollInterval());
         return true;
     }
 
-#if MC_VERSION >= "12000"
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        PoseStack poseStack = guiGraphics.pose();
-#elif MC_VERSION >= "11904"
-    public void renderWidget(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
-        PoseStack poseStack = guiGraphics;
-#else
-    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
-        PoseStack poseStack = guiGraphics;
-#endif
-        if (!this.visible) {
-            return;
+    @Override public void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        if (!visible) return;
+        setOffset(offset); // Content can shrink after filtering.
+        graphics.fill(getX(), getY() + 1, getRight(), getBottom() - 1, isFocused() ? 0xFFFFFFFF : 0xFFA0A0A0);
+        graphics.fill(getX() + 1, getY() + 1, getRight() - 1, getBottom() - 1, 0xFF555555);
+        graphics.enableScissor(getX() + 1, getY() + 1, Math.max(getX() + 1, getRight() - 1), Math.max(getY() + 1, getBottom() - 1));
+        graphics.pose().pushMatrix();
+        try {
+            graphics.pose().translate(0, (float) -offset);
+            renderContents(graphics, mouseX, mouseY, delta);
+        } finally {
+            graphics.pose().popMatrix();
+            graphics.disableScissor();
         }
-        this.renderBackground(guiGraphics);
-        vcEnableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
-        poseStack.pushPose();
-        poseStack.translate(0.0, -this.offset, 0.0);
-        this.renderContents(guiGraphics, mouseX, mouseY, partialTick);
-        poseStack.popPose();
-        RenderSystem.disableScissor();
-        if (this.getScrollBarVisible()) {
-            this.renderScrollBar();
+        if (getScrollBarVisible()) {
+            int barHeight = getScrollBarHeight();
+            int top = getY() + (int) (offset * (height - barHeight) / Math.max(1, getMaxOffset()));
+            graphics.fill(getRight(), top, getRight() + 8, top + barHeight, 0xFF808080);
+            graphics.fill(getRight(), top, getRight() + 7, top + barHeight - 1, 0xFFC0C0C0);
         }
-    }
-
-    public static void vcEnableScissor(int x1, int y1, int x2, int y2) {
-        Window window = Minecraft.getInstance().getWindow();
-        int wndHeight = window.getHeight();
-        double guiScale = window.getGuiScale();
-        double scaledX1 = (double)x1 * guiScale;
-        double scaledY1 = (double)wndHeight - (double)y2 * guiScale;
-        double scaledWidth = (double)(x2 - x1) * guiScale;
-        double scaledHeight = (double)(y2 - y1) * guiScale;
-        RenderSystem.enableScissor((int)scaledX1, (int)scaledY1, Math.max(0, (int)scaledWidth), Math.max(0, (int)scaledHeight));
     }
 
     private int getScrollBarHeight() {
-        return Mth.clamp((int)((float)(this.height * this.height) / (float)this.getContentHeight()), 32, this.height);
+        return Math.max(1, Math.min(height, Math.max(32, (int) ((double) height * height / Math.max(1, getContentHeight())))));
     }
 
-    protected double getOffset() {
-        return this.offset;
-    }
-
-    protected void setOffset(double offset) {
-        this.offset = Mth.clamp(offset, 0.0, this.getMaxOffset());
-    }
-
-    protected int getMaxOffset() {
-        return Math.max(0, this.getContentHeight() - this.height);
-    }
-
-#if MC_VERSION >= "12000"
-    private void renderBackground(GuiGraphics guiGraphics) {
-        guiGraphics.fill(this.getX(), this.getY() + 1, this.getX() + this.width, this.getY() + this.height - 1, this.isFocused() ? 0xffffffff : 0xffa0a0a0);
-        guiGraphics.fill(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1, 0xff555555);
-    }
-#else
-    private void renderBackground(PoseStack poseStack) {
-        fill(poseStack, this.getX(), this.getY() + 1, this.getX() + this.width, this.getY() + this.height - 1, this.isFocused() ? 0xffffffff : 0xffa0a0a0);
-        fill(poseStack, this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1, 0xff555555);
-    }
-#endif
-
-    private void renderScrollBar() {
-        int i = this.getScrollBarHeight();
-        int j = this.getX() + this.width;
-        int k = this.getX() + this.width + 8;
-        int l = Math.max(this.getY(), (int)this.offset * (this.height - i) / this.getMaxOffset() + this.getY());
-        int m = l + i;
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        bufferBuilder.addVertex(j, m, 0.0F).setColor(128, 128, 128, 255);
-        bufferBuilder.addVertex(k, m, 0.0F).setColor(128, 128, 128, 255);
-        bufferBuilder.addVertex(k, l, 0.0F).setColor(128, 128, 128, 255);
-        bufferBuilder.addVertex(j, l, 0.0F).setColor(128, 128, 128, 255);
-        bufferBuilder.addVertex(j, m - 1, 0.0F).setColor(192, 192, 192, 255);
-        bufferBuilder.addVertex(k - 1, m - 1, 0.0F).setColor(192, 192, 192, 255);
-        bufferBuilder.addVertex(k - 1, l, 0.0F).setColor(192, 192, 192, 255);
-        bufferBuilder.addVertex(j, l, 0.0F).setColor(192, 192, 192, 255);
-        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-    }
-
-    protected boolean isMouseInside(double x, double y) {
-        return x >= (double)this.getX() && x < (double)(this.getX() + this.width) && y >= (double)this.getY() && y < (double)(this.getY() + this.height);
-    }
-
+    protected double getOffset() { return offset; }
+    protected void setOffset(double value) { offset = Mth.clamp(value, 0, getMaxOffset()); }
+    protected int getMaxOffset() { return Math.max(0, getContentHeight() - height); }
+    protected boolean isMouseInside(double x, double y) { return x >= getX() && x < getRight() && y >= getY() && y < getBottom(); }
     protected abstract int getContentHeight();
-
     protected abstract boolean getScrollBarVisible();
-
     protected abstract double getScrollInterval();
-
-#if MC_VERSION >= "12000"
-    protected abstract void renderContents(GuiGraphics var1, int var2, int var3, float var4);
-#else
-    protected abstract void renderContents(PoseStack var1, int var2, int var3, float var4);
-#endif
-
-#if MC_VERSION < "11903"
-    protected int getX() {
-        return x;
-    }
-
-    protected int getY() {
-        return y;
-    }
-#endif
+    protected abstract void renderContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta);
 }
-

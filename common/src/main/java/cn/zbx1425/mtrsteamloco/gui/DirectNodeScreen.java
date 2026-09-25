@@ -23,9 +23,7 @@ import mtr.screen.WidgetBetterTextField;
 import mtr.data.IGui;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Block;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.client.ClientData;
 import mtr.data.RailAngle;
@@ -57,18 +55,14 @@ public class DirectNodeScreen extends Screen {
 
     private BlockEntityDirectNode entity;
     private Supplier<Screen> parent;
-    #if MC_VERSION >= "12000"
-    private GuiGraphics matrices;
-#else 
-    private PoseStack matrices;
-#endif
+    private GuiGraphicsExtractor matrices;
     private int mouseX, mouseY;
     private float partialTick;
 
     Button btnReturn = UtilitiesClient.newButton(Text.literal("X"), btn -> onClose());
     Button btnCirculateMode = UtilitiesClient.newButton(Text.literal("⇄"), btn -> switchMode(getMode() + 1));
     Button btnAdjust = UtilitiesClient.newButton(Text.translatable("gui.mtrsteamloco.adjust_settings"), btn -> {
-        minecraft.setScreen(createAdjustScreen(() -> new DirectNodeScreen(entity, parent)));
+        minecraft.gui.setScreen(createAdjustScreen(() -> new DirectNodeScreen(entity, parent)));
     });
     Button btnUnbind = UtilitiesClient.newButton(Text.translatable("gui.mtrsteamloco.direct_node.unbind"), btn -> {
         entity.unbind();
@@ -124,11 +118,7 @@ public class DirectNodeScreen extends Screen {
     }
 
     @Override
-#if MC_VERSION >= "12000"
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-#else
-    public void render(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
-#endif
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.matrices = guiGraphics;
         this.mouseX = mouseX;
         this.mouseY = mouseY;
@@ -139,10 +129,10 @@ public class DirectNodeScreen extends Screen {
         IDrawing.setPositionAndWidth(btnAdjust, width / 2 + w / 2 - 100, height - 80, 50);
         IDrawing.setPositionAndWidth(btnUnbind, width / 2 - w / 2, height - 80, 60);
         btnUnbind.active = entity.isBound() && !entity.isConnected();
-        btnUnbind.render(matrices, mouseX, mouseY, partialTick);
-        btnReturn.render(matrices, mouseX, mouseY, partialTick);
-        btnAdjust.render(matrices, mouseX, mouseY, partialTick);
-        btnCirculateMode.render(matrices, mouseX, mouseY, partialTick);
+        btnUnbind.extractRenderState(matrices, mouseX, mouseY, partialTick);
+        btnReturn.extractRenderState(matrices, mouseX, mouseY, partialTick);
+        btnAdjust.extractRenderState(matrices, mouseX, mouseY, partialTick);
+        btnCirculateMode.extractRenderState(matrices, mouseX, mouseY, partialTick);
         pattern.render();
     }
 
@@ -151,7 +141,7 @@ public class DirectNodeScreen extends Screen {
     }
 
     public void onClose() {
-        minecraft.setScreen(parent.get());
+        minecraft.gui.setScreen(parent.get());
     }
 
     @Override
@@ -239,7 +229,7 @@ public class DirectNodeScreen extends Screen {
         public void render() {
             int w = Math.min(width - 40, 380);
             IDrawing.setPositionAndWidth(slider, width / 2 - w / 2, DirectNodeScreen.this.height - 50, width / 2 + w / 2);
-            slider.render(matrices, mouseX, mouseY, partialTick);
+            slider.extractRenderState(matrices, mouseX, mouseY, partialTick);
         }
 
         @Override
@@ -275,7 +265,7 @@ public class DirectNodeScreen extends Screen {
         public void render() {
             int w = Math.min(width - 40, 380 - IGui.TEXT_FIELD_PADDING);
             IDrawing.setPositionAndWidth(textField, width / 2 - w / 2, DirectNodeScreen.this.height - 50, width / 2 + w / 2);
-            textField.render(matrices, mouseX, mouseY, partialTick);
+            textField.extractRenderState(matrices, mouseX, mouseY, partialTick);
         }
 
         @Override

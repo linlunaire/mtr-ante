@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.MTRClient;
 import mtr.data.TrainClient;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import mtr.mappings.RenderBufferSource;
 import net.minecraft.world.entity.player.Player;
 import cn.zbx1425.mtrsteamloco.scripting.util.TimingUtil;
 import mtr.mappings.Text;
@@ -16,7 +16,7 @@ import java.time.format.DateTimeFormatter;
 public class RenderUtil {
 
     public static PoseStack commonPoseStack = null;
-    public static MultiBufferSource commonVertexConsumers = null;
+    public static RenderBufferSource commonVertexConsumers = null;
 
     public static double runningSeconds;
     public static double frameSeconds;
@@ -72,8 +72,8 @@ public class RenderUtil {
     public static void displayStatusMessage(String msg) {
         if (Minecraft.getInstance().player == null) System.out.println(msg);
         else
-            Minecraft.getInstance().player.displayClientMessage(Text.literal(
+            Minecraft.getInstance().player.sendSystemMessage(Text.literal(
                 String.format("[%s] %s", LocalTime.now().withNano(0).format(DateTimeFormatter.ISO_LOCAL_TIME), msg)
-            ), false);
+            ));
     }
 }

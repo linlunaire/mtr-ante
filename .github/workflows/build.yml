@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches: [master]
-    tags: ['1.1.1-1.21.1-*', '1.1.1-26.2-*']
+    tags: ['*-26.2', '*-26.2-*']
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -13,53 +13,35 @@ permissions:
 
 jobs:
   build:
-    name: Minecraft ${{ matrix.minecraft }}
+    name: Minecraft 26.2
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - minecraft: '1.21.1'
-            java: '21'
-            mtr-ref: '52095c771f8ab36527a723bb922fc6d8650bd4b5'
-            mtr-args: ''
-            artifacts: 'mtr-ante/build/MTR-ANTE-*-1.21.1-*.jar'
-          - minecraft: '26.2'
-            java: '25'
-            mtr-ref: 'fa2a24a39b978a1c81c64319c5d16da837ede250'
-            mtr-args: '-Version=26.2'
-            artifacts: 'mtr-ante/build/release/MTR-ANTE-*-26.2-*.jar'
     steps:
       - name: Checkout ANTE
         uses: actions/checkout@v5
         with:
           path: mtr-ante
-      - name: Checkout pinned MTR dependency
+      - name: Checkout MTR dependency
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: ${{ matrix.mtr-ref }}
+          ref: master
           path: Minecraft-Transit-Railway-3.x.x
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: graalvm
-          java-version: ${{ matrix.java }}
+          java-version: '25'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
       - name: Build MTR dependency
         working-directory: Minecraft-Transit-Railway-3.x.x
-        run: chmod +x gradlew && ./gradlew build ${{ matrix.mtr-args }} --stacktrace
-      - name: Check version selection
-        working-directory: mtr-ante
-        shell: pwsh
-        run: ./scripts/tests/build-entry-tests.ps1
+        run: chmod +x gradlew && ./gradlew build --stacktrace
       - name: Build ANTE Fabric and NeoForge
         working-directory: mtr-ante
-        run: chmod +x gradlew versions/26.2/gradlew && ./gradlew build -Version="${{ matrix.minecraft }}" --stacktrace
+        run: chmod +x gradlew && ./gradlew build --stacktrace
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ANTE-${{ matrix.minecraft }}
-          path: ${{ matrix.artifacts }}
+          name: ANTE-26.2
+          path: mtr-ante/build/release/MTR-ANTE-*-26.2.jar
           if-no-files-found: error

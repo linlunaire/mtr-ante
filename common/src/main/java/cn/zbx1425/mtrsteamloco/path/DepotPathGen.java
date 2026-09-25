@@ -54,7 +54,7 @@ public class DepotPathGen {
         }
 
 		final int cruisingAltitude = depot.cruisingAltitude;
-		final boolean useFastSpeed = cruisingAltitude >= world.getMaxBuildHeight() + 64;
+		final boolean useFastSpeed = cruisingAltitude >= (world.getMaxY() + 1) + 64;
 		final long id = depot.id;
 		final String name = depot.name;
 

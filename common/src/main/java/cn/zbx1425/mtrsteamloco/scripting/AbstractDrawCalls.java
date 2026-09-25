@@ -40,10 +40,7 @@ public abstract class AbstractDrawCalls {
             if (model != null) {
                 drawScheduler.enqueue(model, finalPose, light);
             } else {
-                ModelCluster model = modelHolder.getUploadedModel();
-                if (model != null) {
-                    drawScheduler.enqueue(model, finalPose, light);
-                }
+                modelHolder.withUploadedModel(model -> drawScheduler.enqueue(model, finalPose, light));
             }
         }
 

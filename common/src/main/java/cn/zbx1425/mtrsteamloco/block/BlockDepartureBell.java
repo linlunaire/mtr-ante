@@ -16,10 +16,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-#if MC_VERSION < "12000"
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-#endif
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -28,11 +24,7 @@ public class BlockDepartureBell extends BlockDirectionalMapper {
 
     public BlockDepartureBell() {
         super(
-#if MC_VERSION < "12000"
-                BlockBehaviour.Properties.of(Material.METAL, MaterialColor.COLOR_GRAY)
-#else
                 BlockBehaviour.Properties.of()
-#endif
                         .strength(2)
         );
     }

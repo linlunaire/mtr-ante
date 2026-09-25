@@ -2,7 +2,7 @@ package cn.zbx1425.mtrsteamloco.network;
 
 import mtr.data.TransportMode;
 import mtr.block.BlockNode;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import mtr.RegistryClient;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.Block;
 
 
 public class PacketReplaceRailNode {
-    public static ResourceLocation C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "replace_rail_node");
+    public static Identifier C2S = Identifier.fromNamespaceAndPath(Main.MOD_ID, "replace_rail_node");
 
     public static void sendUpdateC2S(Level level, BlockPos pos, BlockState state, String screenName) {
         Block block = state.getBlock();
@@ -34,7 +34,7 @@ public class PacketReplaceRailNode {
         if (level == null) return;
 
         FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-        packet.writeResourceLocation(level.dimension().location());
+        packet.writeIdentifier(level.dimension().identifier());
         packet.writeBlockPos(pos);
         packet.writeFloat(dir);
         packet.writeUtf(screenName);
@@ -50,11 +50,7 @@ public class PacketReplaceRailNode {
     }
 
     public static void receiveUpdateC2S(MinecraftServer server, ServerPlayer player, FriendlyByteBuf packet) {
-#if MC_VERSION >= "11903"
         ResourceKey<Level> levelKey = packet.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION);
-#else
-        ResourceKey<Level> levelKey = ResourceKey.create(net.minecraft.core.Registry.DIMENSION_REGISTRY, packet.readResourceLocation());
-#endif
         
         BlockPos pos = packet.readBlockPos();
         float dir = packet.readFloat();

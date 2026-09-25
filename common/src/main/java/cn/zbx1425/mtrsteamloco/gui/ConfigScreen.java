@@ -10,8 +10,6 @@ import me.shedaniel.clothconfig2.gui.entries.StringListEntry;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import mtr.mappings.Text;
 import net.minecraft.client.Minecraft;
-#if MC_VERSION >= "12000"
-#endif
 import net.minecraft.client.gui.screens.Screen;
 
 import java.util.List;
@@ -47,7 +45,7 @@ public final class ConfigScreen {
                     boolean needReload = ClientConfig.enableRail3D != checked;
                     ClientConfig.enableRail3D = checked;
                     if (needReload) {
-                        Minecraft.getInstance().levelRenderer.allChanged();
+                        Minecraft.getInstance().levelExtractor.allChanged();
                     }
                 }).setDefaultValue(true).build()
         );
@@ -63,7 +61,7 @@ public final class ConfigScreen {
                     boolean needReload = ClientConfig.enableRailDeform != checked;
                     ClientConfig.enableRailDeform = checked;
                     if (ClientConfig.enableRail3D && needReload) {
-                        Minecraft.getInstance().levelRenderer.allChanged();
+                        Minecraft.getInstance().levelExtractor.allChanged();
                     }
                 }).setDefaultValue(true)
                 .setTooltip(Text.translatable("gui.mtrsteamloco.config.client.rail_deform.description")).build()

@@ -42,8 +42,8 @@ public class MainClient {
 			RegistryClient.registerNetworkReceiver(PacketScreen.PACKET_SHOW_SCREEN, PacketScreen::receiveScreenS2C);
 			RegistryClient.registerNetworkReceiver(PacketRoutePathCreator.ROUTE_S2C, PacketRoutePathCreator::receiveRouteS2C);
 
-			RegistryClient.registerItemModelPredicate("mtr:selected", Main.BRIDGE_CREATOR_1.get(), ItemBlockClickingBase.TAG_POS);
-			RegistryClient.registerItemModelPredicate("mtr:selected", Main.COMPOUND_CREATOR.get(), ItemBlockClickingBase.TAG_POS);
+			// Selection is defined by assets/mtrsteamloco/items in 26.2.
+			// Selection is defined by assets/mtrsteamloco/items in 26.2.
 			RegistryClient.registerKeyBinding(KeyMappings.TRAIN_SCREEN);
 		}
 

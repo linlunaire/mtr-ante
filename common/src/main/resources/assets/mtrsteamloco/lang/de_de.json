@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "Ersetzung",
     "gui.mtrsteamloco.no_tasks_found": "Keine Aufgaben gefunden",
     "key.mtrsteamloco.train_screen": "Zugmenü",
-    "category.mtrsteamloco.keybinding": "ANTE-Tastenbelegungen",
+    "key.category.mtrsteamloco.keybinding": "ANTE-Tastenbelegungen",
     "gui.mtr.percentage_complete_slice": "Segmentierung (%s%%)",
     "gui.mtr.rail_action_slice": "Segment von %s erstellt (%s Blöcke)",
     "gui.mtrsteamloco.direct_node.unbound": "Gerader Knoten nicht verbunden",

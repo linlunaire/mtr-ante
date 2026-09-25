@@ -13,7 +13,7 @@ import cn.zbx1425.sowcer.math.PoseStackUtil;
 import cn.zbx1425.sowcerext.model.ModelCluster;
 import cn.zbx1425.sowcerext.model.integration.BufferSourceProxy;
 import cn.zbx1425.mtrsteamloco.ClientConfig;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.RegistryObject;
 import mtr.block.BlockNode;
@@ -23,8 +23,8 @@ import mtr.data.TrainClient;
 import mtr.data.RailAngle;
 import mtr.mappings.BlockEntityRendererMapper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.util.LightCoordsUtil;
+import mtr.mappings.RenderBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -32,11 +32,7 @@ import cn.zbx1425.sowcer.object.VertArray;
 import cn.zbx1425.sowcer.model.VertArrays;
 import cn.zbx1425.mtrsteamloco.render.integration.MtrModelRegistryUtil;
 import net.minecraft.client.renderer.LevelRenderer;
-#if MC_VERSION >= "11904"
 import net.minecraft.world.item.ItemDisplayContext;
-#else
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-#endif
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -52,8 +48,8 @@ import java.util.Map;
 
 public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<BlockEntityDirectNode> {
 
-    private static final ResourceLocation VERTICAL_MODEL_LOCATION = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_vertical.obj");
-    private static final ResourceLocation CONNECTION_MODEL_LOCATION = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_connection.obj");
+    private static final Identifier VERTICAL_MODEL_LOCATION = Identifier.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_vertical.obj");
+    private static final Identifier CONNECTION_MODEL_LOCATION = Identifier.fromNamespaceAndPath(Main.MOD_ID, "models/block/rail_node_connection.obj");
 
     private static ModelCluster VERTICAL_MODEL = null;
     private static ModelCluster CONNECTION_MODEL = null;
@@ -93,7 +89,7 @@ public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<Blo
     private static HashSet<BlockEntityDirectNode> entitysToRenderWritting = new HashSet<>();
 
     @Override
-    public void render(BlockEntityDirectNode blockEntity, float f, @NotNull PoseStack matrices, @NotNull MultiBufferSource vertexConsumers, int light, int overlay) {
+    public void render(BlockEntityDirectNode blockEntity, float f, @NotNull PoseStack matrices, @NotNull RenderBufferSource vertexConsumers, int light, int overlay) {
         entitysToRenderWritting.add(blockEntity);
     }
 
@@ -102,7 +98,7 @@ public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<Blo
         entitysToRenderWritting = new HashSet<>();
     }
 
-    public static void commit(@NotNull PoseStack matrices, @NotNull MultiBufferSource vertexConsumers) {
+    public static void commit(@NotNull PoseStack matrices, @NotNull RenderBufferSource vertexConsumers) {
         if (VERTICAL_MODEL == null || CONNECTION_MODEL == null) return;
         Matrix4f worldPose = new Matrix4f(matrices.last().pose()).copy();
         HashSet<BlockEntityDirectNode> temp = new HashSet<>(entitysToRender);
@@ -110,9 +106,9 @@ public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<Blo
             if (blockEntity == null) continue;
             
             final Level world = blockEntity.getLevel();
-            if (world == null) continue;
+            if (world == null || world != Minecraft.getInstance().level || blockEntity.isRemoved()) continue;
 
-            int light = LevelRenderer.getLightColor(world, blockEntity.getBlockPos());;
+            int light = LightCoordsUtil.getLightCoords(world, blockEntity.getBlockPos());;
 
             Matrix4f basePose = worldPose.copy();
             final BlockPos pos = blockEntity.getBlockPos();
@@ -134,7 +130,7 @@ public class BlockEntityDirectNodeRenderer extends BlockEntityRendererMapper<Blo
     }
 
     @Override
-    public boolean shouldRenderOffScreen(@NotNull BlockEntityDirectNode blockEntity) {
+    public boolean shouldRenderOffScreen() {
         return true;
     }
 

@@ -4,7 +4,8 @@ import cn.zbx1425.sowcer.batch.MaterialProp;
 import cn.zbx1425.sowcer.model.Mesh;
 import cn.zbx1425.sowcer.object.IndexBuf;
 import cn.zbx1425.sowcer.object.VertBuf;
-import cn.zbx1425.sowcer.util.OffHeapAllocator;
+import java.nio.ByteOrder;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import cn.zbx1425.sowcer.util.DrawContext;
 import cn.zbx1425.sowcer.vertex.VertAttrMapping;
 import cn.zbx1425.sowcer.vertex.VertAttrSrc;
@@ -12,7 +13,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrType;
 import cn.zbx1425.sowcerext.model.integration.FaceList;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import cn.zbx1425.sowcer.math.Vector3f;
-import org.lwjgl.opengl.GL11;
+
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -185,73 +186,72 @@ public class RawMesh {
     public Mesh upload(VertAttrMapping mapping) {
         validateVertIndex();
         VertBuf vertBufObj = new VertBuf();
-        IndexBuf indexBufObj = new IndexBuf(faces.size(), GL11.GL_UNSIGNED_INT);
+        IndexBuf indexBufObj = new IndexBuf(faces.size(), 0x1405);
         Mesh target = new Mesh(vertBufObj, indexBufObj, materialProp);
         upload(target, mapping);
         return target;
     }
 
     public Supplier<Mesh> uploadAsync(VertAttrMapping mapping) {
-        validateVertIndex();
-        Consumer<Mesh> consumer = _uploadAsync(mapping);
-        return () -> {
-            VertBuf vertBufObj = new VertBuf();
-            IndexBuf indexBufObj = new IndexBuf(faces.size(), GL11.GL_UNSIGNED_INT);
-            Mesh target = new Mesh(vertBufObj, indexBufObj, materialProp);
-            consumer.accept(target);
-            return target;
+        final Consumer<Mesh> upload = _uploadAsync(mapping);
+        final MaterialProp capturedMaterial = materialProp.copy();
+        return new Supplier<>() {
+            private Mesh result;
+            @Override public synchronized Mesh get() {
+                if (result == null) {
+                    final Mesh candidate = new Mesh(new VertBuf(), new IndexBuf(0, 0x1405), capturedMaterial);
+                    try { upload.accept(candidate); result = candidate; }
+                    catch (RuntimeException | Error error) { candidate.close(); throw error; }
+                }
+                return result;
+            }
         };
     }
 
     private Consumer<Mesh> _uploadAsync(VertAttrMapping mapping) {
-        distinct();
-
-        ByteBuffer vertBuf = OffHeapAllocator.allocate(vertices.size() * mapping.strideVertex);
-        for (int i = 0; i < vertices.size(); ++i) {
-            if (mapping.sources.get(VertAttrType.POSITION).inVertBuf()) {
-                Vector3f pos = vertices.get(i).position;
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.POSITION));
-                vertBuf.putFloat(pos.x()).putFloat(pos.y()).putFloat(pos.z());
+        // Both immediate and deferred uploads own their geometry. Packing must not rewrite caller indices.
+        final RawMesh snapshot = copy();
+        snapshot.validateVertIndex();
+        snapshot.triangulate();
+        snapshot.distinct();
+        final List<Vertex> vertices = snapshot.vertices;
+        final List<Face> faces = snapshot.faces;
+        final int faceCount = faces.size();
+        final ByteBuffer vertBuf = ByteBuffer.allocate(Math.multiplyExact(vertices.size(), mapping.strideVertex)).order(ByteOrder.nativeOrder());
+        for (int i = 0; i < vertices.size(); i++) {
+            final Vertex vertex = vertices.get(i);
+            for (VertAttrType type : VertAttrType.values()) {
+                if (!mapping.sources.get(type).inVertBuf()) continue;
+                vertBuf.position(getVertBufPos(mapping, i, type));
+                switch (type) {
+                    case POSITION -> vertBuf.putFloat(vertex.position.x()).putFloat(vertex.position.y()).putFloat(vertex.position.z());
+                    case COLOR -> vertBuf.putInt(vertex.color);
+                    case UV_TEXTURE -> vertBuf.putFloat(vertex.u).putFloat(vertex.v);
+                    case UV_OVERLAY -> {
+                        int packed = snapshot.materialProp.attrState.overlayUV == null ? OverlayTexture.NO_OVERLAY
+                                : cn.zbx1425.sowcer.util.AttrUtil.exchangeLightmapUVBits(snapshot.materialProp.attrState.overlayUV);
+                        vertBuf.putShort((short) packed).putShort((short) (packed >>> 16));
+                    }
+                    case UV_LIGHTMAP -> vertBuf.putShort((short) vertex.light).putShort((short) (vertex.light >>> 16));
+                    case NORMAL -> {
+                        Vector3f normal = vertex.normal.copy();
+                        if (!vecIsZero(normal)) normal.normalize();
+                        vertBuf.put((byte) (normal.x() * 127)).put((byte) (normal.y() * 127)).put((byte) (normal.z() * 127));
+                    }
+                    case MATRIX_MODEL -> {
+                        Matrix4f matrix = new Matrix4f();
+                        if (snapshot.materialProp.attrState.matrixModel != null) matrix = snapshot.materialProp.attrState.matrixModel.apply(matrix);
+                        for (float value : matrix.asMoj().get(new float[16])) vertBuf.putFloat(value);
+                    }
+                }
             }
-            if (mapping.sources.get(VertAttrType.COLOR).inVertBuf()) {
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.COLOR));
-                vertBuf.putInt(vertices.get(i).color);
-            }
-            if (mapping.sources.get(VertAttrType.UV_TEXTURE).inVertBuf()) {
-                float u = vertices.get(i).u;
-                float v = vertices.get(i).v;
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_TEXTURE));
-                vertBuf.putFloat(u).putFloat(v);
-            }
-            if (mapping.sources.get(VertAttrType.UV_LIGHTMAP).inVertBuf()) {
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_LIGHTMAP));
-                vertBuf.putInt(vertices.get(i).light);
-            }
-            if (mapping.sources.get(VertAttrType.NORMAL).inVertBuf()) {
-                Vector3f mojNormal = vertices.get(i).normal.copy();
-                mojNormal.normalize();
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.NORMAL));
-                vertBuf.put((byte) (mojNormal.x() * 0x7F)).put((byte) (mojNormal.y() * 0x7F)).put((byte) (mojNormal.z() * 0x7F));
-            }
-            for (int k = 0; k < mapping.paddingVertex; k++) vertBuf.put((byte)0);
         }
-
-        ByteBuffer indexBuf = OffHeapAllocator.allocate(faces.size() * 3 * 4);
-        for (Face face : faces) {
-            for (int j = 0; j < face.vertices.length; ++j) {
-                indexBuf.putInt(face.vertices[j]);
-            }
-        }
-
-        boolean[] executed = new boolean[] {false};
+        final ByteBuffer indexBuf = ByteBuffer.allocate(Math.multiplyExact(faceCount, 12)).order(ByteOrder.nativeOrder());
+        for (Face face : faces) for (int vertex : face.vertices) indexBuf.putInt(vertex);
         return mesh -> {
-            if (executed[0]) return;
-            executed[0] = true;
             mesh.vertBuf.upload(vertBuf, VertBuf.USAGE_STATIC_DRAW);
-            OffHeapAllocator.free(vertBuf);
             mesh.indexBuf.upload(indexBuf, VertBuf.USAGE_STATIC_DRAW);
-            mesh.indexBuf.setFaceCount(faces.size());
-            OffHeapAllocator.free(indexBuf);
+            mesh.indexBuf.setFaceCount(faceCount);
         };
     }
 

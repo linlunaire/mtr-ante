@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import mtr.CreativeModeTabs;
 import mtr.item.ItemWithCreativeTabBase;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Player;
@@ -48,38 +48,38 @@ public class RoutePathCreator extends ItemWithCreativeTabBase {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
+    public net.minecraft.world.InteractionResult use(Level level, Player player, InteractionHand usedHand) {
         ItemStack itemStack = player.getItemInHand(usedHand);
         if (player instanceof ServerPlayer sp) PacketScreen.sendScreenS2C(sp, "route_path_creator");
-        return InteractionResultHolder.success(itemStack);
+        return net.minecraft.world.InteractionResult.SUCCESS.heldItemTransformedTo(itemStack);
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext tooltipContext, List<Component> list, TooltipFlag flag) {
-        CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompound("ANTE-Data");
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext tooltipContext, net.minecraft.world.item.component.TooltipDisplay tooltipDisplay, java.util.function.Consumer<Component> list, TooltipFlag flag) {
+        CompoundTag tag = ItemStackUtilities.getCustomData(stack).getCompoundOrEmpty("ANTE-Data");
         List<PathData> path = readPath(tag);
         if (path.isEmpty()) {
-            list.add(Text.translatable("tooltip.mtrsteamloco.route_path_creator.empty"));
+            list.accept(Text.translatable("tooltip.mtrsteamloco.route_path_creator.empty"));
         } else {
             if (tag.contains("last_pos")) {
-                BlockPos lastPos = BlockPos.of(tag.getLong("last_pos"));
-                list.add(Text.literal("Last position: " + lastPos.toShortString()));
+                BlockPos lastPos = BlockPos.of(mtr.mappings.CompoundTagMapper.getLong(tag, "last_pos"));
+                list.accept(Text.literal("Last position: " + lastPos.toShortString()));
             }
             BlockPos lastPos = null;
             for (PathData pd : path) {
                 BlockPos currentPos = pd.startingPos;
                 if (lastPos == null) {
-                    list.add(Text.literal("§8" + currentPos.toShortString()));//↕↑↓⇓⇑⇕
+                    list.accept(Text.literal("§8" + currentPos.toShortString()));//↕↑↓⇓⇑⇕
                 } else if (currentPos.equals(lastPos)){
-                    list.add(Text.literal("§8" + currentPos.toShortString()));
+                    list.accept(Text.literal("§8" + currentPos.toShortString()));
                 } else {
-                    list.add(Text.literal("§2" + lastPos.toShortString() + "§r -> §4" + currentPos.toShortString()));
+                    list.accept(Text.literal("§2" + lastPos.toShortString() + "§r -> §4" + currentPos.toShortString()));
                 }
-                list.add(Text.literal("Rail: " + pd.rail.railType.name() + " " + pd.rail.railType.speedLimit + "km/h " + String.format("%.1f", pd.rail.getLength()) + "m " + (pd.dwellTime * 0.5f) + "s"));
+                list.accept(Text.literal("Rail: " + pd.rail.railType.name() + " " + pd.rail.railType.speedLimit + "km/h " + String.format("%.1f", pd.rail.getLength()) + "m " + (pd.dwellTime * 0.5f) + "s"));
                 lastPos = getPos(pd.rail, false);
             }
             if (lastPos != null) {
-                list.add(Text.literal("§8" + lastPos.toShortString()));
+                list.accept(Text.literal("§8" + lastPos.toShortString()));
             }
         }
     }
@@ -102,35 +102,35 @@ CompoundTag {
         BlockPos pos = ctx.getClickedPos();
         Block block = ctx.getLevel().getBlockState(pos).getBlock();
         if (block == null || !(block instanceof BlockNode)) return InteractionResult.FAIL;
-        if (ctx.getLevel().isClientSide) return InteractionResult.SUCCESS;
+        if (ctx.getLevel().isClientSide()) return InteractionResult.SUCCESS;
         Player player = ctx.getPlayer();
         
         ItemStack itemStack = ctx.getItemInHand();
         CompoundTag itemTag = ItemStackUtilities.getCustomData(itemStack);
-        CompoundTag compoundTag = itemTag.getCompound("ANTE-Data");
+        CompoundTag compoundTag = itemTag.getCompoundOrEmpty("ANTE-Data");
         
         RailwayData data = RailwayData.getInstance(ctx.getLevel());
         if (data == null) {
-            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.data_not_found"), true);
+            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.data_not_found"));
             return InteractionResult.SUCCESS;
         }
         Map<BlockPos, Map<BlockPos, Rail>> railMap = ((RailwayDataAccessor) (Object) data).getRails();
 
         if (compoundTag.contains("last_pos")) {
-            BlockPos lastPos = BlockPos.of(compoundTag.getLong("last_pos"));
+            BlockPos lastPos = BlockPos.of(mtr.mappings.CompoundTagMapper.getLong(compoundTag, "last_pos"));
             List<PathData> path = readPath(compoundTag);
             Map<BlockPos, Rail> subMap = railMap.get(lastPos);
             if (subMap == null) {
-                if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.no_rail"), true);
+                if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.no_rail"));
                 return InteractionResult.SUCCESS;
             }
             Rail rail = subMap.get(pos);
             if (rail == null) {
-                if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.no_rail"), true);
+                if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.no_rail"));
                 return InteractionResult.SUCCESS;
             }
             if (rail.railType == RailType.NONE) {
-                if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.one_way"), true);
+                if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.one_way"));
                 return InteractionResult.SUCCESS;
             }
             long pid = 0;
@@ -142,7 +142,7 @@ CompoundTag {
                 }
             }
             if (path.size() == 0 && pid == 0) {
-                if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.must_start_with_platform"), true);
+                if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.must_start_with_platform"));
                 compoundTag.remove("last_pos");
                 return InteractionResult.SUCCESS;
             }
@@ -168,13 +168,13 @@ CompoundTag {
                         // if (rai.railType == RailType.TURN_BACK || rai.railType == RailType.PLATFORM) {
                             if (lastTurnBack) {
                                 if (player != null) {
-                                    player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.repeatedly_turn_back"), true);
+                                    player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.repeatedly_turn_back"));
                                 }
                                 return InteractionResult.SUCCESS;
                             } else {
                                 if (i == 1) {
                                     if (player != null) {
-                                        player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.cannot_turn_back_at_start"), true);
+                                        player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.cannot_turn_back_at_start"));
                                     }
                                     return InteractionResult.SUCCESS;
                                 }
@@ -182,7 +182,7 @@ CompoundTag {
                             }
                         // } else {
                         //     if (player != null) {
-                        //         player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.illegal_turn_back"), true);
+                        //         player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.illegal_turn_back"));
                         //     }
                         //     return InteractionResult.SUCCESS;
                         // }
@@ -191,7 +191,7 @@ CompoundTag {
                         lastTurnBack = false;
                         if (Math.abs(lastAngle.angleDegrees - rai.facingStart.angleDegrees) < 135) {
                             if (player != null) {
-                                player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.angle").append(Text.literal(i + " " + lastAngle.angleDegrees + "->" + rai.facingStart.angleDegrees)), true);
+                                player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.error.angle").append(Text.literal(i + " " + lastAngle.angleDegrees + "->" + rai.facingStart.angleDegrees)));
                             }
                             return InteractionResult.SUCCESS;
                         }
@@ -199,10 +199,10 @@ CompoundTag {
                 }
                 lastAngle = rai.facingEnd;
             }
-            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.success.path", path.size()), true);
+            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.success.path", path.size()));
             writePath(path, compoundTag);
         } else {
-            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.success.pos"), true);
+            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.rail_path_creator.success.pos"));
         }
 
         compoundTag.putLong("last_pos", pos.asLong());
@@ -216,7 +216,7 @@ CompoundTag {
     }
 
     public static List<PathData> readPath(CompoundTag compoundTag) {
-        ByteBuf buf0 = Unpooled.wrappedBuffer(compoundTag.getByteArray("path"));
+        ByteBuf buf0 = Unpooled.wrappedBuffer(mtr.mappings.CompoundTagMapper.getByteArray(compoundTag, "path"));
         FriendlyByteBuf buf = new FriendlyByteBuf(buf0);
         List<PathData> path = new ArrayList<>();
         while (buf.isReadable()) {

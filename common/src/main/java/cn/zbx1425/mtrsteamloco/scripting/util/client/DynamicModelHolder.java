@@ -1,57 +1,64 @@
 package cn.zbx1425.mtrsteamloco.scripting.util.client;
 
-import cn.zbx1425.sowcer.util.GlStateTracker;
 import cn.zbx1425.sowcerext.model.ModelCluster;
 import cn.zbx1425.sowcerext.model.RawModel;
 import cn.zbx1425.sowcerext.reuse.ModelManager;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.pipeline.RenderCall;
+import java.util.function.Consumer;
 
-public class DynamicModelHolder {
+/** CPU model ownership; deferred replacements are consumed when the next frame requests the model. */
+public class DynamicModelHolder implements AutoCloseable {
+    private ModelCluster uploadedModel;
+    private RawModel pending;
+    private boolean closed;
 
-    private ModelCluster uploadedModel = null;
-    
-    private RenderCall uploadCall = null;
-    public void uploadLater(RawModel rawModel) {
-        RawModel finalRawModel = rawModel.copyForMaterialChanges();
-        finalRawModel.sourceLocation = null;
-        uploadCall = () -> upload(rawModel);
-        RenderSystem.recordRenderCall(() -> {
-            if (uploadCall != null) {
-                uploadCall.execute();
-                uploadCall = null;
-            }
-        });
+    public synchronized void uploadLater(RawModel rawModel) {
+        requireOpen();
+        pending = snapshot(rawModel);
     }
 
-    public void uploadNow(RawModel rawModel) {
-        uploadCall = null;
-        RawModel finalRawModel = rawModel.copyForMaterialChanges();
-        finalRawModel.sourceLocation = null;
-        upload(rawModel);
+    public synchronized void uploadNow(RawModel rawModel) {
+        requireOpen();
+        final ModelCluster next = new ModelCluster(snapshot(rawModel), ModelManager.DEFAULT_MAPPING);
+        pending = null;
+        replace(next);
     }
 
-    private void upload(RawModel finalRawModel) {
-        assert RenderSystem.isOnRenderThreadOrInit() == true;
-        boolean needProtection = !GlStateTracker.isStateProtected;
-        if (needProtection) GlStateTracker.capture();
-        ModelCluster lastUploadedModel = uploadedModel;
-        ModelCluster newOne = new ModelCluster(finalRawModel, ModelManager.DEFAULT_MAPPING);
-        this.uploadedModel = newOne;
-        if (lastUploadedModel != null) lastUploadedModel.close();
-        if (needProtection) GlStateTracker.restore();
-    }
-
-    public ModelCluster getUploadedModel() {
+    public synchronized ModelCluster getUploadedModel() {
+        if (closed) return null;
+        if (pending != null) {
+            final ModelCluster next = new ModelCluster(pending, ModelManager.DEFAULT_MAPPING);
+            pending = null;
+            replace(next);
+        }
         return uploadedModel;
     }
 
-    public void close() {
-        RenderSystem.recordRenderCall(() -> {
-            if (uploadedModel != null) {
-                uploadedModel.close();
-                uploadedModel = null;
-            }
-        });
+    /** Keep replacement/close out of the frame's acquisition of retained draw data. */
+    public synchronized void withUploadedModel(Consumer<ModelCluster> draw) {
+        final ModelCluster model = getUploadedModel();
+        if (model != null) draw.accept(model);
+    }
+
+    private static RawModel snapshot(RawModel rawModel) {
+        final RawModel copy = rawModel.copy();
+        copy.sourceLocation = null;
+        return copy;
+    }
+
+    private void replace(ModelCluster next) {
+        final ModelCluster previous = uploadedModel;
+        uploadedModel = next;
+        if (previous != null) previous.close();
+    }
+
+    private void requireOpen() {
+        if (closed) throw new IllegalStateException("Dynamic model holder is closed");
+    }
+
+    @Override public synchronized void close() {
+        if (closed) return;
+        closed = true;
+        pending = null;
+        replace(null);
     }
 }

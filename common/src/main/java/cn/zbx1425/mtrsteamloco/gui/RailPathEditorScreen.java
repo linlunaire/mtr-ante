@@ -1,22 +1,16 @@
 package cn.zbx1425.mtrsteamloco.gui;
 
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.MutableComponent;
 import mtr.client.IDrawing;
 import mtr.data.IGui;
 import net.minecraft.client.gui.components.Button;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.gui.screens.Screen;
 
 import java.util.function.Supplier;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
 import cn.zbx1425.mtrsteamloco.network.PacketUpdateRail;
@@ -64,17 +58,13 @@ public class RailPathEditorScreen extends Screen implements IGraphics{
     }
 
 @Override
-#if MC_VERSION >= "12000"
-    public void render(GuiGraphics in, int mouseX, int mouseY, float partialTick) {
-#else
-    public void render(PoseStack in, int mouseX, int mouseY, float partialTick) {
-#endif
-        btnChangePathMode.render(in, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor in, int mouseX, int mouseY, float partialTick) {
+        btnChangePathMode.extractRenderState(in, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent.get());
+        minecraft.gui.setScreen(parent.get());
     }
 
     protected int getMode() {
@@ -95,7 +85,7 @@ public class RailPathEditorScreen extends Screen implements IGraphics{
     protected void changeMode() {
         ((RailExtraSupplier) (Object) rail).changePathMode(1 - ((RailExtraSupplier) (Object) rail).getPathMode());
         updateRail();
-        minecraft.setScreen(createScreen(posStart, posEnd, rail, parent));
+        minecraft.gui.setScreen(createScreen(posStart, posEnd, rail, parent));
     }
 
     protected void updateRail() {
@@ -109,7 +99,7 @@ public class RailPathEditorScreen extends Screen implements IGraphics{
             default: return Text.translatable("tooltip.mtrsteamloco.rail.path_mode.unknown");
         }
     }
-    
+
     public static class Original extends RailPathEditorScreen {
 
         public Original(BlockPos posStart, BlockPos posEnd, Rail rail, Supplier<Screen> parent) {
@@ -123,17 +113,9 @@ public class RailPathEditorScreen extends Screen implements IGraphics{
         }
 
         @Override
-    #if MC_VERSION >= "12000"
-        public void render(GuiGraphics in, int mouseX, int mouseY, float partialTick) {
-    #else
-        public void render(PoseStack in, int mouseX, int mouseY, float partialTick) {
-    #endif
-            super.render(in, mouseX, mouseY, partialTick);
-            final MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(new ByteBufferBuilder(256));
-
-            
-
-            immediate.endBatch();
+        public void extractRenderState(GuiGraphicsExtractor in, int mouseX, int mouseY, float partialTick) {
+            super.extractRenderState(in, mouseX, mouseY, partialTick);
+            // The legacy Bezier screen submitted no geometry; no immediate buffer is needed.
         }
     }
 }

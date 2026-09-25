@@ -23,7 +23,7 @@ import mtr.render.RenderTrains;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -127,7 +127,7 @@ public class RailRenderDispatcher {
 
     public void prepareDraw() {
         if (Minecraft.getInstance().player == null) return;
-        Screen currentScreen = Minecraft.getInstance().screen;
+        Screen currentScreen = Minecraft.getInstance().gui.screen();
         isPreviewingModel = currentScreen instanceof SelectListScreen && ((SelectListScreen)currentScreen).isSelecting();
         if (!isPreviewingModel) {
             isHoldingRailItem = RenderTrains.isHoldingRailRelated(Minecraft.getInstance().player);
@@ -156,7 +156,7 @@ public class RailRenderDispatcher {
         for (Rail rail : railsToRemove) removeRail(rail);
         currentFrameRails.clear();
 
-        Vec3 cameraBlockPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        Vec3 cameraBlockPos = Minecraft.getInstance().gameRenderer.mainCamera().position();
         Vector3f cameraPos = new Vector3f(cameraBlockPos);
         // List<RailChunkBase> railChunkList = new ArrayList<>(this.railChunkList);
         // for (BakedRail rail : railRefMap.values()) {
@@ -169,7 +169,7 @@ public class RailRenderDispatcher {
         // }
         railChunkList.sort(Comparator.comparingDouble(chunk -> chunk.getCameraDistManhattanXZ(cameraBlockPos)));
 
-        Frustum cullingFrustum = ((LevelRendererAccessor)Minecraft.getInstance().levelRenderer).getCullingFrustum();
+        Frustum cullingFrustum = Minecraft.getInstance().gameRenderer.mainCamera().getCullFrustum();
         ShaderProp shaderProp = new ShaderProp().setViewMatrix(viewMatrix);
 
         int maxRailDistance = MTRClient.isReplayMod() ? 64 * 16 : (UtilitiesClient.getRenderDistance() + 3) * 16;
@@ -210,7 +210,7 @@ public class RailRenderDispatcher {
                         nodePose.translate(entryStart.getKey().getX() + 0.5f,
                                 entryStart.getKey().getY(), entryStart.getKey().getZ() + 0.5f);
                         nodePose.rotateY(-(float) entryEnd.getValue().facingStart.angleRadians + (float) Math.PI / 2);
-                        final int light = LightTexture.pack(level.getBrightness(LightLayer.BLOCK, entryStart.getKey()),
+                        final int light = LightCoordsUtil.pack(level.getBrightness(LightLayer.BLOCK, entryStart.getKey()),
                                 level.getBrightness(LightLayer.SKY, entryStart.getKey()));
                         drawScheduler.enqueue(RailModelRegistry.railNodeModel, nodePose, light);
                     }
@@ -219,7 +219,7 @@ public class RailRenderDispatcher {
                         nodePose.translate(entryEnd.getKey().getX() + 0.5f,
                                 entryEnd.getKey().getY(), entryEnd.getKey().getZ() + 0.5f);
                         nodePose.rotateY(-(float) entryEnd.getValue().facingEnd.angleRadians + (float) Math.PI / 2);
-                        final int light = LightTexture.pack(level.getBrightness(LightLayer.BLOCK, entryEnd.getKey()),
+                        final int light = LightCoordsUtil.pack(level.getBrightness(LightLayer.BLOCK, entryEnd.getKey()),
                                 level.getBrightness(LightLayer.SKY, entryEnd.getKey()));
                         drawScheduler.enqueue(RailModelRegistry.railNodeModel, nodePose, light);
                     }
@@ -253,18 +253,8 @@ public class RailRenderDispatcher {
     public void drawBoundingBoxes(PoseStack matrixStack, VertexConsumer buffer) {
         for (RailChunkBase chunk : railChunkList) {
             boolean isChunkEven = chunk.isEven();
-            LevelRenderer.renderLineBox(matrixStack, buffer, chunk.boundingBox,
+            RailDebugGeometry.renderLineBox(matrixStack, buffer, chunk.boundingBox,
                     1.0f, isChunkEven ? 1.0f : 0.0f, isChunkEven ? 0.0f : 1.0f, 1.0f);
-#if DEBUG
-            for (ArrayList<Matrix4f> rail : chunk.containingRails.values()) {
-                for (Matrix4f pieceMat : rail) {
-                    final Vector3f lightPos = pieceMat.getTranslationPart();
-                    final BlockPos lightBlockPos = new BlockPos(lightPos.x(), lightPos.y() + 0.1, lightPos.z());
-                    LevelRenderer.renderLineBox(matrixStack, buffer, new AABB(lightBlockPos),
-                            1.0f, isChunkEven ? 1.0f : 0.0f, isChunkEven ? 0.0f : 1.0f, 1.0f);
-                }
-            }
-#endif
         }
     }
 }

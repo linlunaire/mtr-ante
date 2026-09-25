@@ -1,14 +1,13 @@
 package cn.zbx1425.mtrsteamloco.scripting.util;
 
 import com.google.common.collect.Lists;
+import com.google.gson.JsonPrimitive;
 import net.minecraft.nbt.*;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
 
 public class JsonStringTagVisitor implements TagVisitor {
-    private static final Pattern SIMPLE_VALUE = Pattern.compile("[A-Za-z0-9._+-]+");
     private final StringBuilder builder = new StringBuilder();
 
     public String visit(Tag p_178188_) {
@@ -17,31 +16,31 @@ public class JsonStringTagVisitor implements TagVisitor {
     }
 
     public void visitString(StringTag p_178186_) {
-        this.builder.append(StringTag.quoteAndEscape(p_178186_.getAsString()));
+        this.builder.append(new JsonPrimitive(p_178186_.value()));
     }
 
     public void visitByte(ByteTag p_178164_) {
-        this.builder.append((Object)p_178164_.getAsNumber());
+        this.builder.append(p_178164_.box());
     }
 
     public void visitShort(ShortTag p_178184_) {
-        this.builder.append((Object)p_178184_.getAsNumber());
+        this.builder.append(p_178184_.box());
     }
 
     public void visitInt(IntTag p_178176_) {
-        this.builder.append((Object)p_178176_.getAsNumber());
+        this.builder.append(p_178176_.box());
     }
 
     public void visitLong(LongTag p_178182_) {
-        this.builder.append((Object)p_178182_.getAsNumber());
+        this.builder.append(p_178182_.box());
     }
 
     public void visitFloat(FloatTag p_178172_) {
-        this.builder.append(p_178172_.getAsFloat());
+        this.builder.append(p_178172_.value());
     }
 
     public void visitDouble(DoubleTag p_178168_) {
-        this.builder.append(p_178168_.getAsDouble());
+        this.builder.append(p_178168_.value());
     }
 
     public void visitByteArray(ByteArrayTag p_178162_) {
@@ -105,7 +104,7 @@ public class JsonStringTagVisitor implements TagVisitor {
 
     public void visitCompound(CompoundTag p_178166_) {
         this.builder.append('{');
-        List<String> list = Lists.newArrayList(p_178166_.getAllKeys());
+        List<String> list = Lists.newArrayList(p_178166_.keySet());
         Collections.sort(list);
 
         for(String s : list) {
@@ -113,14 +112,10 @@ public class JsonStringTagVisitor implements TagVisitor {
                 this.builder.append(',');
             }
 
-            this.builder.append('\"').append(handleEscape(s)).append("\":").append((new JsonStringTagVisitor()).visit(p_178166_.get(s)));
+            this.builder.append(new JsonPrimitive(s)).append(':').append((new JsonStringTagVisitor()).visit(p_178166_.get(s)));
         }
 
         this.builder.append('}');
-    }
-
-    protected static String handleEscape(String p_178160_) {
-        return SIMPLE_VALUE.matcher(p_178160_).matches() ? p_178160_ : StringTag.quoteAndEscape(p_178160_);
     }
 
     public void visitEnd(EndTag p_178170_) {

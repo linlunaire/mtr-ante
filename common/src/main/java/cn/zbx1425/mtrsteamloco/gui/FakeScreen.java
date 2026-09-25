@@ -15,6 +15,6 @@ public class FakeScreen extends Screen {
 
     @Override
     protected void init() {
-        minecraft.setScreen(actual.get());
+        minecraft.gui.setScreen(actual.get());
     }
 }

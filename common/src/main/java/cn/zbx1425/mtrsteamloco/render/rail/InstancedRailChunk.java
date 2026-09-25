@@ -20,7 +20,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrSrc;
 import cn.zbx1425.sowcer.vertex.VertAttrState;
 import cn.zbx1425.sowcer.vertex.VertAttrType;
 import com.google.common.io.LittleEndianDataOutputStream;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -83,7 +83,7 @@ public class InstancedRailChunk extends RailChunkBase {
                         yMin = Math.min(yMin, lightPos.y());
                         yMax = Math.max(yMax, lightPos.y());
                         final BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
-                        final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
+                        final int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
                         oStream.writeInt(light);
 
                         byte[] lookAtBytes = new byte[4 * 16];

@@ -14,7 +14,7 @@ import mtr.mappings.UtilitiesClient;
 import mtr.model.ModelSimpleTrainBase;
 import mtr.render.JonModelTrainRenderer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import org.apache.commons.io.FilenameUtils;
 
@@ -36,7 +36,7 @@ public class Debug {
                 try {
                     String textureName = FilenameUtils.getBaseName(renderer.textureId);
                     TrainModelCapture.CaptureResult result = TrainModelCapture.captureModels(
-							renderer.model, ResourceLocation.parse(renderer.textureId + ".png"));
+							renderer.model, Identifier.parse(renderer.textureId + ".png"));
                     result.getNamedModels().values().forEach(RawModel::distinct);
                     ObjModelLoader.saveModels(result.getNamedModels(),
                             outputDir.resolve(trainId + ".obj"),
@@ -44,7 +44,7 @@ public class Debug {
 
                     if (!Files.exists(outputDir.resolve(textureName + ".png"))) {
                         final List<Resource> resources = UtilitiesClient.getResources(Minecraft.getInstance().getResourceManager(),
-								ResourceLocation.parse(renderer.textureId + ".png"));
+								Identifier.parse(renderer.textureId + ".png"));
                         if (!resources.isEmpty()) {
                             try {
                                 try (InputStream is = Utilities.getInputStream(resources.get(0))) {
@@ -63,7 +63,7 @@ public class Debug {
     }
 
     public static void saveAllLoadedModels(Path outputDir) {
-        for (Map.Entry<ResourceLocation, RawModel> pair : MainClient.modelManager.loadedRawModels.entrySet()) {
+        for (Map.Entry<Identifier, RawModel> pair : MainClient.modelManager.loadedRawModels.entrySet()) {
             Path path = Paths.get(outputDir.toString(), pair.getKey().getNamespace(), pair.getKey().getPath());
             try {
                 Files.createDirectories(path.getParent());
@@ -77,7 +77,7 @@ public class Debug {
     }
 
     /*public static void registerAllModelsAsEyeCandy() {
-        for (Map.Entry<ResourceLocation, ModelCluster> entry : MainClient.modelManager.uploadedVertArrays.entrySet()) {
+        for (Map.Entry<Identifier, ModelCluster> entry : MainClient.modelManager.uploadedVertArrays.entrySet()) {
             String key = FilenameUtils.getBaseName(entry.getKey().getPath());
             EyeCandyRegistry.register(key, new EyeCandyProperties(Text.literal(key), entry.getValue(), null));
         }

@@ -2,12 +2,7 @@ package cn.zbx1425.mtrsteamloco.gui.entries;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.Window;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#else
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiComponent;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -77,14 +72,9 @@ public class ButtonCycleListEntry extends TooltipListEntry<Integer> implements C
         return defaultValue == null ? Optional.empty() : Optional.ofNullable(defaultValue.get());
     }
     
-#if MC_VERSION >= "12000"
     @Override
-    public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-#else
-    @Override
-    public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-#endif
-        super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+    public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+        super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         Window window = Minecraft.getInstance().getWindow();
         this.resetButton.active = isEditable() && getDefaultValue().isPresent() && defaultValue.get() != this.index.get();
         UtilitiesClient.setWidgetY(resetButton, y);
@@ -102,19 +92,13 @@ public class ButtonCycleListEntry extends TooltipListEntry<Integer> implements C
             UtilitiesClient.setWidgetX(buttonWidget, x + entryWidth - 150);
         }
         this.buttonWidget.setWidth(150 - resetButton.getWidth() - 2);
-        resetButton.render(matrices, mouseX, mouseY, delta);
-        buttonWidget.render(matrices, mouseX, mouseY, delta);
+        resetButton.extractRenderState(matrices, mouseX, mouseY, delta);
+        buttonWidget.extractRenderState(matrices, mouseX, mouseY, delta);
     }
     
-#if MC_VERSION >= "12000"
-    public static void drawString(GuiGraphics matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
-        matrices.drawString(font, text, x, y, color);
+    public static void drawString(GuiGraphicsExtractor matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        matrices.text(font, text, x, y, color);
     }
-#else
-    public static void drawString(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
-        GuiComponent.drawString(matrices, font, text, x, y, color);
-    }
-#endif
 
     @Override
     public void save() {

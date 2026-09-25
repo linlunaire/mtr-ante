@@ -1,8 +1,5 @@
 package cn.zbx1425.sowcer.vertex;
 
-import cn.zbx1425.sowcer.object.InstanceBuf;
-import cn.zbx1425.sowcer.object.VertBuf;
-import org.lwjgl.opengl.GL33;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -15,7 +12,7 @@ public class VertAttrMapping {
     public final int paddingVertex, paddingInstance;
 
     private VertAttrMapping(HashMap<VertAttrType, VertAttrSrc> sources) {
-        this.sources = sources;
+        this.sources = new HashMap<>(sources);
 
         int strideVertex = 0, strideInstance = 0;
         for (VertAttrType attrType : VertAttrType.values()) {
@@ -48,40 +45,6 @@ public class VertAttrMapping {
 
         this.strideVertex = strideVertex;
         this.strideInstance = strideInstance;
-    }
-
-    public void setupAttrsToVao(VertBuf vertexBuf, InstanceBuf instanceBuf) {
-        for (VertAttrType attrType : VertAttrType.values()) {
-            switch (sources.get(attrType)) {
-                case GLOBAL:
-                    attrType.toggleAttrArray(false);
-                    break;
-                case VERTEX_BUF:
-                case VERTEX_BUF_OR_GLOBAL:
-                    attrType.toggleAttrArray(true);
-                    vertexBuf.bind(GL33.GL_ARRAY_BUFFER);
-                    attrType.setupAttrPtr(strideVertex, pointers.get(attrType));
-                    attrType.setAttrDivisor(0);
-                    break;
-                case INSTANCE_BUF:
-                case INSTANCE_BUF_OR_GLOBAL:
-                    attrType.toggleAttrArray(true);
-                    instanceBuf.bind(GL33.GL_ARRAY_BUFFER);
-                    attrType.setupAttrPtr(strideInstance, pointers.get(attrType));
-                    attrType.setAttrDivisor(1);
-                    break;
-            }
-        }
-    }
-
-    public void applyToggleableAttr(VertAttrState enqueueProp, VertAttrState materialProp) {
-        for (VertAttrType attrType : VertAttrType.values()) {
-            if (sources.get(attrType).isToggleable()) {
-                boolean hasAttr = (enqueueProp != null && enqueueProp.hasAttr(attrType))
-                        || (materialProp != null && materialProp.hasAttr(attrType));
-                attrType.toggleAttrArray(!hasAttr);
-            }
-        }
     }
 
     public static class Builder {

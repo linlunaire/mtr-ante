@@ -6,7 +6,7 @@ import cn.zbx1425.mtrsteamloco.scripting.util.client.DynamicModelHolder;
 import cn.zbx1425.sowcer.math.Matrices;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import cn.zbx1425.sowcerext.model.ModelCluster;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import cn.zbx1425.sowcerext.reuse.DrawScheduler;
 import cn.zbx1425.sowcer.math.Matrix4f;
@@ -67,13 +67,9 @@ public class EyeCandyScriptContext extends AbstractScriptContext {
         scriptResultWriting.addModel(model, poseStack == null ? Matrix4f.IDENTITY : poseStack.last().copy());
     }
 
-    public void playSound(ResourceLocation sound, float volume, float pitch) {
+    public void playSound(Identifier sound, float volume, float pitch) {
         scriptResultWriting.addSound(
-#if MC_VERSION >= "11903"
                 SoundEvent.createVariableRangeEvent(sound),
-#else
-                new SoundEvent(sound),
-#endif
                 volume, pitch
         );
     }

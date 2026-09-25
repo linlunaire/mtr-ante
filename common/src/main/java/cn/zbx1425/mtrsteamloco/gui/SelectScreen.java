@@ -5,7 +5,7 @@ import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -20,16 +20,9 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#endif
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-import cn.zbx1425.mtrsteamloco.gui.CompoundCreatorScreen.SliceTaskScreen.Square;
 import cn.zbx1425.mtrsteamloco.util.PinyinUtils;
-import me.shedaniel.cloth.clothconfig.shadowed.org.yaml.snakeyaml.events.Event.ID;
 
 public class SelectScreen extends Screen {
     public static final Map<String, Integer> SCROLLING_MAP = new HashMap<>();
@@ -65,11 +58,11 @@ public class SelectScreen extends Screen {
         searchField.moveCursorToStart(false);
 
         lblInstruction = new WidgetLabel(0, 0, 0, screenKey.copy().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
-            this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
+            this.minecraft.gui.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
                     Util.getPlatform().openUri(instructionLink);
                 }
-                this.minecraft.setScreen(this);
+                this.minecraft.gui.setScreen(this);
             }, instructionLink, true));
         });
         btnMerge.active = false;
@@ -88,11 +81,11 @@ public class SelectScreen extends Screen {
         searchField.setResponder(this::filter);
         searchField.moveCursorToStart(false);
         lblInstruction = new WidgetLabel(0, 0, 0, screenKey.copy().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
-            this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
+            this.minecraft.gui.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
                     Util.getPlatform().openUri(instructionLink);
                 }
-                this.minecraft.setScreen(this);
+                this.minecraft.gui.setScreen(this);
             }, instructionLink, true));
         });
         btnMerge.active = false;
@@ -108,7 +101,7 @@ public class SelectScreen extends Screen {
             if (node instanceof Tree.Data data) {
                 button = UtilitiesClient.newButton(20, data.name, btn -> onSelected.accept(minecraft, this, data.key));
             } else if (node instanceof Tree.Branch branch) {
-                button = UtilitiesClient.newButton(20, Text.literal("§e❇ ").append(branch.name), btn -> minecraft.setScreen(new SelectScreen(
+                button = UtilitiesClient.newButton(20, Text.literal("§e❇ ").append(branch.name), btn -> minecraft.gui.setScreen(new SelectScreen(
                     () -> this, branch, getSelected, onSelected, instructionLink
                 )));
             }
@@ -119,11 +112,11 @@ public class SelectScreen extends Screen {
         searchField.setResponder(this::filter);
         searchField.moveCursorToStart(false);
         lblInstruction = new WidgetLabel(0, 0, 0, tree.getPathName().append(Text.literal("\n").append(Text.translatable("tooltip.mtrsteamloco.select_screen.info"))), () -> {
-            this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
+            this.minecraft.gui.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
                     Util.getPlatform().openUri(instructionLink);
                 }
-                this.minecraft.setScreen(this);
+                this.minecraft.gui.setScreen(this);
             }, instructionLink, true));
         });
         if (tree.hasSubBranches()) {
@@ -133,7 +126,7 @@ public class SelectScreen extends Screen {
                 for (Map.Entry<String, Tree.Data<T>> entry : leaves.entrySet()) {
                     map.put(entry.getKey(), entry.getValue().name.getString());
                 }
-                minecraft.setScreen(new SelectScreen(() -> this, Text.translatable("gui.mtrsteamloco.select_screen.merged").append(tree.getPathName()), map, getSelected, onSelected, instructionLink));
+                minecraft.gui.setScreen(new SelectScreen(() -> this, Text.translatable("gui.mtrsteamloco.select_screen.merged").append(tree.getPathName()), map, getSelected, onSelected, instructionLink));
             };
             btnMerge.active = true;
         } else {
@@ -198,11 +191,7 @@ public class SelectScreen extends Screen {
     }
 
     @Override
-#if MC_VERSION >= "12000"
-    public void render(GuiGraphics in, int mouseX, int mouseY, float partialTick) {
-#else
-    public void render(PoseStack in, int mouseX, int mouseY, float partialTick) {
-#endif
+    public void extractRenderState(GuiGraphicsExtractor in, int mouseX, int mouseY, float partialTick) {
         String selected = "";
         if (getSelected != null) selected = getSelected.get();
         if (selected == null) selected = "";
@@ -222,38 +211,27 @@ public class SelectScreen extends Screen {
         }
 
         int w = Math.min(width / 3, 320);
-        vcEnableScissor(0, 20, width, height);
+        in.enableScissor(0, 20, w, Math.max(20, height));
+        try {
         int y = 20 -scrolling;
         for (Button button : filteredButtons.values()) {
             IDrawing.setPositionAndWidth(button, 0, y, w);
-            button.render(in, mouseX, mouseY, partialTick);
             button.setAlpha(alpha);
+            button.extractRenderState(in, mouseX, mouseY, partialTick);
             y += 20;
         }
-        RenderSystem.disableScissor();
+        } finally {
+            in.disableScissor();
+        }
 
         btnReturn.setAlpha(alpha);
         searchField.setAlpha(alpha);
         btnMerge.setAlpha(alpha);
         lblInstruction.setAlpha(alpha);
-        btnReturn.render(in, mouseX, mouseY, partialTick);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
-        searchField.render(in, mouseX, mouseY, partialTick);
-        btnMerge.render(in, mouseX, mouseY, partialTick);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
-        lblInstruction.render(in, mouseX, mouseY, partialTick);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-    }
-
-    public static void vcEnableScissor(int x1, int y1, int x2, int y2) {
-        Window window = Minecraft.getInstance().getWindow();
-        int wndHeight = window.getHeight();
-        double guiScale = window.getGuiScale();
-        double scaledX1 = (double)x1 * guiScale;
-        double scaledY1 = (double)wndHeight - (double)y2 * guiScale;
-        double scaledWidth = (double)(x2 - x1) * guiScale;
-        double scaledHeight = (double)(y2 - y1) * guiScale;
-        RenderSystem.enableScissor((int)scaledX1, (int)scaledY1, Math.max(0, (int)scaledWidth), Math.max(0, (int)scaledHeight));
+        btnReturn.extractRenderState(in, mouseX, mouseY, partialTick);
+        searchField.extractRenderState(in, mouseX, mouseY, partialTick);
+        btnMerge.extractRenderState(in, mouseX, mouseY, partialTick);
+        lblInstruction.extractRenderState(in, mouseX, mouseY, partialTick);
     }
 
     @Override
@@ -268,7 +246,7 @@ public class SelectScreen extends Screen {
     @Override
     public void onClose() {
         SCROLLING_MAP.put(screenKey.getString(), scrolling);
-        minecraft.setScreen(parent.get());
+        minecraft.gui.setScreen(parent.get());
     }
 
     @Override

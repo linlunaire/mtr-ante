@@ -13,15 +13,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import net.minecraft.client.player.LocalPlayer;
 import mtr.entity.EntitySeat;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import cn.zbx1425.mtrsteamloco.render.block.BlockEntityEyeCandyRenderer;
 import cn.zbx1425.mtrsteamloco.render.block.BlockEntityDirectNodeRenderer;
 import mtr.render.RenderTrains;
 import net.minecraft.client.Minecraft;
 import cn.zbx1425.mtrsteamloco.Main;
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import mtr.mappings.RenderBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.world.level.Level;
 import cn.zbx1425.mtrsteamloco.gui.DirectNodeScreen;
 import cn.zbx1425.mtrsteamloco.render.RailDistanceRenderer;
@@ -29,7 +29,6 @@ import mtr.mappings.EntityRendererMapper;
 import mtr.entity.EntitySeat;
 import cn.zbx1425.mtrsteamloco.data.Rolling;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mtr.MTRClient;
 import mtr.block.BlockNode;
@@ -48,13 +47,13 @@ import mtr.model.ModelLift1;
 import mtr.path.PathData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.util.LightCoordsUtil;
+import mtr.mappings.RenderBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -77,14 +76,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(RenderTrains.class)
-public class RenderTrainsMixin extends EntityRendererMapper<EntitySeat> implements IGui{
+public abstract class RenderTrainsMixin extends EntityRendererMapper<EntitySeat> implements IGui{
 
     RenderTrainsMixin() {
         super(null);
     }
 
     @Override
-	public ResourceLocation getTextureLocation(EntitySeat entity) {
+	public Identifier getTextureLocation(EntitySeat entity) {
 		return null;
 	}
 
@@ -96,11 +95,16 @@ public class RenderTrainsMixin extends EntityRendererMapper<EntitySeat> implemen
         throw new IllegalStateException("Mixin failed to apply");
     }
 
-    @Shadow(remap = false) private static void renderSignalsStandard(Level world, PoseStack matrices, MultiBufferSource vertexConsumers, Rail rail, BlockPos startPos, BlockPos endPos) {
+    @Shadow(remap = false) private static void renderSignalsStandard(Level world, PoseStack matrices, RenderBufferSource vertexConsumers, Rail rail, BlockPos startPos, BlockPos endPos) {
         throw new IllegalStateException("Mixin failed to apply");
     }
 
-    private static void lambda$render$8(net.minecraft.client.player.LocalPlayer player, net.minecraft.core.BlockPos startPos, int maxRailDistance, java.util.Map<UUID, RailType> renderedRailMap, net.minecraft.world.level.Level world, boolean renderColors, com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.MultiBufferSource vertexConsumers, net.minecraft.core.BlockPos endPos, mtr.data.Rail rail) {
+    /**
+     * @author ANTE contributors
+     * @reason Include curved/vertical rails using ANTE's bounds; retain MTR's rendering branches.
+     */
+    @org.spongepowered.asm.mixin.Overwrite(remap = false)
+    private static void lambda$render$8(net.minecraft.client.player.LocalPlayer player, net.minecraft.core.BlockPos startPos, int maxRailDistance, java.util.Map<UUID, RailType> renderedRailMap, net.minecraft.world.level.Level world, boolean renderColors, com.mojang.blaze3d.vertex.PoseStack matrices, mtr.mappings.RenderBufferSource vertexConsumers, net.minecraft.core.BlockPos endPos, mtr.data.Rail rail) {
 
         if (!((RailExtraSupplier) (Object) rail).isBetween(player.getX(), player.getY(), player.getZ(), maxRailDistance)) {
 			return;
@@ -157,21 +161,31 @@ public class RenderTrainsMixin extends EntityRendererMapper<EntitySeat> implemen
 		}
     }
 
-    @Inject(at = @At("HEAD"),
-            method = "render(Lmtr/entity/EntitySeat;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V")
-    private static void renderHead(EntitySeat entity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers, CallbackInfo ci) {
-        Minecraft.getInstance().level.getProfiler().popPush("MTRRailwayData");
+    @Inject(at = @At("HEAD"), cancellable = true,
+            method = "render(Lmtr/entity/EntitySeat;FLcom/mojang/blaze3d/vertex/PoseStack;Lmtr/mappings/RenderBufferSource;)V")
+    private static void renderHead(EntitySeat entity, float tickDelta, PoseStack matrices, RenderBufferSource vertexConsumers, CallbackInfo ci) {
+        // Seats are extracted before block entities. Use MTR's global extraction-tail pass
+        // for both trains and ANTE, so the current block-entity queue is complete first.
+        if (entity != null) {
+            ci.cancel();
+            return;
+        }
+        net.minecraft.util.profiling.Profiler.get().popPush("MTRRailwayData");
+        // MTR calls this after vanilla block-entity extraction; consume this frame's entries.
+        BlockEntityEyeCandyRenderer.exchange();
+        BlockEntityDirectNodeRenderer.exchange();
+        MainClient.drawContext.resetFrameProfiler();
         RenderUtil.commonVertexConsumers = vertexConsumers;
         RenderUtil.commonPoseStack = matrices;
         RenderUtil.updateElapsedTicks();
     }
 
     @Inject(at = @At("TAIL"),
-            method = "render(Lmtr/entity/EntitySeat;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V")
-    private static void renderTail(EntitySeat entity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers, CallbackInfo ci) {
+            method = "render(Lmtr/entity/EntitySeat;FLcom/mojang/blaze3d/vertex/PoseStack;Lmtr/mappings/RenderBufferSource;)V")
+    private static void renderTail(EntitySeat entity, float tickDelta, PoseStack matrices, RenderBufferSource vertexConsumers, CallbackInfo ci) {
         // Already once per frame, since TAIL
         Rolling.update();
-        Minecraft.getInstance().level.getProfiler().popPush("NTERailwayData");
+        net.minecraft.util.profiling.Profiler.get().popPush("NTERailwayData");
         Matrix4f viewMatrix = new Matrix4f(matrices.last().pose());
         MainClient.railRenderDispatcher.prepareDraw();
         if (ClientConfig.getRailRenderLevel() >= 2) {
@@ -180,8 +194,8 @@ public class RenderTrainsMixin extends EntityRendererMapper<EntitySeat> implemen
             MainClient.drawScheduler.commitRaw(MainClient.drawContext);
 
             GlStateTracker.restore();
-            if (Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes() && !Minecraft.getInstance().showOnlyReducedInfo()) {
-                MainClient.railRenderDispatcher.drawBoundingBoxes(matrices, vertexConsumers.getBuffer(RenderType.lines()));
+            if (Minecraft.getInstance().debugEntries.isCurrentlyEnabled(net.minecraft.client.gui.components.debug.DebugScreenEntries.ENTITY_HITBOXES) && !Minecraft.getInstance().showOnlyReducedInfo()) {
+                MainClient.railRenderDispatcher.drawBoundingBoxes(matrices, vertexConsumers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.lines()));
             }
 
             MainClient.railRenderDispatcher.drawRailNodes(Minecraft.getInstance().level, MainClient.drawScheduler, viewMatrix);

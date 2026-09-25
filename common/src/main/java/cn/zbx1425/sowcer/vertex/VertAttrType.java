@@ -1,18 +1,16 @@
 package cn.zbx1425.sowcer.vertex;
 
-import cn.zbx1425.sowcer.ContextCapability;
-import org.lwjgl.opengl.GL33;
 
 public enum VertAttrType {
 
     // Location must be consistent with MC_FORMAT_ENTITY_MAT in ShaderManager
-    POSITION(0, GL33.GL_FLOAT, 3, 1, false, false),
-    COLOR(1, GL33.GL_UNSIGNED_BYTE, 4, 1, true, false),
-    UV_TEXTURE(2, GL33.GL_FLOAT, 2, 1, false, false),
-    UV_OVERLAY(3, GL33.GL_SHORT, 2, 1, false, true),
-    UV_LIGHTMAP(4, GL33.GL_SHORT, 2, 1, false, true),
-    NORMAL(5, GL33.GL_BYTE, 3, 1, true, false),
-    MATRIX_MODEL(6, GL33.GL_FLOAT, 4, 4, false, false);
+    POSITION(0, 0x1406, 3, 1, false, false),
+    COLOR(1, 0x1401, 4, 1, true, false),
+    UV_TEXTURE(2, 0x1406, 2, 1, false, false),
+    UV_OVERLAY(3, 0x1402, 2, 1, false, true),
+    UV_LIGHTMAP(4, 0x1402, 2, 1, false, true),
+    NORMAL(5, 0x1400, 3, 1, true, false),
+    MATRIX_MODEL(6, 0x1406, 4, 4, false, false);
 
     /** The location of the first OpenGL vertex attribute, corresponding to the one assigned by the Minecraft VertexFormat. */
     public final int location;
@@ -42,14 +40,14 @@ public enum VertAttrType {
 
         int singleSize;
         switch (type) {
-            case GL33.GL_FLOAT:
+            case 0x1406:
                 singleSize = 4;
                 break;
-            case GL33.GL_UNSIGNED_BYTE:
-            case GL33.GL_BYTE:
+            case 0x1401:
+            case 0x1400:
                 singleSize = 1;
                 break;
-            case GL33.GL_SHORT:
+            case 0x1402:
                 singleSize = 2;
                 break;
             default:
@@ -57,39 +55,6 @@ public enum VertAttrType {
                 break;
         };
         this.byteSize = singleSize * size * span;
-    }
-
-    public void toggleAttrArray(boolean enable) {
-        for (int i = 0; i < span; ++i) {
-            if (enable) {
-                GL33.glEnableVertexAttribArray(location + i);
-            } else {
-                GL33.glDisableVertexAttribArray(location + i);
-            }
-        }
-    }
-
-    public void setupAttrPtr(int stride, int pointer) {
-        for (int i = 0; i < span; ++i) {
-            int attrPtr = pointer + (i * byteSize / span);
-            if (iPointer) {
-                if (!ContextCapability.isGL4ES) {
-                    GL33.glVertexAttribIPointer(location + i, size, type, stride, attrPtr);
-                } else {
-                    // GL4ES doesn't have binding for Attrib*i, so make the shader use float
-                    GL33.glVertexAttribPointer(location + i, size, type, false, stride, attrPtr);
-                }
-            } else {
-                GL33.glVertexAttribPointer(location + i, size, type, normalized, stride, attrPtr);
-            }
-        }
-    }
-
-    public void setAttrDivisor(int divisor) {
-        if (!ContextCapability.supportVertexAttribDivisor) return;
-        for (int i = 0; i < span; ++i) {
-            GL33.glVertexAttribDivisor(location + i, divisor);
-        }
     }
 
 }

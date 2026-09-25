@@ -1,7 +1,7 @@
 package cn.zbx1425.mtrsteamloco.scripting;
 
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import com.google.gson.JsonObject;
 import cn.zbx1425.mtrsteamloco.Main;
 import net.minecraft.world.entity.player.Player;
@@ -42,16 +42,16 @@ public abstract class ScriptHolderBase {
     private static ExecutorService SCRIPT_THREAD = Executors.newSingleThreadExecutor();
 
     public final String side;
-    private Context context; 
-    private Value globalBindings; 
-    public final Map<String, List<Value>> functions = new HashMap<>(); 
+    private Context context;
+    private Value globalBindings;
+    public final Map<String, List<Value>> functions = new HashMap<>();
 
     public long failTime = 0;
     public Exception failException = null;
 
     public String name;
     public String contextTypeName;
-    private Map<ResourceLocation, String> scripts;
+    private Map<Identifier, String> scripts;
 
     private JsonObject config;
     private String key;
@@ -70,8 +70,8 @@ public abstract class ScriptHolderBase {
     );
 
     public void load(
-        String name, String contextTypeName, ResourceManager resourceManager, 
-        Map<ResourceLocation, String> scripts, JsonObject config, String key, 
+        String name, String contextTypeName, ResourceManager resourceManager,
+        Map<Identifier, String> scripts, JsonObject config, String key,
         String... functionNames) throws Exception {
         this.name = name;
         this.contextTypeName = contextTypeName;
@@ -86,12 +86,12 @@ public abstract class ScriptHolderBase {
         final FileSystem defFileSystem = FileSystem.newDefaultFileSystem();
         defFileSystem.setCurrentWorkingDirectory(basicFolder);
 
-        context = Context.newBuilder("js")  
+        context = Context.newBuilder("js")
             .allowNativeAccess(false)
             .option("engine.WarnInterpreterOnly", "false")
-            .allowCreateThread(true)  
+            .allowCreateThread(true)
             .allowCreateProcess(false)
-            .allowHostClassLoading(true)  
+            .allowHostClassLoading(true)
             .allowHostClassLookup(trust ? className -> true : className -> {
                 if (loading[0]) return true;
                 for (String allowedPackage : ALLOWED_PACKAGES) {
@@ -107,10 +107,10 @@ public abstract class ScriptHolderBase {
                 } else {
                     return basicFolder.resolve(path).normalize().startsWith(basicFolder);
                 }
-            }))).build())  
-            .allowEnvironmentAccess(EnvironmentAccess.INHERIT)  
-            .allowExperimentalOptions(true)  
-            .allowInnerContextOptions(true)  
+            }))).build())
+            .allowEnvironmentAccess(EnvironmentAccess.INHERIT)
+            .allowExperimentalOptions(true)
+            .allowInnerContextOptions(true)
             .sandbox(SandboxPolicy.TRUSTED)
             .allowHostAccess(
                 HostAccess.newBuilder()
@@ -176,19 +176,19 @@ public abstract class ScriptHolderBase {
             .build();
 
         if (false) {
-        context = Context.newBuilder("js")  
+        context = Context.newBuilder("js")
             .sandbox(SandboxPolicy.TRUSTED)
             .allowPolyglotAccess(true ? PolyglotAccess.ALL : PolyglotAccess.NONE)
             .allowNativeAccess(true)
             .option("engine.WarnInterpreterOnly", "false")
-            .allowCreateThread(true)  
+            .allowCreateThread(true)
             .allowCreateProcess(true)
-            .allowHostClassLoading(true)  
-            .allowHostClassLookup(className -> true)  
-            .allowIO(trust ? IOAccess.ALL : IOAccess.NONE)  
-            .allowEnvironmentAccess(true ? EnvironmentAccess.INHERIT : EnvironmentAccess.NONE)  
-            .allowExperimentalOptions(true)  
-            .allowInnerContextOptions(true)  
+            .allowHostClassLoading(true)
+            .allowHostClassLookup(className -> true)
+            .allowIO(trust ? IOAccess.ALL : IOAccess.NONE)
+            .allowEnvironmentAccess(true ? EnvironmentAccess.INHERIT : EnvironmentAccess.NONE)
+            .allowExperimentalOptions(true)
+            .allowInnerContextOptions(true)
             .allowValueSharing(true)
             .allowHostAccess(
                 HostAccess.newBuilder()
@@ -297,13 +297,13 @@ public abstract class ScriptHolderBase {
             .build();
         }
 
-        globalBindings = context.getBindings("js");    
-        
+        globalBindings = context.getBindings("js");
+
         appendImporter();
-        
-        for (Map.Entry<ResourceLocation, String> entry : scripts.entrySet()) {
-            String scriptContent = entry.getValue() != null ? 
-                entry.getValue() : 
+
+        for (Map.Entry<Identifier, String> entry : scripts.entrySet()) {
+            String scriptContent = entry.getValue() != null ?
+                entry.getValue() :
                 ScriptResourceUtil.readString(entry.getKey());
 
             ScriptResourceUtil.executeScript(context, scriptContent, entry.getKey());
@@ -366,10 +366,10 @@ public abstract class ScriptHolderBase {
 
         inject(Matrices.class, "Matrices");
         inject(Matrix4f.class, "Matrix4f");
-        inject(Vector3f.class, "Vector3f");   
+        inject(Vector3f.class, "Vector3f");
 
         inject(Component.class, "Component");
-        
+
         inject(Optional.class, "Optional");
     }
 
@@ -382,7 +382,7 @@ public abstract class ScriptHolderBase {
         }
     }
 
-    public Future<?> callFunctionAsync(List<Value> functions, AbstractScriptContext scriptCtx, 
+    public Future<?> callFunctionAsync(List<Value> functions, AbstractScriptContext scriptCtx,
                                       Runnable finishCallback, Object... args) {
         if (duringFailTimeout()) return null;
         if (context == null) {
@@ -392,18 +392,18 @@ public abstract class ScriptHolderBase {
 
         return SCRIPT_THREAD.submit(() -> {
             long start = System.nanoTime();
-            try {            
-                TimingUtil.prepareForScript(scriptCtx);    
+            try {
+                TimingUtil.prepareForScript(scriptCtx);
                 Object[] allArgs = new Object[3 + args.length];
                 allArgs[0] = scriptCtx;
                 allArgs[1] = scriptCtx.state != null ? scriptCtx.state : ProxyObject.fromMap(new HashMap<>());
                 allArgs[2] = scriptCtx.getWrapperObject();
                 System.arraycopy(args, 0, allArgs, 3, args.length);
-                
+
                 for (Value function : functions) {
                     function.executeVoid(allArgs);
                 }
-                
+
                 if (finishCallback != null) finishCallback.run();
 
                 failException = null;

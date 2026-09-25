@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.commands.synchronization.brigadier.StringArgumentSerializer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -50,13 +50,13 @@ public class SoundHelper {
         });
     }
 
-    public static void stop(ResourceLocation sound, SoundSource source) {
+    public static void stop(Identifier sound, SoundSource source) {
         Minecraft.getInstance().execute(() -> {
             Minecraft.getInstance().getSoundManager().stop(sound, source);
         });
     }
 
-    public static void stop(ResourceLocation sound) {
+    public static void stop(Identifier sound) {
         Minecraft.getInstance().execute(() -> {
             Minecraft.getInstance().getSoundManager().stop(sound, SoundSource.BLOCKS);
         });

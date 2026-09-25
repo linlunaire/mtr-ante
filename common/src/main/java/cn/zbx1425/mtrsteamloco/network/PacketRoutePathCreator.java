@@ -1,6 +1,6 @@
 package cn.zbx1425.mtrsteamloco.network;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.data.RailwayData;
 import mtr.data.Route;
@@ -24,8 +24,8 @@ import net.minecraft.world.entity.player.Player;
 
 public class PacketRoutePathCreator {
 
-    public static ResourceLocation ROUTE_C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_c2s");
-    public static ResourceLocation ROUTE_S2C = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_s2c");
+    public static Identifier ROUTE_C2S = Identifier.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_c2s");
+    public static Identifier ROUTE_S2C = Identifier.fromNamespaceAndPath(Main.MOD_ID, "route_path_creator/route_s2c");
 
     public static void sendRouteC2S(Route route) {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
@@ -34,11 +34,7 @@ public class PacketRoutePathCreator {
     }
 
     public static void receiveRouteC2S(MinecraftServer server, ServerPlayer player, FriendlyByteBuf packet) {
-#if MC_VERSION >= "12000"
         Level level = player.level();
-#else
-        Level level = player.level;
-#endif
         RailwayData rd = RailwayData.getInstance(level);
         if (rd != null) {
             FriendlyByteBuf np = new FriendlyByteBuf(packet.copy());

@@ -37,7 +37,7 @@ import cn.zbx1425.mtrsteamloco.network.PacketScreen;
 import mtr.data.RailAngle;
 import cn.zbx1425.mtrsteamloco.Main;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.InteractionHand;
 import cn.zbx1425.mtrsteamloco.render.rail.BakedRail;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderBase;
@@ -54,12 +54,12 @@ public class CompoundCreator extends ItemNodeModifierBase {
         super(true, false, false, true);
     }
 
-    public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+    public net.minecraft.world.InteractionResult use(Level world, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!world.isClientSide) {
+        if (!world.isClientSide()) {
             PacketScreen.sendScreenS2C((ServerPlayer) player, "compound_creator");
         }
-        return InteractionResultHolder.success(stack);
+        return net.minecraft.world.InteractionResult.SUCCESS.heldItemTransformedTo(stack);
     }
 
     @Override
@@ -97,17 +97,17 @@ public class CompoundCreator extends ItemNodeModifierBase {
         if (tag.contains(TAG_TASKS)) {
             RailActionsModuleExtraSupplier acc = (RailActionsModuleExtraSupplier) (Object) railwayData.railwayDataRailActionsModule;
             List<Task> tasks = new ArrayList<>();
-            CompoundTag tasksTag = tag.getCompound(TAG_TASKS);
-            Set<String> keys = tasksTag.getAllKeys();
+            CompoundTag tasksTag = tag.getCompoundOrEmpty(TAG_TASKS);
+            Set<String> keys = tasksTag.keySet();
             for (String key : keys) {
-                CompoundTag taskTag = tasksTag.getCompound(key);
-                String type = taskTag.getString(Task.TAG_TYPE);
+                CompoundTag taskTag = tasksTag.getCompoundOrEmpty(key);
+                String type = mtr.mappings.CompoundTagMapper.getString(taskTag, Task.TAG_TYPE);
                 if (type.equals(SliceTask.TYPE)) {
                     tasks.add(new SliceTask(taskTag));
                 } else if (type.equals(RailModifierTask.TYPE)) {
                     tasks.add(new RailModifierTask(taskTag));
                 } else {
-                    player.displayClientMessage(Text.translatable("gui.mtrsteamloco.unknown_task_type", type), true);
+                    player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.unknown_task_type", type));
                 }
             }
             tasks.sort(Comparator.comparingInt(sliceTask -> sliceTask.order));
@@ -119,7 +119,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
                     if (railwayData.containsRail(posStart, posEnd)) {
                         acc.getRailActions().add(new SliceAction(acc.getWorld(), player, acc.getRails().get(posStart).get(posEnd), (SliceTask) tasks.get(i)));
                     } else {
-                        player.displayClientMessage(Text.translatable("gui.mtr.rail_not_found_action"), true);
+                        player.sendOverlayMessage(Text.translatable("gui.mtr.rail_not_found_action"));
                     }
                 } else if (task instanceof RailModifierTask) {
                     changed = true;
@@ -132,7 +132,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
             }
             acc.sendUpdateS2C();
         } else {
-            player.displayClientMessage(Text.translatable("gui.mtrsteamloco.no_tasks_found"), true);
+            player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.no_tasks_found"));
         }
 	}
 
@@ -141,7 +141,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
         RailType railType = baseRail.railType;
         if (railType.hasSavedRail && (railwayData.hasSavedRail(posStart) || railwayData.hasSavedRail(posEnd))) {
 			if (player != null) {
-				player.displayClientMessage(Text.translatable("gui.mtr.platform_or_siding_exists"), true);
+				player.sendOverlayMessage(Text.translatable("gui.mtr.platform_or_siding_exists"));
 			}
 		} else {
 			boolean isValidContinuousMovement;
@@ -204,7 +204,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
 				PacketTrainDataGuiServer.createRailS2C(world, transportMode, posStart, posEnd, rail1, rail2, newId);
                 return true;
 			} else if (player != null) {
-				player.displayClientMessage(Text.translatable(isValidContinuousMovement ? goodRadius ? "gui.mtr.invalid_orientation" : "gui.mtr.radius_too_small" : "gui.mtr.cable_car_invalid_orientation"), true);
+				player.sendOverlayMessage(Text.translatable(isValidContinuousMovement ? goodRadius ? "gui.mtr.invalid_orientation" : "gui.mtr.radius_too_small" : "gui.mtr.cable_car_invalid_orientation"));
 			}
             return false;
 		}
@@ -225,8 +225,8 @@ public class CompoundCreator extends ItemNodeModifierBase {
         }
 
         public Task(CompoundTag compoundTag) {
-            order = compoundTag.getInt(TAG_ORDER);
-            name = compoundTag.getString(TAG_NAME);
+            order = mtr.mappings.CompoundTagMapper.getInt(compoundTag, TAG_ORDER);
+            name = mtr.mappings.CompoundTagMapper.getString(compoundTag, TAG_NAME);
         }
 
         public Task(Task other) {
@@ -319,24 +319,24 @@ public class CompoundCreator extends ItemNodeModifierBase {
 
         public SliceTask(CompoundTag compoundTag) {
             super(compoundTag);
-            this.width = compoundTag.getInt(TAG_WIDTH);
-            this.height = compoundTag.getInt(TAG_HEIGHT);
-            this.start = compoundTag.getDouble(TAG_START);
+            this.width = mtr.mappings.CompoundTagMapper.getInt(compoundTag, TAG_WIDTH);
+            this.height = mtr.mappings.CompoundTagMapper.getInt(compoundTag, TAG_HEIGHT);
+            this.start = mtr.mappings.CompoundTagMapper.getDouble(compoundTag, TAG_START);
             if (compoundTag.contains(TAG_LENGTH)) {
-                this.length = compoundTag.getDouble(TAG_LENGTH);
+                this.length = mtr.mappings.CompoundTagMapper.getDouble(compoundTag, TAG_LENGTH);
             } else {
                 this.length = null;
             }
-            this.increment = compoundTag.getDouble(TAG_INCREMENT);
+            this.increment = mtr.mappings.CompoundTagMapper.getDouble(compoundTag, TAG_INCREMENT);
             if (compoundTag.contains(TAG_INTERVAL)) {
-                this.interval = compoundTag.getDouble(TAG_INTERVAL);
+                this.interval = mtr.mappings.CompoundTagMapper.getDouble(compoundTag, TAG_INTERVAL);
             } else {
                 this.interval = null;
             }
-            this.lumps = Lump.fromByteArray(compoundTag.getByteArray(TAG_LUMPS));
-            this.useYaw = compoundTag.getBoolean(TAG_USE_YAW);
-            this.usePitch = compoundTag.getBoolean(TAG_USE_PITCH);
-            this.useRoll = compoundTag.getBoolean(TAG_USE_ROLL);
+            this.lumps = Lump.fromByteArray(mtr.mappings.CompoundTagMapper.getByteArray(compoundTag, TAG_LUMPS));
+            this.useYaw = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, TAG_USE_YAW);
+            this.usePitch = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, TAG_USE_PITCH);
+            this.useRoll = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, TAG_USE_ROLL);
         }
 
         public boolean setWidthAndHeight(int width, int height) {
@@ -490,11 +490,11 @@ public class CompoundCreator extends ItemNodeModifierBase {
 
         public RailModifierTask(CompoundTag compoundTag) {
             super(compoundTag);
-            ByteBuf buf = Unpooled.wrappedBuffer(compoundTag.getByteArray(TAG_RAIL));
+            ByteBuf buf = Unpooled.wrappedBuffer(mtr.mappings.CompoundTagMapper.getByteArray(compoundTag, TAG_RAIL));
             this.rail = new Rail(new FriendlyByteBuf(buf));
             buf.release();
-            this.isOneWay = compoundTag.getBoolean(TAG_IS_ONE_WAY);
-            this.isReversed = compoundTag.getBoolean(TAG_IS_REVERSED);
+            this.isOneWay = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, TAG_IS_ONE_WAY);
+            this.isReversed = mtr.mappings.CompoundTagMapper.getBoolean(compoundTag, TAG_IS_REVERSED);
             tryCallRailScript();
         }
 
@@ -678,7 +678,7 @@ public class CompoundCreator extends ItemNodeModifierBase {
         private void showProgressMessage(float percentage) {
             final Player player = world.getPlayerByUUID(uuid);
 			if (player != null) {
-				player.displayClientMessage(Text.translatable("gui.mtr.percentage_complete_slice", percentage), true);
+				player.sendOverlayMessage(Text.translatable("gui.mtr.percentage_complete_slice", percentage));
 			}
         }
 

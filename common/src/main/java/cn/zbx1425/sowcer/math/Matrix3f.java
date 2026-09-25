@@ -3,7 +3,6 @@ package cn.zbx1425.sowcer.math;
 import java.nio.FloatBuffer;
 
 public class Matrix3f implements Posture{
-#if MC_VERSION >= "11903"
 
     private final org.joml.Matrix3f impl;
 
@@ -79,71 +78,6 @@ public class Matrix3f implements Posture{
         org.joml.Vector3f srcCpy = new org.joml.Vector3f(src.impl);
         return new Vector3f(this.impl.transform(srcCpy));
     }
-#else
-    private final com.mojang.math.Matrix3f impl;
-
-    public Matrix3f(com.mojang.math.Matrix3f impl) {
-        this.impl = impl;
-    }
-
-    public Matrix3f() {
-        this(new com.mojang.math.Matrix3f());
-    }
-
-    public Matrix3f(Matrix3f other) {
-        this(new com.mojang.math.Matrix3f(other.asMoj()));
-    }
-
-    public Matrix3f(Quaternionf q) {
-        this.impl = new com.mojang.math.Matrix3f(q.asMoj());
-    }
-
-    public Matrix3f(Matrix4f m) {
-        this.impl = new com.mojang.math.Matrix3f(m.asMoj());
-    }
-
-    public void store(FloatBuffer buffer) {
-        this.impl.store(buffer);
-    }
-
-    public void load(FloatBuffer buffer) {
-        this.impl.load(buffer);
-    }
-
-    public void setIdentity() {
-        this.impl.setIdentity();
-    }
-
-    public void multiply(Matrix3f other) {
-        this.impl.mul(other.impl);
-    }
-
-    public void multiply(Quaternionf q) {
-        this.impl.mul(q.asMoj());
-    }
-
-    public void add(Matrix3f other) {
-        this.impl.add(other.impl);
-    }
-
-    public void sub(Matrix3f other) {
-        this.impl.sub(other.impl);
-    }
-
-    public void scale(float sx, float sy, float sz) {
-        this.impl.mul(com.mojang.math.Matrix3f.createScaleMatrix(sx, sy, sz));
-    }
-
-    public com.mojang.math.Matrix3f asMoj() {
-        return this.impl;
-    }
-
-    public Vector3f transform(Vector3f src) {
-        Vector3f pos3 = src.copy();
-        pos3.impl.transform(impl);
-        return pos3;
-    }
-#endif
 
     public void scale(float s) {
         scale(s, s, s);

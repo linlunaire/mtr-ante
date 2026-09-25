@@ -5,7 +5,7 @@ import cn.zbx1425.mtrsteamloco.Main;
 import cn.zbx1425.mtrsteamloco.gui.ErrorScreen;
 import cn.zbx1425.mtrsteamloco.render.integration.MtrModelRegistryUtil;
 import cn.zbx1425.sowcer.ContextCapability;
-import cn.zbx1425.sowcer.util.GlStateTracker;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -14,7 +14,7 @@ import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderBase;
 import mtr.mappings.Utilities;
 import mtr.mappings.UtilitiesClient;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -37,11 +37,9 @@ public class CustomResourcesMixin {
     @Inject(at = @At("HEAD"), method = "reload(Lnet/minecraft/server/packs/resources/ResourceManager;)V")
     private static void reloadHead(ResourceManager manager, CallbackInfo ci) {
         ContextCapability.checkContextVersion();
-        String glVersionStr = "OpenGL " + ContextCapability.contextVersion / 10 + "."
-                + ContextCapability.contextVersion % 10;
-        Main.LOGGER.info("ANTE detected " + glVersionStr + (ContextCapability.isGL4ES ? " (GL4ES)." : "."));
+        Main.LOGGER.info("ANTE detected " + ContextCapability.backendDescription);
 
-        GlStateTracker.capture();
+
         MtrModelRegistryUtil.loadingErrorList.clear();
         MtrModelRegistryUtil.resourceManager = manager;
 
@@ -54,9 +52,9 @@ public class CustomResourcesMixin {
     private static void reloadTail(ResourceManager manager, CallbackInfo ci) {
         CustomResources.resetComponents();
         if (!MtrModelRegistryUtil.loadingErrorList.isEmpty()) {
-            Minecraft.getInstance().setScreen(ErrorScreen.createScreen(MtrModelRegistryUtil.loadingErrorList, Minecraft.getInstance().screen));
+            Minecraft.getInstance().gui.setScreen(ErrorScreen.createScreen(MtrModelRegistryUtil.loadingErrorList, Minecraft.getInstance().gui.screen()));
         }
-        GlStateTracker.restore();
+
 
         Main.LOGGER.info("MTR-ANTE has finished loading custom resources.");
     }
@@ -69,7 +67,7 @@ public class CustomResourcesMixin {
             return;
         }
 
-        ResourceLocation location = ResourceLocation.parse(path);
+        Identifier location = Identifier.parse(path);
         try {
             UtilitiesClient.getResources(manager, location).forEach(resource -> {
                 try (final InputStream stream = Utilities.getInputStream(resource)) {

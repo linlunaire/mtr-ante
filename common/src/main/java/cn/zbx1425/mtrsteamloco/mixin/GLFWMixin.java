@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(GLFW.class)
 public class GLFWMixin {
 
-    // Promote to a higher OpenGL version, as glVertexAttribDivisor is only available in OpenGL 3.3+
+    // Preserve Minecraft's backend-specific window hints; the compatibility helper calls the native entry.
 
     @Inject(method = "glfwCreateWindow(IILjava/lang/CharSequence;JJ)J", at = @At("HEAD"), cancellable = true, remap = false)
     private static void glfwCreateWindow(int width, int height, CharSequence title, long monitor, long share, CallbackInfoReturnable<Long> cir) {

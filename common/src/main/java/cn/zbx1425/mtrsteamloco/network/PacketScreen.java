@@ -15,12 +15,12 @@ import mtr.mappings.UtilitiesClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 public class PacketScreen {
 
-    public static ResourceLocation PACKET_SHOW_SCREEN = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "show_screen");
+    public static Identifier PACKET_SHOW_SCREEN = Identifier.fromNamespaceAndPath(Main.MOD_ID, "show_screen");
 
     public static void sendScreenS2C(ServerPlayer player, String screenName) {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
@@ -75,21 +75,21 @@ public class PacketScreen {
             minecraftClient.execute(() -> {
                 switch (screenName) {
                     case "eye_candy":
-                        minecraftClient.setScreen(EyeCandyScreen.createScreen(pos0, null));
+                        minecraftClient.gui.setScreen(EyeCandyScreen.createScreen(pos0, null));
                         break;
                     case "brush_edit_rail":
-                        minecraftClient.setScreen(BrushEditRailScreen.createScreen(null));
+                        minecraftClient.gui.setScreen(BrushEditRailScreen.createScreen(null));
                         break;
                     case "compound_creator":
-                        minecraftClient.setScreen(CompoundCreatorScreen.createScreen(null));
+                        minecraftClient.gui.setScreen(CompoundCreatorScreen.createScreen(null));
                         break;
                     case "direct_node":
-                        minecraftClient.setScreen(DirectNodeScreen.createScreen(minecraftClient.level, pos0, null));
+                        minecraftClient.gui.setScreen(DirectNodeScreen.createScreen(minecraftClient.level, pos0, null));
                     case "rail_path_editor":
-                        minecraftClient.setScreen(RailPathEditorScreen.createScreen(pos0, pos1, rail, null));
+                        minecraftClient.gui.setScreen(RailPathEditorScreen.createScreen(pos0, pos1, rail, null));
                         break;
                     case "route_path_creator":
-                        minecraftClient.setScreen(RoutePathCreatorScreen.createScreen(null));
+                        minecraftClient.gui.setScreen(RoutePathCreatorScreen.createScreen(null));
                         break;
                 }
             });

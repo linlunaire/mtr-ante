@@ -1,27 +1,57 @@
 # MTR-ANTE
 
-Aphrodite's Nemo's Transit Expansion (MTR-ANTE) 是一个基于 Minecraft Transit Railway（MTR）的实验性功能扩展。
+Custom train and rail models, JavaScript-driven rendering, decorative objects and rail editing tools for Minecraft Transit Railway.
 
-`master` 默认构建 **Minecraft 26.2 / ANTE 1.1.1-beta.5**，同时保留 1.21.1 构建入口。需要配合 [MTR 社区移植版](https://github.com/linlunaire/Minecraft-Transit-Railway) 的同一 Minecraft 版本使用，仅支持 Fabric 与 NeoForge。
+**Aphrodite's Nemo's Transit Expansion**, ported to **Minecraft 26.2** for **Fabric** and **NeoForge**. This community fork extends the [MTR 3 community port](https://github.com/linlunaire/Minecraft-Transit-Railway); it is not a standalone mod or an MTR 4 add-on.
 
-独立 1.21.1 基线保存在 [tag `1.1.1-1.21.1-beta.2`](https://github.com/linlunaire/mtr-ante/tree/1.1.1-1.21.1-beta.2)，对应 [MTR tag `1.21.1-3.3.2`](https://github.com/linlunaire/Minecraft-Transit-Railway/tree/1.21.1-3.3.2)。原有 `alpha` 历史保留，不做重写。
+## Install
 
-> [!WARNING]
-> 此版本仍处于移植测试阶段，可能存在功能缺失、兼容性问题或其他未知问题，不建议用于重要存档。
+Use Java 25 and install ANTE together with the **26.2 MTR community port**, using the same loader for both JARs.
 
-## 构建
+| Loader | Required mods |
+| --- | --- |
+| Fabric | MTR, [Fabric API](https://modrinth.com/mod/fabric-api), [Architectury API](https://modrinth.com/mod/architectury-api) |
+| NeoForge | MTR, [Architectury API](https://modrinth.com/mod/architectury-api) |
 
-26.2 使用 **Java 25 / Gradle 9.5.1**；1.21.1 使用 **Java 21 / Gradle 8.14.5**。使用项目自带的 Gradle Wrapper，配置 `JAVA_HOME` 或传入 `-JavaHome` 选择对应 JDK。
+Place the JARs in `mods` on the server and clients. ANTE's scripting runtime and configuration library are bundled; no separate installation is needed. Players using custom models also need the corresponding resource packs.
 
-先将 MTR 检出到相邻的 `Minecraft-Transit-Railway-3.x.x` 目录，构建对应版本，再构建 ANTE。26.2 的已验证 MTR 源码基线为 [`fa2a24a39`](https://github.com/linlunaire/Minecraft-Transit-Railway/commit/fa2a24a39b978a1c81c64319c5d16da837ede250)；1.21.1 使用上述 MTR tag。GitHub Actions 固定这两个提交，先构建依赖再构建 ANTE，不自动发布到 Modrinth 或 GitHub Pages。
+Back up worlds, configuration and resource packs before upgrading. Test your existing routes, custom trains and scripts on a copy of the world first.
 
-### Windows
+## Build from source
 
-```powershell
-.\gradlew.bat build --console=plain                 # 默认 26.2
-.\gradlew.bat build '-Version=1.21.1' --console=plain # 指定 1.21.1
+Install **JDK 25** and set `JAVA_HOME`. Clone the [MTR community port](https://github.com/linlunaire/Minecraft-Transit-Railway) and ANTE as siblings:
+
+```text
+workspace/
+├── Minecraft-Transit-Railway-3.x.x/
+└── mtr-ante/
 ```
 
-Linux / macOS 使用 `./gradlew build -Version=26.2` 或 `./gradlew build -Version=1.21.1`。
+Build MTR first, following its [build instructions](https://github.com/linlunaire/Minecraft-Transit-Railway#build-from-source). Then run from the ANTE repository root:
 
-26.2 产物位于 `build/release/`，1.21.1 产物位于 `build/`。两版目录与 JDK 独立；编译、兼容性检查通过不等于游戏及多人服务器验证通过，部署前请备份存档并测试。
+```sh
+./gradlew build
+```
+
+On Windows, use `./gradlew.bat` in place of `./gradlew`. The wrapper downloads Gradle **9.5.1**. For a different MTR checkout location, append `-PmtrProjectDir=/path/to/MTR` to the command.
+
+The build runs the compatibility checks and writes both loader JARs to `build/release/`:
+
+- `MTR-ANTE-fabric-1.1.1-26.2.jar`
+- `MTR-ANTE-neoforge-1.1.1-26.2.jar`
+
+## Development
+
+`common/` contains shared code and assets; `fabric/` and `neoforge/` contain loader integrations. Regression and compatibility checks live in `tests/`. Dependency versions are defined in [gradle.properties](gradle.properties).
+
+Report fork-specific problems in [this repository's issue tracker](https://github.com/linlunaire/mtr-ante/issues), including the MTR and ANTE versions, loader, logs and a minimal reproduction or resource pack.
+
+## Older versions
+
+`master` targets **26.2 only**. For Minecraft 1.21.1, use [ANTE tag `1.1.1-1.21.1-beta.2`](https://github.com/linlunaire/mtr-ante/tree/1.1.1-1.21.1-beta.2) with [MTR tag `1.21.1-3.3.2`](https://github.com/linlunaire/Minecraft-Transit-Railway/tree/1.21.1-3.3.2). Those tags retain the original source and build instructions.
+
+## Credits and license
+
+Based on [ANTE](https://github.com/aphrodite281/mtr-ante) by Aphrodite281 and [Nemo's Transit Expansion](https://github.com/zbx1425/mtr-nte) by Zbx1425, with contributions from their communities.
+
+Code is licensed under [MIT](LICENSE). Bundled models, textures, sounds and other third-party content retain their respective licenses and [credits](docs/feature.md).

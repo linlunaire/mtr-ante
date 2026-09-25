@@ -36,8 +36,9 @@ public class WrappedEntity {
     }
 
     public String getNBT() {
-        CompoundTag tag = new CompoundTag();
-        entity.saveWithoutId(tag);
+        var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, entity.registryAccess());
+        entity.saveWithoutId(output);
+        CompoundTag tag = output.buildResult();
         return (new JsonStringTagVisitor()).visit(tag);
     }
 }

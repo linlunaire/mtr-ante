@@ -6,7 +6,7 @@ import cn.zbx1425.sowcerext.model.integration.BufferSourceProxy;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.screen.ResourcePackCreatorScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import mtr.mappings.RenderBufferSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,7 +23,7 @@ public class ResourcePackCreatorScreenMixin {
     private static void render(PoseStack matrices, CallbackInfo ci) {
         if (guiCounter == 0) return;
 
-        final MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
+        final RenderBufferSource immediate = RenderBufferSource.current().immediate();
         final BufferSourceProxy immediateProxy = new BufferSourceProxy(immediate);
         MainClient.drawScheduler.commit(immediateProxy, MainClient.drawContext);
         immediateProxy.commit();

@@ -3,7 +3,7 @@ package cn.zbx1425.mtrsteamloco.mixin;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import net.minecraft.world.phys.Vec3;
 import cn.zbx1425.mtrsteamloco.data.VehicleRidingClientExtraSupplier;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
@@ -85,7 +85,7 @@ public abstract class VehicleRidingClientMixin implements VehicleRidingClientExt
 	@Shadow(remap = false) private Map<UUID, Float> newPercentagesZ;
 	@Shadow(remap = false) private Map<UUID, Vec3> riderPositions;
 	@Shadow(remap = false) private Set<UUID> ridingEntities;
-	@Shadow(remap = false) private ResourceLocation packetId;
+	@Shadow(remap = false) private Identifier packetId;
 
 	@Shadow(remap = false)
 	private Vec3 getViewOffset() {
@@ -199,7 +199,7 @@ public abstract class VehicleRidingClientMixin implements VehicleRidingClientExt
 				clientPlayer.setDeltaMovement(0, 0, 0);
 				clientPlayer.setSpeed(0);
 				if (MTRClient.getGameTick() > 40) {
-					clientPlayer.absMoveTo(moveX, moveY, moveZ);
+					clientPlayer.absSnapTo(moveX, moveY, moveZ);
 				}
 			}
 
@@ -255,8 +255,7 @@ public abstract class VehicleRidingClientMixin implements VehicleRidingClientExt
 		
 		final Player renderPlayer = world.getPlayerByUUID(playerId);
 		if (renderPlayer != null && (!playerId.equals(TrainRendererBaseAccessor.getPlayer().getUUID()) || camera.isDetached())) {
-			EntityRenderer<? super Entity> entityrenderer = TrainRendererBaseAccessor.getEntityRenderDispatcher().getRenderer(renderPlayer);
-			Vec3 vec3 = entityrenderer.getRenderOffset(renderPlayer, 1);
+			Vec3 vec3 = getRenderOffset(TrainRendererBaseAccessor.getEntityRenderDispatcher().getRenderer(renderPlayer), renderPlayer);
 			vec3 = vec3.add(playerPositionOffset);
 			matrices.pushPose();
 			matrices.translate(vec3.x, vec3.y, vec3.z);
@@ -272,9 +271,12 @@ public abstract class VehicleRidingClientMixin implements VehicleRidingClientExt
 			}
 			matrices.translate(-vec3.x, -vec3.y, -vec3.z);
 			matrices.translate(playerPositionOffset.x, playerPositionOffset.y, playerPositionOffset.z);
-			TrainRendererBaseAccessor.getEntityRenderDispatcher().render(renderPlayer, 0, 0, 0, 0, 1, matrices, TrainRendererBaseAccessor.getVertexConsumers(), 0xF000F0);
+			TrainRendererBaseAccessor.getVertexConsumers().drawEntity(TrainRendererBaseAccessor.getEntityRenderDispatcher(), renderPlayer, 1, matrices.last().pose(), 0, 0, 0, 0xF000F0);
 			matrices.popPose();
 		}
 		matrices.popPose();
 	}
+    private static <T extends Entity, S extends net.minecraft.client.renderer.entity.state.EntityRenderState> Vec3 getRenderOffset(EntityRenderer<T, S> renderer, T entity) {
+        return renderer.getRenderOffset(renderer.createRenderState(entity, 1));
+    }
 }

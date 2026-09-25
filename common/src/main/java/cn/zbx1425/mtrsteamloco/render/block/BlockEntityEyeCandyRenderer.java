@@ -19,17 +19,13 @@ import mtr.client.ClientData;
 import mtr.data.TrainClient;
 import mtr.mappings.BlockEntityRendererMapper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.util.LightCoordsUtil;
+import mtr.mappings.RenderBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.client.renderer.LevelRenderer;
-#if MC_VERSION >= "11904"
 import net.minecraft.world.item.ItemDisplayContext;
-#else
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-#endif
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -55,7 +51,7 @@ public class BlockEntityEyeCandyRenderer extends BlockEntityRendererMapper<Block
     private static final RegistryObject<ItemStack> BARRIER_ITEM_STACK = new RegistryObject<>(() -> new ItemStack(net.minecraft.world.item.Items.BARRIER, 1));
 
     @Override
-    public void render(BlockEyeCandy.BlockEntityEyeCandy blockEntity, float f, @NotNull PoseStack matrices, @NotNull MultiBufferSource vertexConsumers, int light, int overlay) {
+    public void render(BlockEyeCandy.BlockEntityEyeCandy blockEntity, float f, @NotNull PoseStack matrices, @NotNull RenderBufferSource vertexConsumers, int light, int overlay) {
         entitysToRenderWritting.add(blockEntity);
     }
 
@@ -68,19 +64,19 @@ public class BlockEntityEyeCandyRenderer extends BlockEntityRendererMapper<Block
         Main.LOGGER.info(s);
     }
 
-    public static void commit(@NotNull PoseStack matrices, @NotNull MultiBufferSource vertexConsumers) {
+    public static void commit(@NotNull PoseStack matrices, @NotNull RenderBufferSource vertexConsumers) {
         Matrix4f worldPose = new Matrix4f(matrices.last().pose()).copy();
         HashSet<BlockEyeCandy.BlockEntityEyeCandy> temp = new HashSet<>(entitysToRender);
         for (BlockEyeCandy.BlockEntityEyeCandy blockEntity : temp) {
             if (blockEntity == null) continue;
             
             final Level world = blockEntity.getLevel();
-            if (world == null) continue;
+            if (world == null || world != Minecraft.getInstance().level || blockEntity.isRemoved()) continue;
             BlockPos pos = blockEntity.getBlockPos();
 
-            int light = LevelRenderer.getLightColor(world, pos);;
+            int light = LightCoordsUtil.getLightCoords(world, pos);;
 
-            int lightToUse = blockEntity.fullLight ? LightTexture.pack(15, 15) : light;
+            int lightToUse = blockEntity.fullLight ? LightCoordsUtil.pack(15, 15) : light;
 
             EyeCandyProperties prop = EyeCandyRegistry.getProperty(blockEntity.prefabId);
             if (prop == null || RailRenderDispatcher.isHoldingBrush) {
@@ -88,19 +84,11 @@ public class BlockEntityEyeCandyRenderer extends BlockEntityRendererMapper<Block
                 matrices.translate(pos.getX(), pos.getY(), pos.getZ());
                 matrices.translate(0.5f, 0.5f, 0.5f);
                 PoseStackUtil.rotY(matrices, (float) ((System.currentTimeMillis() % 1000) * (Math.PI * 2 / 1000)));
-#if MC_VERSION >= "11904"
                 if (blockEntity.prefabId != null && prop == null) {
-                    Minecraft.getInstance().getItemRenderer().renderStatic(BARRIER_ITEM_STACK.get(), ItemDisplayContext.GROUND, lightToUse, 0, matrices, vertexConsumers, world, 0);
+                    vertexConsumers.drawItem(Minecraft.getInstance().getItemModelResolver(), BARRIER_ITEM_STACK.get(), ItemDisplayContext.GROUND, world, matrices.last().pose(), lightToUse, 0, 0);
                 } else {
-                    Minecraft.getInstance().getItemRenderer().renderStatic(BRUSH_ITEM_STACK.get(), ItemDisplayContext.GROUND, lightToUse, 0, matrices, vertexConsumers, world, 0);
+                    vertexConsumers.drawItem(Minecraft.getInstance().getItemModelResolver(), BRUSH_ITEM_STACK.get(), ItemDisplayContext.GROUND, world, matrices.last().pose(), lightToUse, 0, 0);
                 }
-#else
-                if (blockEntity.prefabId != null && prop == null) {
-                    Minecraft.getInstance().getItemRenderer().renderStatic(BARRIER_ITEM_STACK.get(), ItemTransforms.TransformType.GROUND, lightToUse, 0, matrices, vertexConsumers, 0);
-                } else {
-                    Minecraft.getInstance().getItemRenderer().renderStatic(BRUSH_ITEM_STACK.get(), ItemTransforms.TransformType.GROUND, lightToUse, 0, matrices, vertexConsumers, 0);
-                }
-#endif
                 matrices.popPose();
 
             }
@@ -121,7 +109,7 @@ public class BlockEntityEyeCandyRenderer extends BlockEntityRendererMapper<Block
     }
 
     @Override
-    public boolean shouldRenderOffScreen(BlockEyeCandy.@NotNull BlockEntityEyeCandy blockEntity) {
+    public boolean shouldRenderOffScreen() {
         return true;
     }
 

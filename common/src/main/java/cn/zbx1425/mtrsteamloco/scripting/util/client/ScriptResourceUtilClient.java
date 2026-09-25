@@ -11,14 +11,10 @@ import mtr.client.ClientData;
 import mtr.mappings.Utilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleType;
-#if MC_VERSION >= "11903"
 import net.minecraft.core.registries.BuiltInRegistries;
-#else
-import net.minecraft.core.Registry;
-#endif
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
@@ -44,9 +40,9 @@ public class ScriptResourceUtilClient extends ScriptResourceUtil {
 
     private static boolean hasNotoSansCjk = false;
     private static Font NOTO_SANS_MAYBE_CJK;
-    private static final ResourceLocation NOTO_SANS_CJK_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-cjk-tc-medium.otf");
-    private static final ResourceLocation NOTO_SANS_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-semibold.ttf");
-    private static final ResourceLocation NOTO_SERIF_LOCATION = ResourceLocation.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-serif-cjk-tc-semibold.ttf");
+    private static final Identifier NOTO_SANS_CJK_LOCATION = Identifier.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-cjk-tc-medium.otf");
+    private static final Identifier NOTO_SANS_LOCATION = Identifier.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-sans-semibold.ttf");
+    private static final Identifier NOTO_SERIF_LOCATION = Identifier.fromNamespaceAndPath(mtr.MTR.MOD_ID, "font/noto-serif-cjk-tc-semibold.ttf");
 
     public static void init(ResourceManager resourceManager) {
         hasNotoSansCjk = hasResource(NOTO_SANS_CJK_LOCATION);

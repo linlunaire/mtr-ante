@@ -29,12 +29,8 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import cn.zbx1425.mtrsteamloco.gui.entries.ButtonListEntry;
 
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.CreativeModeTabs;
-#else
-import net.minecraft.client.gui.GuiComponent;
-#endif
 
 import java.util.ArrayList;
 import java.util.List;
@@ -181,7 +177,7 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
     private boolean pullTag() {
         ItemStack itemStack = Minecraft.getInstance().player.getMainHandItem();
         if (!itemStack.is(Main.ROUTE_PATH_CREATOR.get())) return false;
-        tag = ItemStackUtilities.getCustomData(itemStack).getCompound("ANTE-Data").copy();
+        tag = ItemStackUtilities.getCustomData(itemStack).getCompoundOrEmpty("ANTE-Data").copy();
         return true;
     }
 
@@ -265,14 +261,14 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
             routeName = "Route Pro Max";
             tag.putString("route_name", routeName);
             changed = true;
-        } else routeName = tag.getString("route_name");
+        } else routeName = mtr.mappings.CompoundTagMapper.getString(tag, "route_name");
 
         final int routeColor;
         if (!tag.contains("route_color")) {
             routeColor = 0xFFFFFF;
             tag.putInt("route_color", routeColor);
             changed = true;
-        } else routeColor = tag.getInt("route_color");
+        } else routeColor = mtr.mappings.CompoundTagMapper.getInt(tag, "route_color");
 
         if (changed) pushData();
 
@@ -311,8 +307,8 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
         if (pathData.size() > 2 && pathData.get(pathData.size() - 1).rail.railType == RailType.PLATFORM && (!pathData.get(pathData.size() - 2).isOppositeRail(pathData.get(pathData.size() - 1)))) {
             common.addEntry(ButtonListEntry.createCenteredInstance(Text.literal("创建路线"), btn -> {
                 Route route = new Route(TransportMode.TRAIN);
-                route.name = tag.getString("route_name");
-                route.color = tag.getInt("route_color");
+                route.name = mtr.mappings.CompoundTagMapper.getString(tag, "route_name");
+                route.color = mtr.mappings.CompoundTagMapper.getInt(tag, "route_color");
                 ((IRoute) (Object) route).setPathData(pathData);
                 PacketRoutePathCreator.sendRouteC2S(route);
             }));
@@ -321,7 +317,7 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
         }
         
 
-        minecraft.setScreen(builder.build());
+        minecraft.gui.setScreen(builder.build());
     }
 
     @Override
@@ -361,11 +357,7 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
     }
 
     @Override
-#if MC_VERSION >= "12000"
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float partialTick) {
-#else
-    public void render(PoseStack ctx, int mouseX, int mouseY, float partialTick) {
-#endif
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float partialTick) {
         renderDirtBackground(this, ctx);
         drawCenteredString(ctx, minecraft.font, "Route Path Creator Screen", width / 2, 10, 0xFFFFFF);
         drawCenteredString(ctx, minecraft.font, selectedParts + " " + partPerPage() + " " + maxPage(), width / 2, height - 10, 0xFFFFFF);
@@ -393,12 +385,12 @@ public class RoutePathCreatorScreen extends Screen implements IGraphics {
                 IDrawing.setPositionAndWidth(label, 0, 50 + 30 * j - label.getHeight() / 2, 80);
             }
         }
-        super.render(ctx, mouseX, mouseY, partialTick);
+        super.extractRenderState(ctx, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     @Override

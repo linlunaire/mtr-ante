@@ -6,16 +6,11 @@ import cn.zbx1425.mtrsteamloco.scripting.ScriptContextManager;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderBase;
 import cn.zbx1425.mtrsteamloco.scripting.util.client.GraphicsTexture;
 import com.google.common.base.Splitter;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-#if MC_VERSION >= "12000"
-import net.minecraft.client.gui.GuiGraphics;
-#else
-import net.minecraft.client.gui.GuiComponent;
-#endif
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -31,18 +26,14 @@ public class ScriptDebugOverlay {
     public static final OrderedMap<String, Object> STATIC = new OrderedMap<>();
     // cn.zbx1425.mtrsteamloco.gui.ScriptDebugOverlay.STATIC.put(, );
 
-#if MC_VERSION >= "12000"
-    public synchronized static void render(GuiGraphics vdStuff) {
-        PoseStack matrices = vdStuff.pose();
-#else
-    public synchronized static void render(PoseStack vdStuff) {
-        PoseStack matrices = vdStuff;
-#endif
+    public synchronized static void render(GuiGraphicsExtractor vdStuff) {
+        var matrices = vdStuff.pose();
         if (!ClientConfig.enableScriptDebugOverlay) return;
-        if (Minecraft.getInstance().screen != null) return;
+        if (Minecraft.getInstance().gui.screen() != null) return;
 
-        matrices.pushPose();
-        matrices.translate(10, 10, 0);
+        matrices.pushMatrix();
+        try {
+        matrices.translate(10, 10);
 
         Map<ScriptHolderBase, List<AbstractScriptContext>> contexts = new HashMap<>();
         for (Map.Entry<AbstractScriptContext, ScriptHolderBase> entry : ScriptContextManager.livingContexts.entrySet()) {
@@ -93,35 +84,21 @@ public class ScriptDebugOverlay {
             }
         }
 
-        matrices.popPose();
+        } finally {
+            matrices.popMatrix();
+        }
     }
 
-#if MC_VERSION >= "12000"
-    private static int drawText(GuiGraphics guiGraphics, Font font, String text, int x, int y, int color) {
+    private static int drawText(GuiGraphicsExtractor guiGraphics, Font font, String text, int x, int y, int color) {
         FormattedText formattedText = FormattedText.of(text);
         List<FormattedCharSequence> lines = font.split(formattedText, Minecraft.getInstance().getWindow().getGuiScaledWidth() - 40);
         for (FormattedCharSequence line : lines) {
-            guiGraphics.drawString(font, line, x, y, color);
+            guiGraphics.text(font, line, x, y, color);
             y += Mth.ceil(font.lineHeight * 1.1f);
         }
         return y;
     }
-    private static void blit(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int width, int height) {
-        guiGraphics.blit(texture, x, y, width, height, 0, 0, 1, 1, 1, 1);
+    private static void blit(GuiGraphicsExtractor guiGraphics, Identifier texture, int x, int y, int width, int height) {
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, width, height, width, height);
     }
-#else
-    private static int drawText(PoseStack matrices, Font font, String text, int x, int y, int color) {
-        FormattedText formattedText = FormattedText.of(text);
-        List<FormattedCharSequence> lines = font.split(formattedText, Minecraft.getInstance().getWindow().getGuiScaledWidth() - 40);
-        for (FormattedCharSequence line : lines) {
-            font.drawShadow(matrices, line, x, y, color);
-            y += Mth.ceil(font.lineHeight * 1.1f);
-        }
-        return y;
-    }
-    private static void blit(PoseStack matrices, ResourceLocation texture, int x, int y, int width, int height) {
-        RenderSystem.setShaderTexture(0, texture);
-        GuiComponent.blit(matrices, x, y, width, height, 0, 0, 1, 1, 1, 1);
-    }
-#endif
 }

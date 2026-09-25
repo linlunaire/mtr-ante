@@ -3,8 +3,8 @@ package cn.zbx1425.sowcerext.model.integration;
 import cn.zbx1425.sowcer.math.Vector3f;
 import cn.zbx1425.sowcerext.model.Vertex;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import mtr.mappings.RenderBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class FaceList {
         queuedFaces.add(new TransformedFace(vertices, color, light, overlay));
     }
 
-    public void commit(MultiBufferSource bufferSource) {
+    public void commit(RenderBufferSource bufferSource) {
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
         if (needSorting) {
             queuedFaces.sort((a, b) ->

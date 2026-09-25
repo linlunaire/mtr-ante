@@ -1,7 +1,7 @@
 package cn.zbx1425.mtrsteamloco.network;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.RegistryClient;
@@ -22,7 +22,7 @@ import java.util.HashSet;
 
 public class PacketUpdateTrainCustomConfigs {
     
-    public static ResourceLocation C2S = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "update_train_custom_configs");
+    public static Identifier C2S = Identifier.fromNamespaceAndPath(Main.MOD_ID, "update_train_custom_configs");
 
     public static void sendUpdateC2S(Train train) {
         sendUpdateC2S(train.sidingId, train.id, ((TrainExtraSupplier) train).getCustomConfigs());
@@ -60,11 +60,7 @@ public class PacketUpdateTrainCustomConfigs {
         final Map<String, String> ed = customConfigs;
         
         server.execute(() -> {
-#if MC_VERSION >= "12000"
             RailwayData railwayData = RailwayData.getInstance(player.level());
-#else
-            RailwayData railwayData = RailwayData.getInstance(player.level);
-#endif
             if (railwayData == null) return;
             if (railwayData.sidings == null) return;
             Set<Siding> sidings = new HashSet<>(railwayData.sidings);

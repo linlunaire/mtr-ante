@@ -13,7 +13,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrSrc;
 import cn.zbx1425.sowcer.vertex.VertAttrState;
 import cn.zbx1425.sowcer.vertex.VertAttrType;
 import cn.zbx1425.sowcerext.model.*;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.util.LightCoordsUtil;
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -89,7 +89,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
             for (Matrix4f pieceMat : railSpan) {
                 final Vector3f lightPos = pieceMat.getTranslationPart();
                 final BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
-                final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
+                final int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
                 combinedModel.appendTransformed(railModel, pieceMat, entry.getKey().color, light);
             }
         }
@@ -132,7 +132,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
                 Vector3f lightPos = new Vector3f(mid);
                 BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
-                int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
+                int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
 
                 RawModel rm = railModel.copy();
                 for (Map.Entry<MaterialProp, RawMesh> entry : rm.meshList.entrySet()) {

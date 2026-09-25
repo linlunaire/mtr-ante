@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "Skipting",
     "gui.mtrsteamloco.no_tasks_found": "Engin verkefni fundust",
     "key.mtrsteamloco.train_screen": "Lestarskjár",
-    "category.mtrsteamloco.keybinding": "ANTE lyklaborðstillingar",
+    "key.category.mtrsteamloco.keybinding": "ANTE lyklaborðstillingar",
     "gui.mtr.percentage_complete_slice": "Sneiðverkefni (%s%%)",
     "gui.mtr.rail_action_slice": "Sneið verkefni búið til af %s (%s kubbalengd)",
     "gui.mtrsteamloco.direct_node.unbound": "Óbundinn beinn hnútur",

@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,14 +36,14 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
+    public net.minecraft.world.InteractionResult use(Level level, Player player, InteractionHand usedHand) {
         ItemStack itemStack = player.getItemInHand(usedHand);
-        if (level.isClientSide) return InteractionResultHolder.success(itemStack);
+        if (level.isClientSide()) return net.minecraft.world.InteractionResult.SUCCESS.heldItemTransformedTo(itemStack);
 
         CompoundTag tag = ItemStackUtilities.getCustomData(itemStack);
         if (tag.contains("start") && tag.contains("end")) {
-            BlockPos posStart = BlockPos.of(tag.getLong("start"));
-            BlockPos posEnd = BlockPos.of(tag.getLong("end"));
+            BlockPos posStart = BlockPos.of(mtr.mappings.CompoundTagMapper.getLong(tag, "start"));
+            BlockPos posEnd = BlockPos.of(mtr.mappings.CompoundTagMapper.getLong(tag, "end"));
             RailwayData railwayData = RailwayData.getInstance(level);
             boolean success = false;
             if (railwayData != null) { 
@@ -57,12 +57,12 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
                 }
             }
             if (!success) {
-                player.displayClientMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.data_not_found"), true);
+                player.sendOverlayMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.data_not_found"));
             }
         } else {
-            player.displayClientMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.no_data"), true);
+            player.sendOverlayMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.no_data"));
         }
-        return InteractionResultHolder.success(itemStack);
+        return net.minecraft.world.InteractionResult.SUCCESS.heldItemTransformedTo(itemStack);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
 
     // 在服务器端
     private boolean updateRail(UseOnContext ctx) {
-        if (ctx.getLevel().isClientSide) return true;
+        if (ctx.getLevel().isClientSide()) return true;
         final RailwayData railwayData = RailwayData.getInstance(ctx.getLevel());
         if (railwayData == null) return false;
         BlockPos rPosStart = ctx.getClickedPos();
@@ -103,7 +103,7 @@ public class RailPathEditor extends ItemWithCreativeTabBase {
             if (ctx.getPlayer() instanceof ServerPlayer sp) {
                 sp.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
 
-                sp.displayClientMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.success_update", posStart.getX(), posStart.getY(), posStart.getZ(), posEnd.getX(), posEnd.getY(), posEnd.getZ()), true);
+                sp.sendOverlayMessage(Text.translatable("tooltip.mtrsteamloco.rail_path_editor.success_update", posStart.getX(), posStart.getY(), posStart.getZ(), posEnd.getX(), posEnd.getY(), posEnd.getZ()));
                 return true;
             }
         } 

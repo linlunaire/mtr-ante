@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "替換",
     "gui.mtrsteamloco.no_tasks_found": "未找到任務",
     "key.mtrsteamloco.train_screen": "列車螢幕",
-    "category.mtrsteamloco.keybinding": "ANTE 按鍵綁定",
+    "key.category.mtrsteamloco.keybinding": "ANTE 按鍵綁定",
     "gui.mtr.percentage_complete_slice": "切片任務 (%s%%)",
     "gui.mtr.rail_action_slice": "由 %s 創建切片任務 (%s 方塊長)",
     "gui.mtrsteamloco.direct_node.unbound": "直線節點未綁定",

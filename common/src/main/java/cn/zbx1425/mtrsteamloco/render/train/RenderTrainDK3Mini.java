@@ -7,7 +7,7 @@ import cn.zbx1425.sowcerext.multipart.animated.AnimatedLoader;
 import cn.zbx1425.sowcerext.multipart.mi.MiLoader;
 import mtr.data.TrainClient;
 import mtr.render.TrainRendererBase;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.IOException;
@@ -23,15 +23,15 @@ public class RenderTrainDK3Mini extends RenderTrainDK3 {
 
     public static void initGLModel(ResourceManager resourceManager) {
         try {
-            MainClient.atlasManager.load(resourceManager, ResourceLocation.parse("mtrsteamloco:models/atlas/dk3.json"));
+            MainClient.atlasManager.load(resourceManager, Identifier.parse("mtrsteamloco:models/atlas/dk3.json"));
             models[MODEL_BODY_HEAD] = AnimatedLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    ResourceLocation.parse("mtrsteamloco:models/dk3/chmini.animated"));
+                    Identifier.parse("mtrsteamloco:models/dk3/chmini.animated"));
             models[MODEL_BODY_TAIL] = AnimatedLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    ResourceLocation.parse("mtrsteamloco:models/dk3/cmini.animated"));
+                    Identifier.parse("mtrsteamloco:models/dk3/cmini.animated"));
             models[MODEL_AUX_HEAD] = MiLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    ResourceLocation.parse("mtrsteamloco:models/alex/dk3auxheadmini.json"));
+                    Identifier.parse("mtrsteamloco:models/alex/dk3auxheadmini.json"));
             models[MODEL_AUX_TAIL] = MiLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    ResourceLocation.parse("mtrsteamloco:models/alex/dk3auxtailmini.json"));
+                    Identifier.parse("mtrsteamloco:models/alex/dk3auxtailmini.json"));
         } catch (IOException e) {
             Main.LOGGER.error("Failed loading model for DK3 Mini:", e);
         }

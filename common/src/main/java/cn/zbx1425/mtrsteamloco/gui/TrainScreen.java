@@ -28,7 +28,7 @@ public class TrainScreen {
             if (player == null) return;
 			for (TrainClient train : ClientData.TRAINS) {
                 if (train.isPlayerRiding(player)) {
-                    Minecraft.getInstance().setScreen(createScreen(train, null));
+                    Minecraft.getInstance().gui.setScreen(createScreen(train, null));
                     break;
                 }
 			}

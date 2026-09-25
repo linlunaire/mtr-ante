@@ -6,7 +6,7 @@ import net.minecraft.client.player.LocalPlayer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.client.renderer.MultiBufferSource;
+import mtr.mappings.RenderBufferSource;
 import net.minecraft.world.phys.Vec3;
 import mtr.render.TrainRendererBase;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
@@ -40,7 +40,7 @@ public interface TrainRendererBaseAccessor {
     };
 
     @Accessor(remap = false)
-    static MultiBufferSource getVertexConsumers() {
+    static RenderBufferSource getVertexConsumers() {
         throw new AssertionError();
     }
 
