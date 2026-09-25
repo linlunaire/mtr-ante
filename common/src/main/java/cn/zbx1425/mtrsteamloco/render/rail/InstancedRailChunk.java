@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -62,21 +63,21 @@ public class InstancedRailChunk extends RailChunkBase {
 
     @Override
     public void rebuildBuffer(Level world) {
-        super.rebuildBuffer(world);
         if (vertArrays == null) return;
 
-        EXECUTOR.execute(() -> {
+        rebuildAsync(() -> {
             int instanceCount = containingRails.values().stream().mapToInt(ArrayList::size).sum();
             float yMin = 256, yMax = -64;
 
-            ByteBuffer byteBuf = OffHeapAllocator.allocate(instanceCount * RAIL_MAPPING.strideInstance);
-            ByteBufferOutputStream byteArrayOutputStream = new ByteBufferOutputStream(byteBuf, false);
-            LittleEndianDataOutputStream oStream = new LittleEndianDataOutputStream(byteArrayOutputStream);
+            ByteBuffer byteBuf = OffHeapAllocator.allocate(Math.multiplyExact(instanceCount, RAIL_MAPPING.strideInstance));
+            boolean queued = false;
+            try {
+                ByteBufferOutputStream byteArrayOutputStream = new ByteBufferOutputStream(byteBuf, false);
+                LittleEndianDataOutputStream oStream = new LittleEndianDataOutputStream(byteArrayOutputStream);
 
-            for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
-                ArrayList<Matrix4f> railSpan = entry.getValue();
-                for (Matrix4f pieceMat : railSpan) {
-                    try {
+                for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
+                    ArrayList<Matrix4f> railSpan = entry.getValue();
+                    for (Matrix4f pieceMat : railSpan) {
                         oStream.writeInt(entry.getKey().color);
 
                         final Vector3f lightPos = pieceMat.getTranslationPart();
@@ -93,21 +94,30 @@ public class InstancedRailChunk extends RailChunkBase {
                         oStream.write(lookAtBytes);
 
                         for (int k = 0; k < RAIL_MAPPING.paddingInstance; k++) oStream.writeByte(0);
-                    } catch (IOException ignored) {
-
                     }
                 }
+
+                final float minY = Math.min(yMin, yMax);
+                final float maxY = yMax;
+                RailBuildScheduler.Upload result = new RailBuildScheduler.Upload() {
+                    @Override public void upload() {
+                        instanceBuf.upload(byteBuf, VertBuf.USAGE_DYNAMIC_DRAW);
+                        instanceBuf.size = instanceCount;
+                        setBoundingBox(minY, maxY);
+                        bufferBuilt = true;
+                    }
+                    @Override public void close() {
+                        OffHeapAllocator.free(byteBuf);
+                    }
+                };
+                queued = true;
+                return result;
+            } catch (IOException error) {
+                throw new UncheckedIOException(error);
+            } finally {
+                // A successful build transfers ownership to upload/discard, including stale results.
+                if (!queued) OffHeapAllocator.free(byteBuf);
             }
-
-            UPLOAD_QUEUE.offer(() -> {
-                instanceBuf.size = instanceCount;
-                instanceBuf.upload(byteBuf, VertBuf.USAGE_DYNAMIC_DRAW);
-                OffHeapAllocator.free(byteBuf);
-                bufferBuilding = false;
-            });
-
-            if (yMin > yMax) yMin = yMax;
-            setBoundingBox(yMin, yMax);
         });
     }
 
@@ -123,6 +133,7 @@ public class InstancedRailChunk extends RailChunkBase {
 
     @Override
     public void close() {
+        closeBuild();
         if (vertArrays == null) return;
 
         vertArrays.close();

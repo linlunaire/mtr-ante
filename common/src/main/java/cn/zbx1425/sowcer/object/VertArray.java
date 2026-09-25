@@ -12,6 +12,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrType;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix3f;
 import org.joml.Vector3f;
+import mtr.mappings.RetainedGeometry;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
@@ -28,6 +29,8 @@ public class VertArray implements Closeable {
     public InstanceBuf instanceBuf;
     public VertAttrMapping mapping;
     private VertBuf vertexBuf;
+    private GeometryKey geometryKey;
+    private RetainedGeometry geometry;
 
     public void create(Mesh mesh, VertAttrMapping mapping, InstanceBuf instances) {
         if (vertexBuf != null || id == 0) throw new IllegalStateException("Vertex array already initialized or closed");
@@ -53,8 +56,65 @@ public class VertArray implements Closeable {
     @Override public void close() {
         if (id == 0) return;
         id = 0;
+        geometry = null;
+        geometryKey = null;
         if (vertexBuf != null) { vertexBuf.release(); indexBuf.release(); if (instanceBuf != null) instanceBuf.release(); }
     }
+
+    /**
+     * Static, translated opaque meshes keep their object-space vertices across frames.
+     * All other layouts/transforms still use capture(), including translucent sorting.
+     */
+    public RetainedDraw captureRetained(VertAttrState enqueue, ShaderProp shader) {
+        if (id == 0) throw new IllegalStateException("Capture of closed vertex array");
+        if (instanceBuf != null || mapping.sources.get(VertAttrType.MATRIX_MODEL) != VertAttrSrc.GLOBAL
+                || materialProp.translucent || materialProp.cutoutHack || !materialProp.writeDepthBuf
+                || indexBuf.vertexCount == 0) return null;
+
+        final var type = materialProp.getBlazeRenderType();
+        if (!RetainedGeometry.supports(type)) return null;
+        final var capturedEnqueue = enqueue == null ? null : enqueue.copy();
+        final VertBuf.Upload vertexUpload = vertexBuf.snapshotUpload(), indexUpload = indexBuf.snapshotUpload();
+        final ByteBuffer vertices = vertexUpload.data(), indices = indexUpload.data();
+        final Matrix4f model = new Reader(vertices, null, 0, 0, capturedEnqueue).matrix();
+        final org.joml.Matrix4f pose = shader.viewMatrix == null ? new org.joml.Matrix4f() : new org.joml.Matrix4f(shader.viewMatrix.asMoj());
+        pose.mul(model.asMoj());
+        // The retained shader applies camera-relative translation to fog as well as
+        // projection. Rotation/nonuniform scale need a separate normal transform.
+        if ((pose.properties() & org.joml.Matrix4fc.PROPERTY_TRANSLATION) == 0) return null;
+
+        final var key = new GeometryKey(vertexUpload.revision(), indexUpload.revision(), indexBuf.vertexCount,
+                withoutMatrix(capturedEnqueue), withoutMatrix(materialProp.attrState), type);
+        if (!key.equals(geometryKey)) {
+            final var faces = new ArrayList<Face>(indexBuf.vertexCount / 3);
+            final Matrix4f identity = new Matrix4f();
+            for (int element = 0; element < indexBuf.vertexCount; element += 3) {
+                final Value a = decode(vertices, null, index(indices, element), 0, capturedEnqueue, ShaderProp.DEFAULT, identity);
+                final Value b = decode(vertices, null, index(indices, element + 1), 0, capturedEnqueue, ShaderProp.DEFAULT, identity);
+                final Value c = decode(vertices, null, index(indices, element + 2), 0, capturedEnqueue, ShaderProp.DEFAULT, identity);
+                faces.add(new Face(a, b, c));
+            }
+            final List<Face> immutableFaces = List.copyOf(faces);
+            geometry = new RetainedGeometry(type, indexBuf.vertexCount, consumer -> {
+                for (Face face : immutableFaces) face.emit(consumer);
+            });
+            geometryKey = key;
+        }
+        return new RetainedDraw(geometry, pose);
+    }
+
+    private static VertAttrState withoutMatrix(VertAttrState state) {
+        if (state == null) return null;
+        final var result = state.copy();
+        result.matrixModel = null;
+        result.useMatixProcess = false;
+        return result;
+    }
+
+    private record GeometryKey(long vertices, long indices, int count, VertAttrState enqueue,
+                               VertAttrState material, net.minecraft.client.renderer.rendertype.RenderType type) { }
+
+    public record RetainedDraw(RetainedGeometry geometry, org.joml.Matrix4f pose) { }
 
     public List<Face> capture(VertAttrState enqueue, ShaderProp shader) {
         if (id == 0) throw new IllegalStateException("Capture of closed vertex array");

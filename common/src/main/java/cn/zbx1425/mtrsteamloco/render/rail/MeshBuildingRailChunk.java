@@ -62,26 +62,41 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void rebuildBuffer(Level world) {
-        super.rebuildBuffer(world);
         if (railModel == null) return;
 
-        EXECUTOR.execute(() -> {
-            RawModel combinedModel = ClientConfig.enableRailDeform ? transformModelDeform(world) : transformModel(world);
-            checkBoundingBox();
+        final boolean useDeform = ClientConfig.enableRailDeform;
+        rebuildAsync(() -> {
+            RawModel combinedModel = useDeform ? transformModelDeform(world) : transformModel(world);
+            float[] bounds = getYBounds();
             
             Supplier<Model> supplier = combinedModel.uploadAsync(RAIL_MAPPING);
-            UPLOAD_QUEUE.offer(() -> {
-                if (uploadedCombinedModel != null) uploadedCombinedModel.close();
-                if (vertArrays != null) vertArrays.close();
-                uploadedCombinedModel = supplier.get();
-                vertArrays = VertArrays.createAll(uploadedCombinedModel, RAIL_MAPPING, null);
-                bufferBuilding = false;
-            });
+            // The deferred supplier owns heap buffers only. Discarding it must not perform an upload.
+            return () -> {
+                Model candidate = supplier.get();
+                VertArrays candidateArrays;
+                try {
+                    candidateArrays = VertArrays.createAll(candidate, RAIL_MAPPING, null);
+                } catch (RuntimeException | Error error) {
+                    candidate.close();
+                    throw error;
+                }
+                Model previousModel = uploadedCombinedModel;
+                VertArrays previousArrays = vertArrays;
+                uploadedCombinedModel = candidate;
+                vertArrays = candidateArrays;
+                deform = useDeform;
+                setBoundingBox(bounds[0], bounds[1]);
+                bufferBuilt = true;
+                try {
+                    if (previousArrays != null) previousArrays.close();
+                } finally {
+                    if (previousModel != null) previousModel.close();
+                }
+            };
         });
     }
 
     private RawModel transformModel(Level world) {
-        deform = false;
         RawModel combinedModel = new RawModel();
 
         for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
@@ -97,7 +112,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         return  combinedModel;
     }
 
-    private void checkBoundingBox() {
+    private float[] getYBounds() {
         float yMin = 256, yMax = -64;
         for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
             for (Matrix4f pieceMat : entry.getValue()) {
@@ -108,11 +123,10 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         }
 
         if (yMin > yMax) yMin = yMax;
-        setBoundingBox(yMin, yMax);
+        return new float[]{yMin, yMax};
     }
 
     private RawModel transformModelDeform(Level world) {
-        deform = true;
         RawModel combinedModel = new RawModel();
         for (BakedRail bakedRail : containingRails.keySet()) {
             Rail rail = bakedRail.rail;
@@ -179,6 +193,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void close() {
+        closeBuild();
         if (vertArrays != null) vertArrays.close();
         if (uploadedCombinedModel != null) uploadedCombinedModel.close();
         vertArrays = null;

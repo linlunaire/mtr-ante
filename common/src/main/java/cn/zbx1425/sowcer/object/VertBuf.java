@@ -12,6 +12,7 @@ public class VertBuf implements Closeable {
     private ByteBuffer data;
     private int references = 1;
     private boolean ownerClosed;
+    private long revision;
 
     public void upload(ByteBuffer buffer, int usage) { upload(buffer, buffer.capacity(), usage); }
 
@@ -24,7 +25,13 @@ public class VertBuf implements Closeable {
         final ByteBuffer copy = ByteBuffer.allocate(size).order(buffer.order());
         copy.put(input).flip();
         data = copy.asReadOnlyBuffer().order(copy.order());
+        revision++;
     }
+
+    /** Pair the bytes with their upload revision under the same lock. */
+    synchronized Upload snapshotUpload() { return new Upload(snapshot(), revision); }
+
+    record Upload(ByteBuffer data, long revision) { }
 
     public synchronized ByteBuffer snapshot() {
         if (references == 0 || data == null) throw new IllegalStateException("Buffer is closed or not uploaded");

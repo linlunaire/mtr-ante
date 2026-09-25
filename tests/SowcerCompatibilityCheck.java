@@ -16,6 +16,7 @@ import cn.zbx1425.sowcerext.reuse.ModelManager;
 import cn.zbx1425.mtrsteamloco.scripting.util.client.DynamicModelHolder;
 import mtr.mappings.RenderBufferSource;
 import mtr.mappings.RenderSnapshot;
+import mtr.mappings.RetainedGeometry;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.CustomFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -43,6 +44,9 @@ public final class SowcerCompatibilityCheck {
         coloredSeams();
         packedLayout();
         materialPipelineFlags();
+        uploadInvalidation();
+        retainedSnapshots();
+        retainedMeshAllocation();
         cn.zbx1425.sowcer.ContextCapability.checkContextVersion();
         require(cn.zbx1425.sowcer.ContextCapability.supportVertexAttribDivisor, "Portable instance layout incorrectly requires a GL context");
         require(cn.zbx1425.sowcer.ContextCapability.contextVersion == 0, "Uninitialized backend fabricated an OpenGL version");
@@ -81,6 +85,176 @@ public final class SowcerCompatibilityCheck {
         buffer.close(); buffer.close();
         rejects(() -> buffer.snapshot(), "Closed upload remained accessible");
         rejects(() -> buffer.upload(input, VertBuf.USAGE_STATIC_DRAW), "Closed upload resurrected");
+    }
+
+    private static void uploadInvalidation() {
+        var layout = mapping(false, true);
+        try (var mesh = raw().upload(layout); var array = new VertArray()) {
+            array.create(mesh, layout, null);
+            var state = new VertAttrState().setOverlayUV(OVERLAY)
+                    .setModelMatrix(new Matrix4f(new org.joml.Matrix4f().translation(7, 0, 0)));
+            var initial = array.capture(state, ShaderProp.DEFAULT);
+            var batches = new BatchManager();
+            batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+
+            var previousVertices = mesh.vertBuf.snapshot();
+            var replacement = ByteBuffer.allocate(previousVertices.remaining()).order(previousVertices.order());
+            replacement.put(previousVertices);
+            replacement.putFloat(layout.pointers.get(VertAttrType.POSITION), 12);
+            mesh.vertBuf.upload(replacement, VertBuf.USAGE_DYNAMIC_DRAW);
+            require(array.capture(state, ShaderProp.DEFAULT).getFirst().a().x() == 19,
+                    "Retained geometry ignored a vertex buffer upload");
+            require(initial.getFirst().a().x() == 7, "Vertex upload mutated an earlier capture");
+            var next = new BatchManager();
+            next.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+            require(replay(snapshot(next), (float) (1 / Math.sqrt(2))).equals(List.of(19F, 8F, 7F)),
+                    "Retained queued geometry ignored a vertex buffer upload");
+
+            var indices = ByteBuffer.allocate(12).order(ByteOrder.nativeOrder());
+            indices.putInt(1).putInt(0).putInt(2);
+            mesh.indexBuf.upload(indices, VertBuf.USAGE_DYNAMIC_DRAW);
+            var reordered = array.capture(state, ShaderProp.DEFAULT).getFirst();
+            require(reordered.a().x() == 8 && reordered.b().x() == 19,
+                    "Retained geometry ignored an index buffer upload");
+            next.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+            require(replay(snapshot(next), (float) (1 / Math.sqrt(2))).equals(List.of(8F, 19F, 7F)),
+                    "Retained queued geometry ignored an index buffer upload");
+
+            require(replay(snapshot(batches), (float) (1 / Math.sqrt(2))).equals(List.of(7F, 8F, 7F)),
+                    "Upload changed geometry already queued for a delayed frame");
+        }
+    }
+
+    /** Exercises the rail call site, including a moving camera, without a graphics context. */
+    private static void retainedMeshAllocation() {
+        final int triangleCount = 4096, warmupFrames = 48, measuredFrames = 32;
+        final long maxBytesPerFrame = 64 * 1024;
+        var layout = mapping(false, true);
+        var raw = new RawMesh(new MaterialProp());
+        for (int face = 0; face < triangleCount; face++) {
+            int first = raw.vertices.size();
+            for (int corner = 0; corner < 3; corner++) {
+                var vertex = new Vertex(new Vector3f(face * 2 + (corner == 1 ? 1 : 0), corner == 2 ? 1 : 0, 0),
+                        new Vector3f(0, 1, 0));
+                vertex.color = 0x80563412; vertex.light = LIGHT;
+                raw.vertices.add(vertex);
+            }
+            raw.faces.add(new Face(new int[]{first, first + 1, first + 2}));
+        }
+        var allocationBean = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        require(allocationBean.isThreadAllocatedMemorySupported(), "JVM cannot verify retained mesh allocation budget");
+        allocationBean.setThreadAllocatedMemoryEnabled(true);
+        final long thread = Thread.currentThread().threadId();
+        try (var mesh = raw.upload(layout); var array = new VertArray()) {
+            array.create(mesh, layout, null);
+            require(array.getFaceCount() == triangleCount, "Performance fixture lost geometry during upload");
+            var batches = new BatchManager();
+            for (int frame = 0; frame < warmupFrames; frame++) enqueueRailFrame(batches, array, frame);
+            final long allocationStart = allocationBean.getThreadAllocatedBytes(thread);
+            final long start = System.nanoTime();
+            for (int frame = 0; frame < measuredFrames; frame++) enqueueRailFrame(batches, array, frame + warmupFrames);
+            final long duration = System.nanoTime() - start;
+            final long bytesPerFrame = (allocationBean.getThreadAllocatedBytes(thread) - allocationStart) / measuredFrames;
+            System.out.printf(java.util.Locale.ROOT,
+                    "Retained rail enqueue: %,d triangles, %,d B/frame, %.3f ms/frame; budget %,d B/frame%n",
+                    triangleCount, bytesPerFrame, duration / 1_000_000.0 / measuredFrames, maxBytesPerFrame);
+            require(bytesPerFrame <= maxBytesPerFrame,
+                    "Retained rail enqueue allocates per vertex instead of reusing uploaded geometry: " + bytesPerFrame + " B/frame");
+        }
+    }
+
+    private static void enqueueRailFrame(BatchManager batches, VertArray array, int frame) {
+        // MeshBuildingRailChunk supplies its changing camera transform through the global model matrix.
+        var camera = new Matrix4f(new org.joml.Matrix4f().translation(frame * 0.125F, 2, -5));
+        var state = new VertAttrState().setModelMatrix(camera).setOverlayUV(OVERLAY).setColor(-1);
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        batches.clear();
+    }
+
+    private static void retainedSnapshots() {
+        var layout = mapping(false, true);
+        var mesh = raw().upload(layout);
+        var array = new VertArray(); array.create(mesh, layout, null);
+        var model = new Matrix4f(new org.joml.Matrix4f().translation(2, 3, 4));
+        var state = new VertAttrState().setOverlayUV(OVERLAY).setModelMatrix(model);
+        var batches = new BatchManager();
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        var first = retained(snapshot(batches));
+        var expected = array.capture(state, ShaderProp.DEFAULT).getFirst();
+        require(emittedValues(first).equals(List.of(expected.a(), expected.b(), expected.c())),
+                "Retained node changed positions, UVs, normals or packed attributes");
+
+        model.translate(10, 20, 30);
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        var moved = retained(snapshot(batches));
+        require(first.geometry() == moved.geometry(), "Camera movement rebuilt immutable object-space geometry");
+        require(first.x() == 2 && first.y() == 3 && first.z() == 4 && moved.x() == 12 && moved.y() == 23 && moved.z() == 34,
+                "Queued retained translation aliased the mutable camera matrix");
+        first.pose().translate(100, 100, 100);
+        require(first.x() == 2, "Retained pose accessor exposed mutable captured state");
+
+        state.setColor(0xAABBCCDD).setLightmapUV(AttrUtil.exchangeLightmapUVBits(123)).setOverlayUV(456);
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        var changed = retained(snapshot(batches));
+        require(changed.geometry() != first.geometry(), "Changing global attributes reused stale geometry");
+        var changedValue = emittedValues(changed).getFirst();
+        require(changedValue.color() == 0xDDAABBCC && changedValue.light() == 123 && changedValue.overlay() == 456,
+                "Retained geometry lost changed global color/light/overlay");
+        require(emittedValues(first).getFirst().color() == COLOR, "Changed attributes mutated an earlier snapshot");
+
+        array.materialProp.attrState.setColor(0x10203040);
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        var materialChanged = retained(snapshot(batches));
+        require(emittedValues(materialChanged).getFirst().color() == 0x40102030,
+                "Retained cache ignored higher-priority material attributes");
+        // Keep the next draw queued until its array and owned uploads are all closed.
+        batches.enqueue(array, new EnqueueProp(state), ShaderProp.DEFAULT);
+        array.close(); mesh.close();
+        require(mesh.vertBuf.id == 0 && mesh.indexBuf.id == 0, "Retained CPU cache leaked upload ownership");
+        require(retained(snapshot(batches)).geometry() == materialChanged.geometry(),
+                "Close-before-submission invalidated immutable retained geometry");
+        require(emittedValues(first).size() == 3, "Closing the model invalidated a prior retained frame");
+
+        var coldMesh = raw().upload(layout);
+        var coldArray = new VertArray(); coldArray.create(coldMesh, layout, null);
+        batches.enqueue(coldArray, new EnqueueProp(new VertAttrState().setModelMatrix(
+                new Matrix4f(new org.joml.Matrix4f().translation(3, 0, 0)))), ShaderProp.DEFAULT);
+        coldArray.close(); coldMesh.close();
+        var cold = emittedValues(retained(snapshot(batches)));
+        require(cold.size() == 3 && cold.getFirst().x() == 3 && cold.getFirst().color() == COLOR,
+                "Closing before the first retained replay invalidated cold geometry");
+    }
+
+    private static RetainedGeometry.Submit retained(RenderSnapshot snapshot) {
+        var storage = new SubmitNodeStorage();
+        snapshot.submit(new PoseStack(), storage, new CameraRenderState());
+        var nodes = new ArrayList<RetainedGeometry.Submit>();
+        storage.drainPhases(phase -> phase.sortInto((node, blending) -> {
+            require(node instanceof RetainedGeometry.Submit, "Opaque translated fixture did not take the retained path");
+            nodes.add((RetainedGeometry.Submit) node);
+        }));
+        require(nodes.size() == 1, "Retained fixture submitted a duplicate or missing draw");
+        return nodes.getFirst();
+    }
+
+    private static List<VertArray.Value> emittedValues(RetainedGeometry.Submit submit) {
+        var result = new ArrayList<VertArray.Value>();
+        submit.geometry().emit(new VertexConsumer() {
+            private float x, y, z, u, v;
+            private int color, light, overlay;
+            public VertexConsumer addVertex(float x, float y, float z) { this.x = x; this.y = y; this.z = z; return this; }
+            public VertexConsumer setColor(int r, int g, int b, int a) { color = a << 24 | r << 16 | g << 8 | b; return this; }
+            public VertexConsumer setColor(int color) { this.color = color; return this; }
+            public VertexConsumer setUv(float u, float v) { this.u = u; this.v = v; return this; }
+            public VertexConsumer setUv1(int u, int v) { overlay = u | v << 16; return this; }
+            public VertexConsumer setUv2(int u, int v) { light = u | v << 16; return this; }
+            public VertexConsumer setNormal(float nx, float ny, float nz) {
+                result.add(new VertArray.Value(x + submit.x(), y + submit.y(), z + submit.z(), nx, ny, nz, u, v, color, light, overlay));
+                return this;
+            }
+            public VertexConsumer setLineWidth(float width) { return this; }
+        });
+        return result;
     }
 
     private static void materialRoundTrip() throws Exception {
@@ -214,23 +388,43 @@ public final class SowcerCompatibilityCheck {
     }
 
     private static List<Float> replay(RenderSnapshot snapshot) {
+        return replay(snapshot, (float) (1 / Math.sqrt(5)));
+    }
+
+    private static List<Float> replay(RenderSnapshot snapshot, float normalX) {
         var storage = new SubmitNodeStorage();
         snapshot.submit(new PoseStack(), storage, new CameraRenderState());
         var positions = new ArrayList<Float>();
         storage.drainPhases(phase -> phase.sortInto((node, blending) -> {
-            var geometry = (CustomFeatureRenderer.Submit) node;
-            geometry.customGeometryRenderer().render(geometry.pose(), new VertexConsumer() {
-                public VertexConsumer addVertex(float x, float y, float z) { positions.add(x); return this; }
+            float translation = node instanceof RetainedGeometry.Submit retained ? retained.x() : 0;
+            emitNode(node, new VertexConsumer() {
+                public VertexConsumer addVertex(float x, float y, float z) { positions.add(x + translation); return this; }
                 public VertexConsumer setColor(int r, int g, int b, int a) { require((a << 24 | r << 16 | g << 8 | b) == COLOR, "Replay color"); return this; }
                 public VertexConsumer setColor(int color) { require(color == COLOR, "Replay color"); return this; }
                 public VertexConsumer setUv(float u, float v) { require(u == 0.25F && v == 0.75F, "Replay UV"); return this; }
                 public VertexConsumer setUv1(int u, int v) { require((u | v << 16) == OVERLAY, "Replay overlay"); return this; }
                 public VertexConsumer setUv2(int u, int v) { require((u | v << 16) == LIGHT, "Replay light"); return this; }
-                public VertexConsumer setNormal(float x, float y, float z) { near(x, (float) (1 / Math.sqrt(5)), "Replay normal"); return this; }
+                public VertexConsumer setNormal(float x, float y, float z) { near(x, normalX, "Replay normal"); return this; }
                 public VertexConsumer setLineWidth(float width) { return this; }
             });
         }));
         return positions;
+    }
+
+    private static RenderSnapshot snapshot(BatchManager batches) {
+        try (var source = RenderBufferSource.begin(Vec3.ZERO)) {
+            batches.drawAll(new ShaderManager(), new DrawContext());
+            return source.snapshot();
+        }
+    }
+
+    private static void emitNode(Object node, VertexConsumer consumer) {
+        if (node instanceof RetainedGeometry.Submit retained) {
+            retained.geometry().emit(consumer);
+        } else {
+            var geometry = (CustomFeatureRenderer.Submit) node;
+            geometry.customGeometryRenderer().render(geometry.pose(), consumer);
+        }
     }
 
     private static RawModel rawModel() { var result = new RawModel(); result.append(raw()); return result; }
@@ -240,8 +434,7 @@ public final class SowcerCompatibilityCheck {
         snapshot.submit(new PoseStack(), storage, new CameraRenderState());
         int[] count = {0};
         storage.drainPhases(phase -> phase.sortInto((node, blending) -> {
-            var geometry = (CustomFeatureRenderer.Submit) node;
-            geometry.customGeometryRenderer().render(geometry.pose(), new VertexConsumer() {
+            emitNode(node, new VertexConsumer() {
                 public VertexConsumer addVertex(float x, float y, float z) { count[0]++; return this; }
                 public VertexConsumer setColor(int r, int g, int b, int a) { return this; }
                 public VertexConsumer setColor(int color) { return this; }

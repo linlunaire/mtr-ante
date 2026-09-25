@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Batches fully extracted triangles; no queued job refers back to a mutable model or upload. */
+/** Queues immutable retained meshes where possible, with captured triangles as the fallback. */
 public class BatchManager {
     private final List<RenderCall> calls = new ArrayList<>();
 
@@ -24,18 +24,26 @@ public class BatchManager {
     }
 
     public void enqueue(VertArray array, EnqueueProp enqueue, ShaderProp shader) {
-        calls.add(new RenderCall(array, array.materialProp.copy(), array.capture(enqueue.attrState, shader)));
+        final var retained = array.captureRetained(enqueue.attrState, shader);
+        calls.add(new RenderCall(array, array.materialProp.copy(),
+                retained == null ? array.capture(enqueue.attrState, shader) : null, retained));
     }
 
     public void drawAll(ShaderManager shaders, DrawContext context) {
         final Map<Key, List<VertArray.Face>> batches = new LinkedHashMap<>();
+        int retainedBatches = 0;
         for (RenderCall call : calls) {
+            context.recordDrawCall(call);
+            if (call.retained != null) {
+                RenderBufferSource.current().drawRetained(call.retained.geometry(), call.retained.pose());
+                retainedBatches++;
+                continue;
+            }
             final var material = call.material;
             final int stage = material.translucent ? 2 : material.cutoutHack ? 1 : 0;
             batches.computeIfAbsent(new Key(shaders.material(material), stage), key -> new ArrayList<>()).addAll(call.faces);
-            context.recordDrawCall(call);
         }
-        context.recordBatches(batches.size());
+        context.recordBatches(batches.size() + retainedBatches);
         for (var entry : batches.entrySet().stream().sorted(Comparator.comparingInt(entry -> entry.getKey().stage)).toList()) {
             if (entry.getKey().stage == 2) entry.getValue().sort(Comparator.comparingDouble(VertArray.Face::distanceSquared).reversed());
             final var consumer = RenderBufferSource.current().getBuffer(entry.getKey().type);
@@ -52,9 +60,12 @@ public class BatchManager {
         public final boolean instanced;
         private final MaterialProp material;
         private final List<VertArray.Face> faces;
-        private RenderCall(VertArray array, MaterialProp material, List<VertArray.Face> faces) {
+        private final VertArray.RetainedDraw retained;
+        private RenderCall(VertArray array, MaterialProp material, List<VertArray.Face> faces, VertArray.RetainedDraw retained) {
             vertArray = array; this.material = material; this.faces = faces;
-            faceCount = faces.size(); instanced = array.instanceBuf != null;
+            this.retained = retained;
+            faceCount = retained == null ? faces.size() : retained.geometry().vertexCount() / 3;
+            instanced = array.instanceBuf != null;
         }
     }
 }
