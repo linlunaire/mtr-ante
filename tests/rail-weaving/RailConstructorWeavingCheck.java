@@ -52,6 +52,7 @@ public final class RailConstructorWeavingCheck {
             }
         };
         Class<?> rail = loader.loadClass("mtr.data.Rail");
+        checkNewConnections(loader, rail);
         Map<String, Value> record = straightRail();
         Object restored = construct(rail, Map.class, record);
         checkPosition(rail, restored);
@@ -105,6 +106,35 @@ public final class RailConstructorWeavingCheck {
             require(count>0,"No real rail connections tested");
             System.out.println("PASS: actually constructed "+count+" connections from read-only real save rail records");
         }
+    }
+    private static void checkNewConnections(ClassLoader loader, Class<?> rail) throws Exception {
+        Class<?> angle = loader.loadClass("mtr.data.RailAngle");
+        Class<?> railType = loader.loadClass("mtr.data.RailType");
+        Class<?> transport = loader.loadClass("mtr.data.TransportMode");
+        Class<?> angleHelper = loader.loadClass("cn.zbx1425.mtrsteamloco.data.RailAngleExtra");
+        Object facingStart = angleHelper.getMethod("fromDegrees", double.class).invoke(null, 0D);
+        Object facingEnd = angleHelper.getMethod("fromDegrees", double.class).invoke(null, 180D);
+        var constructor = rail.getConstructor(net.minecraft.core.BlockPos.class, angle,
+                net.minecraft.core.BlockPos.class, angle, railType, transport);
+        var start = new net.minecraft.core.BlockPos(0, 64, 0);
+        var end = new net.minecraft.core.BlockPos(16, 64, 0);
+        Object train = transport.getField("TRAIN").get(null);
+        Object iron = railType.getField("IRON").get(null);
+        for (boolean reversed : new boolean[]{false, true}) {
+            Object connected = constructor.newInstance(reversed ? end : start, reversed ? facingEnd : facingStart,
+                    reversed ? start : end, reversed ? facingStart : facingEnd, iron, train);
+            // ItemRailModifier.onConnect calls isValid before it can add either rail or send it to clients.
+            require((boolean) rail.getMethod("isValid").invoke(connected), "New straight connection is invalid");
+            checkPosition(rail, connected);
+            require("".equals(rail.getMethod("getModelKey").invoke(connected)), "New rail lost default model key");
+            for (String getter : List.of("getRollAngleMap", "getCustomConfigs", "getCustomResponders")) {
+                require(rail.getMethod(getter).invoke(connected) instanceof Map<?, ?> map && map.isEmpty(),
+                        "New rail lost default collection: " + getter);
+            }
+            require((float) rail.getMethod("getRollingOffset").invoke(connected) == 1.435F / 2F,
+                    "New rail lost default rolling offset");
+        }
+        System.out.println("PASS: both newly connected rails validate with initialized extension metadata");
     }
     private static Object construct(Class<?> type,Class<?> argument,Object value) throws Exception {
         try { return type.getConstructor(argument).newInstance(value); }

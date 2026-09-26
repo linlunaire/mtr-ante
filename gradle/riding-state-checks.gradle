@@ -1,0 +1,19 @@
+def ridingStateClasses = layout.buildDirectory.dir('classes/ridingStateWeaving')
+tasks.register('compileRidingStateWeaving', JavaCompile) {
+    dependsOn tasks.named('classes')
+    source rootProject.file('tests/riding-state-weaving/RidingStateWeavingCheck.java'),
+            rootProject.file('tests/riding-state-weaving/fixtures'),
+            rootProject.file('tests/camera-weaving/CameraWeavingCheck.java')
+    classpath = configurations.compileClasspath
+    destinationDirectory = ridingStateClasses
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-proc:none']
+}
+tasks.register('checkRidingStateWeaving', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRidingStateWeaving'
+    classpath = files(ridingStateClasses, rootProject.file('tests/riding-state-weaving/resources'),
+            rootProject.file('tests/camera-weaving/resources')) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RidingStateWeavingCheck'
+}
+tasks.named('check') { dependsOn 'checkRidingStateWeaving' }

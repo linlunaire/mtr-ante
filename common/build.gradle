@@ -2,6 +2,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import java.time.Instant
 
 architectury { common('fabric', 'neoforge') }
+apply from: rootProject.file('gradle/riding-state-checks.gradle')
 
 def buildConfigSources = layout.buildDirectory.dir('generated/sources/buildConfig')
 def generateBuildConfig = tasks.register('generateBuildConfig', Copy) {
