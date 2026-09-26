@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "置換",
     "gui.mtrsteamloco.no_tasks_found": "タスクが見つかりません",
     "key.mtrsteamloco.train_screen": "列車画面",
-    "key.category.mtrsteamloco.keybinding": "ANTEキーバインド",
+    "category.mtrsteamloco.keybinding": "ANTEキーバインド",
     "gui.mtr.percentage_complete_slice": "スライスタスク（%s%%）",
     "gui.mtr.rail_action_slice": "%s がスライスタスクを作成（%sブロック）",
     "gui.mtrsteamloco.direct_node.unbound": "直線ノード未接続",

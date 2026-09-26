@@ -1,110 +1,245 @@
 package cn.zbx1425.mtrsteamloco.data;
 
-import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
-import net.minecraft.SharedConstants;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.AbstractPackResources;
-import net.minecraft.server.packs.PackLocationInfo;
-import net.minecraft.server.packs.PackResources;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.metadata.pack.PackMetadataSection;
-import net.minecraft.server.packs.repository.PackSource;
-import net.minecraft.server.packs.resources.FallbackResourceManager;
-import net.minecraft.server.packs.resources.IoSupplier;
-import net.minecraft.server.packs.resources.MultiPackResourceManager;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
-import net.minecraft.util.InclusiveRange;
-
+import net.minecraft.server.packs.resources.FallbackResourceManager;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
 import java.io.ByteArrayInputStream;
+import net.minecraft.server.packs.AbstractPackResources;
+#if MC_VERSION >= "11903"
+import net.minecraft.server.packs.resources.IoSupplier;
+#endif
+#if MC_VERSION <= "11701"
+import net.minecraft.server.packs.resources.SimpleReloadableResourceManager;
+#else
+import net.minecraft.server.packs.resources.MultiPackResourceManager;
+#endif
+
+
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Optional;
+import java.io.FileNotFoundException;
+import java.util.Map;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Set;
+import java.util.HashSet;
+import java.io.IOException;
 
 public class DynamicResource {
 
-    private static MultiPackResourceManager MPRM;
-    private static DynamicPack DYNAMIC_PACK;
-    private static final Set<String> ADDED_NAMESPACES = new HashSet<>();
+#if MC_VERSION >= "11800"
+    private static MultiPackResourceManager MPRM = null;
+    private static DynamicPack DYNAMIC_PACK = null;
+    private static Set<String> ADDED_NAMESPACES = new HashSet<>();
 
-    public static void addResourcesClient(Identifier loc, IoSupplier<InputStream> funGetStream) {
-        addResources((MultiPackResourceManager) ((ReloadableResourceManager) Minecraft.getInstance().getResourceManager()).resources,
-                loc, funGetStream);
-    }
+    public static void addResourcesClient(ResourceLocation loc, IoSupplier<InputStream> funGetStream) {
+        MultiPackResourceManager mprm = (MultiPackResourceManager) (Object) ((ReloadableResourceManager) (Object) Minecraft.getInstance().getResourceManager()).resources;
+        if (MPRM == null || MPRM != mprm) {
+            MPRM = mprm;
+            if (DYNAMIC_PACK != null && MPRM.packs.contains(DYNAMIC_PACK)) {
+                MPRM.packs.remove(DYNAMIC_PACK);
+            }
+            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"ANTE Virtual Dynamic Pack\"}}");
 
-    // The manager seam also keeps the real resource lookup test independent of a client window.
-    static void addResources(MultiPackResourceManager manager, Identifier loc, IoSupplier<InputStream> funGetStream) {
-        if (MPRM != manager) {
-            MPRM = manager;
-            DYNAMIC_PACK = new DynamicPack();
             MPRM.packs = new ArrayList<>(MPRM.packs);
             MPRM.packs.add(DYNAMIC_PACK);
-            ADDED_NAMESPACES.clear();
+            ADDED_NAMESPACES = new HashSet<>();
         }
-        DYNAMIC_PACK.addResource(PackType.CLIENT_RESOURCES, loc, funGetStream);
-        if (ADDED_NAMESPACES.add(loc.getNamespace())) {
-            MPRM.namespacedManagers.computeIfAbsent(loc.getNamespace(), namespace -> new FallbackResourceManager(PackType.CLIENT_RESOURCES, namespace))
+        DYNAMIC_PACK.addResoure(PackType.CLIENT_RESOURCES, loc, funGetStream);
+        Set<String> current = new HashSet<>(DYNAMIC_PACK.getNamespaces(PackType.CLIENT_RESOURCES));
+        current.removeAll(ADDED_NAMESPACES);
+        for (String ns : current) {
+            if (!ns.isEmpty()) {
+                MPRM.namespacedManagers.computeIfAbsent(ns, k -> new FallbackResourceManager(PackType.CLIENT_RESOURCES, k))
+            #if MC_VERSION >= "11900"
                     .push(DYNAMIC_PACK);
+            #else
+                    .add(DYNAMIC_PACK);
+            #endif
+            }
         }
+        ADDED_NAMESPACES = new HashSet<>(DYNAMIC_PACK.getNamespaces(PackType.CLIENT_RESOURCES));
     }
+#else
+    private static SimpleReloadableResourceManager SRRM = null;
+    private static DynamicPack DYNAMIC_PACK = null;
+    private static Set<String> ADDED_NAMESPACES = new HashSet<>();
 
-    private static class DynamicPack extends AbstractPackResources {
-        private static final String NAME = "ANTE Virtual Dynamic Pack";
-        private final byte[] metadata;
-        private final Map<PackType, Map<Identifier, IoSupplier<InputStream>>> resources = new HashMap<>();
+    public static void addResourcesClient(ResourceLocation loc, IoSupplier<InputStream> funGetStream) {
+        SimpleReloadableResourceManager srrm = (SimpleReloadableResourceManager) (Object) Minecraft.getInstance().getResourceManager();
+        if (SRRM == null || SRRM != srrm) {
+            SRRM = srrm;
+            if (DYNAMIC_PACK != null && SRRM.packs.contains(DYNAMIC_PACK)) {
+                SRRM.packs.remove(DYNAMIC_PACK);
+            }
+            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"ANTE Virtual Dynamic Pack\"}}");
+
+            SRRM.packs.add(DYNAMIC_PACK);
+            ADDED_NAMESPACES = new HashSet<>();
+        }
+        DYNAMIC_PACK.addResoure(PackType.CLIENT_RESOURCES, loc, funGetStream);
+        Set<String> current = new HashSet<>(DYNAMIC_PACK.getNamespaces(PackType.CLIENT_RESOURCES));
+        current.removeAll(ADDED_NAMESPACES);
+        for (String ns : current) {
+            if (!ns.isEmpty()) {
+                SRRM.namespacedPacks.computeIfAbsent(ns, k -> new FallbackResourceManager(PackType.CLIENT_RESOURCES, k)).add(DYNAMIC_PACK);
+            }
+        }
+        ADDED_NAMESPACES = new HashSet<>(DYNAMIC_PACK.getNamespaces(PackType.CLIENT_RESOURCES));
+    }
+#endif
+
+    private static class DynamicPack implements PackResources {
+        private final String name, pack_mcmeta;
+        private final Map<PackType, Map<ResourceLocation, IoSupplier<InputStream>>> resources = new HashMap<>();
         private final Map<PackType, Set<String>> namespaces = new HashMap<>();
 
-        DynamicPack() {
-            super(new PackLocationInfo(NAME, Component.literal(NAME), PackSource.DEFAULT, Optional.empty()));
-            final PackMetadataSection section = new PackMetadataSection(Component.literal(NAME),
-                    new InclusiveRange<>(SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES)));
-            final JsonObject root = new JsonObject();
-            root.add(PackMetadataSection.CLIENT_TYPE.name(), PackMetadataSection.CLIENT_TYPE.codec().encodeStart(JsonOps.INSTANCE, section).getOrThrow());
-            metadata = root.toString().getBytes(StandardCharsets.UTF_8);
+        public DynamicPack(String name, String pack_mcmeta) {
+            this.name = name;
+            this.pack_mcmeta = pack_mcmeta;
         }
 
-        void addResource(PackType packType, Identifier loc, IoSupplier<InputStream> funGetStream) {
-            resources.computeIfAbsent(packType, type -> new HashMap<>()).put(loc, funGetStream);
-            namespaces.computeIfAbsent(packType, type -> new HashSet<>()).add(loc.getNamespace());
+        public void addResoure(PackType packType, ResourceLocation loc, IoSupplier<InputStream> funGetStream) {
+            resources.computeIfAbsent(packType, k -> new HashMap<>()).put(loc, funGetStream);
+            namespaces.computeIfAbsent(packType, k -> new HashSet<>()).add(loc.getNamespace());
+        }
+    #if MC_VERSION < "11903"
+        @Override
+        public InputStream getRootResource(String fileName) {
+            return null;
         }
 
         @Override
-        public IoSupplier<InputStream> getRootResource(String... path) {
-            return path.length == 1 && PackResources.PACK_META.equals(path[0]) ? () -> new ByteArrayInputStream(metadata) : null;
+        public InputStream getResource(PackType packType, ResourceLocation loc) throws IOException {
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(packType);
+            if (map == null) {
+                throw new FileNotFoundException("Resource not found: " + loc);
+            }
+            return map.get(loc).get();
+        }
+
+      #if MC_VERSION < "11902"
+        @Override
+        public Collection<ResourceLocation> getResources(PackType type, String namespace, String path, int maxDepth, Predicate<String> filter) {
+            String[] strings;
+            String lpath;
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(type);
+            if (map == null) return new ArrayList<>();
+            List<ResourceLocation> list = new ArrayList<>();
+            for (ResourceLocation loc : map.keySet()) {
+                if (!loc.getNamespace().equals(namespace)) continue;
+
+                if (!(lpath = loc.getPath()).startsWith(path) || (strings = lpath.split("/")).length < maxDepth + 1 || !filter.test(strings[strings.length - 1])) continue;
+                list.add(new ResourceLocation(namespace, lpath));
+            }
+            return list;
+        }
+      #else
+        @Override
+        public Collection<ResourceLocation> getResources(PackType type, String namespace, String path, Predicate<ResourceLocation> filter) {
+            String lpath;
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(type);
+            if (map == null) return new ArrayList<>();
+            List<ResourceLocation> list = new ArrayList<>();
+            for (ResourceLocation loc : map.keySet()) {
+                if (!loc.getNamespace().equals(namespace)) continue;
+
+                if (!(lpath = loc.getPath()).startsWith(path) || !filter.test(loc)) continue;
+                list.add(new ResourceLocation(namespace, lpath));
+            }
+            return list;
+        }
+      #endif
+
+        @Override
+        public boolean hasResource(PackType packType, ResourceLocation loc) {
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(packType);
+            if (map == null) return false;
+            return map.containsKey(loc);
         }
 
         @Override
-        public IoSupplier<InputStream> getResource(PackType packType, Identifier loc) {
-            final Map<Identifier, IoSupplier<InputStream>> map = resources.get(packType);
-            if (map == null) return null;
+        public String getName() {
+            return name;
+        }
+    
+    #else
+
+      #if MC_VERSION < "12000"
+            
+        @Override
+        public boolean isBuiltin() {
+            return true;
+        }
+
+      #endif
+        @Override
+        public IoSupplier<InputStream> getRootResource(String... fileName) {
+            return null;
+        }
+
+        @Override
+        public IoSupplier<InputStream> getResource(PackType packType, ResourceLocation loc) {
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(packType);
+            if (map != null) return null;
             return map.get(loc);
         }
 
+		@Override
+		public String packId() {
+			return name;
+		}
+
+		@Override
+		public PackLocationInfo location() {
+			return new PackLocationInfo(name, Component.literal(name), PackSource.DEFAULT, Optional.empty());
+		}
+
         @Override
         public void listResources(PackType type, String namespace, String path, PackResources.ResourceOutput output) {
-            final Map<Identifier, IoSupplier<InputStream>> map = resources.get(type);
+            Map<ResourceLocation, IoSupplier<InputStream>> map = resources.get(type);
             if (map == null) return;
-            final String prefix = path.isEmpty() || path.endsWith("/") ? path : path + "/";
-            for (Map.Entry<Identifier, IoSupplier<InputStream>> entry : map.entrySet()) {
-                final Identifier loc = entry.getKey();
-                if (loc.getNamespace().equals(namespace) && loc.getPath().startsWith(prefix)) output.accept(loc, entry.getValue());
+            for (Map.Entry<ResourceLocation, IoSupplier<InputStream>> entry : map.entrySet()) {
+                ResourceLocation loc = entry.getKey();
+                if (!loc.getNamespace().equals(namespace)) continue;
+                if (!loc.getPath().startsWith(path)) continue;
+                output.accept(loc, entry.getValue());
             }
         }
+    #endif
 
         @Override
         public Set<String> getNamespaces(PackType packType) {
-            return Set.copyOf(namespaces.getOrDefault(packType, Set.of()));
+            return namespaces.getOrDefault(packType, new HashSet<>());
         }
 
         @Override
         public void close() {
+
+        }
+
+        @Override
+        public <T> T getMetadataSection(MetadataSectionSerializer<T> deserializer) throws IOException {
+            if (pack_mcmeta == null) return null;
+            return AbstractPackResources.getMetadataFromStream(deserializer, new ByteArrayInputStream(pack_mcmeta.getBytes()));
         }
     }
+
+#if MC_VERSION < "11903"
+    @FunctionalInterface
+    public static interface IoSupplier<T> {
+        T get() throws IOException;
+    }
+#endif
 }

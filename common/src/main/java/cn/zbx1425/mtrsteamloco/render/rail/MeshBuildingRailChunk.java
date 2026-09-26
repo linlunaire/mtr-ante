@@ -13,7 +13,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrSrc;
 import cn.zbx1425.sowcer.vertex.VertAttrState;
 import cn.zbx1425.sowcer.vertex.VertAttrType;
 import cn.zbx1425.sowcerext.model.*;
-import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.LightTexture;
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -62,41 +62,26 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void rebuildBuffer(Level world) {
+        super.rebuildBuffer(world);
         if (railModel == null) return;
 
-        final boolean useDeform = ClientConfig.enableRailDeform;
-        rebuildAsync(() -> {
-            RawModel combinedModel = useDeform ? transformModelDeform(world) : transformModel(world);
-            float[] bounds = getYBounds();
+        EXECUTOR.execute(() -> {
+            RawModel combinedModel = ClientConfig.enableRailDeform ? transformModelDeform(world) : transformModel(world);
+            checkBoundingBox();
             
             Supplier<Model> supplier = combinedModel.uploadAsync(RAIL_MAPPING);
-            // The deferred supplier owns heap buffers only. Discarding it must not perform an upload.
-            return () -> {
-                Model candidate = supplier.get();
-                VertArrays candidateArrays;
-                try {
-                    candidateArrays = VertArrays.createAll(candidate, RAIL_MAPPING, null);
-                } catch (RuntimeException | Error error) {
-                    candidate.close();
-                    throw error;
-                }
-                Model previousModel = uploadedCombinedModel;
-                VertArrays previousArrays = vertArrays;
-                uploadedCombinedModel = candidate;
-                vertArrays = candidateArrays;
-                deform = useDeform;
-                setBoundingBox(bounds[0], bounds[1]);
-                bufferBuilt = true;
-                try {
-                    if (previousArrays != null) previousArrays.close();
-                } finally {
-                    if (previousModel != null) previousModel.close();
-                }
-            };
+            UPLOAD_QUEUE.offer(() -> {
+                if (uploadedCombinedModel != null) uploadedCombinedModel.close();
+                if (vertArrays != null) vertArrays.close();
+                uploadedCombinedModel = supplier.get();
+                vertArrays = VertArrays.createAll(uploadedCombinedModel, RAIL_MAPPING, null);
+                bufferBuilding = false;
+            });
         });
     }
 
     private RawModel transformModel(Level world) {
+        deform = false;
         RawModel combinedModel = new RawModel();
 
         for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
@@ -104,7 +89,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
             for (Matrix4f pieceMat : railSpan) {
                 final Vector3f lightPos = pieceMat.getTranslationPart();
                 final BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
-                final int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
+                final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
                 combinedModel.appendTransformed(railModel, pieceMat, entry.getKey().color, light);
             }
         }
@@ -112,7 +97,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         return  combinedModel;
     }
 
-    private float[] getYBounds() {
+    private void checkBoundingBox() {
         float yMin = 256, yMax = -64;
         for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
             for (Matrix4f pieceMat : entry.getValue()) {
@@ -123,10 +108,11 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         }
 
         if (yMin > yMax) yMin = yMax;
-        return new float[]{yMin, yMax};
+        setBoundingBox(yMin, yMax);
     }
 
     private RawModel transformModelDeform(Level world) {
+        deform = true;
         RawModel combinedModel = new RawModel();
         for (BakedRail bakedRail : containingRails.keySet()) {
             Rail rail = bakedRail.rail;
@@ -146,7 +132,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
                 Vector3f lightPos = new Vector3f(mid);
                 BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
-                int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
+                int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
 
                 RawModel rm = railModel.copy();
                 for (Map.Entry<MaterialProp, RawMesh> entry : rm.meshList.entrySet()) {
@@ -193,7 +179,6 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void close() {
-        closeBuild();
         if (vertArrays != null) vertArrays.close();
         if (uploadedCombinedModel != null) uploadedCombinedModel.close();
         vertArrays = null;

@@ -3,7 +3,7 @@ package cn.zbx1425.sowcerext.reuse;
 import cn.zbx1425.sowcer.batch.BatchManager;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import cn.zbx1425.sowcer.shader.ShaderManager;
-
+import cn.zbx1425.sowcer.util.GlStateTracker;
 import cn.zbx1425.sowcer.util.DrawContext;
 import cn.zbx1425.sowcerext.model.ModelCluster;
 import cn.zbx1425.sowcerext.model.RawModel;
@@ -45,8 +45,7 @@ public class DrawScheduler {
 
     public void commit(BufferSourceProxy vertexConsumers, DrawContext drawContext) {
         if (!drawContext.drawWithBlaze && !shaderManager.isReady()) return;
-        if (clusterDrawCalls.isEmpty() && blazeDrawCalls.isEmpty()) return;
-        try {
+        if (clusterDrawCalls.isEmpty()) return;
         if (drawContext.drawWithBlaze) {
             for (ClusterDrawCall drawCall : clusterDrawCalls)
                 drawCall.model.enqueueOpaqueBlaze(vertexConsumers, drawCall.pose, drawCall.light, drawCall.overlay, drawContext);
@@ -67,14 +66,11 @@ public class DrawScheduler {
             drawCall.model.writeBlazeBuffer(vertexConsumers, drawCall.pose, drawCall.light, drawCall.overlay, drawContext);
         }
         if (!drawContext.drawWithBlaze) {
+            GlStateTracker.capture();
             commitRaw(drawContext);
+            GlStateTracker.restore();
         }
-        } finally {
-            for (ClusterDrawCall call : clusterDrawCalls) call.model.close();
-            clusterDrawCalls.clear();
-            blazeDrawCalls.clear();
-            batchManager.clear();
-        }
+        clusterDrawCalls.clear();
     }
 
     public void commitRaw(DrawContext drawContext) {
@@ -99,7 +95,9 @@ public class DrawScheduler {
             model.enqueueTranslucentGl(batchManager, pose, light, overlay, drawContext);
         }
         if (!drawContext.drawWithBlaze) {
+            GlStateTracker.capture();
             batchManager.drawAll(shaderManager, drawContext);
+            GlStateTracker.restore();
         }
         vertexConsumers.commit();
     }
@@ -111,15 +109,15 @@ public class DrawScheduler {
         public int overlay;
 
         public ClusterDrawCall(ModelCluster model, Matrix4f pose, int light) {
-            this.model = model.snapshotForDrawing();
-            this.pose = pose.copy();
+            this.model = model;
+            this.pose = pose;
             this.light = light;
             this.overlay = OverlayTexture.NO_OVERLAY;
         }
 
         public ClusterDrawCall(ModelCluster model, Matrix4f pose, int light, int overlay) {
-            this.model = model.snapshotForDrawing();
-            this.pose = pose.copy();
+            this.model = model;
+            this.pose = pose;
             this.light = light;
             this.overlay = overlay;
         }
@@ -132,15 +130,15 @@ public class DrawScheduler {
         public int overlay;
 
         public BlazeDrawCall(RawModel model, Matrix4f pose, int light) {
-            this.model = model.copy();
-            this.pose = pose.copy();
+            this.model = model;
+            this.pose = pose;
             this.light = light;
             this.overlay = OverlayTexture.NO_OVERLAY;
         }
 
         public BlazeDrawCall(RawModel model, Matrix4f pose, int light, int overlay) {
-            this.model = model.copy();
-            this.pose = pose.copy();
+            this.model = model;
+            this.pose = pose;
             this.light = light;
             this.overlay = overlay;
         }

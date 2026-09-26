@@ -18,7 +18,7 @@ import cn.zbx1425.mtrsteamloco.block.BlockDirectNode.BlockEntityDirectNode;
 import net.minecraft.util.FormattedCharSequence;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.chat.FormattedText;
 import mtr.client.IDrawing;
@@ -36,11 +36,13 @@ import net.minecraft.util.Mth;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import mtr.data.RailType;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.BlockPos;
@@ -49,7 +51,12 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.Window;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
+#endif
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -149,7 +156,7 @@ public class BrushEditRailScreen {
                 common.addEntry(
                     ButtonListEntry.createCenteredInstance(
                         Text.translatable("gui.mtrsteamloco.brush_edit_rail.adjust_angle"),
-                        btn -> minecraft.gui.setScreen(DirectNodeScreen.createScreen(entity1, () -> createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent)))
+                        btn -> minecraft.setScreen(DirectNodeScreen.createScreen(entity1, () -> createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent)))
                     )
                 );
             } else if (pickedRail.transportMode == TransportMode.TRAIN) {
@@ -186,7 +193,7 @@ public class BrushEditRailScreen {
                                 }
                             }
                         );
-                        Minecraft.getInstance().gui.setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
+                        Minecraft.getInstance().setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
                     }
                     return Optional.empty();
                 }).build()
@@ -195,7 +202,7 @@ public class BrushEditRailScreen {
                 common.addEntry(
                     entryBuilder.startTextField(
                         Text.translatable("gui.mtrsteamloco.brush_edit_rail.rail_type"),
-                        mtr.mappings.CompoundTagMapper.getString(brushTag, "RailType")
+                        brushTag.getString("RailType")
                     ).setErrorSupplier(str -> {
                         try {
                             RailType type = RailType.valueOf(str);
@@ -226,7 +233,7 @@ public class BrushEditRailScreen {
                                     compoundTag.remove("ModelKey");
                                 }
                             });
-                        Minecraft.getInstance().gui.setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
+                        Minecraft.getInstance().setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
                     }
                     return Optional.empty();
                 })
@@ -237,7 +244,7 @@ public class BrushEditRailScreen {
                 RailModelProperties properties = RailModelRegistry.ELEMENTS.get(modelKey);
                 common.addEntry(ButtonListEntry.createCenteredInstance(
                     Text.translatable("gui.mtrsteamloco.brush_edit_rail.present", (properties != null ? (properties.name.getString()) : (modelKey + " (???)"))),
-                    btn -> Minecraft.getInstance().gui.setScreen(new SelectScreen(() -> createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent), RailModelRegistry.TREE, supplier::getModelKey, (mc, screen, btnKey) -> {
+                    btn -> Minecraft.getInstance().setScreen(new SelectScreen(() -> createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent), RailModelRegistry.TREE, supplier::getModelKey, (mc, screen, btnKey) -> {
                         BrushEditRailScreen.updateBrushTag(compoundTag -> compoundTag.putString("ModelKey", btnKey));
                         ((RailExtraSupplier) pickedRail).setModelKey(btnKey);
                         PacketUpdateRail.sendUpdateC2S(pickedRail, pickedPosStart, pickedPosEnd);
@@ -260,7 +267,7 @@ public class BrushEditRailScreen {
                                 compoundTag.remove("VerticalCurveRadius");
                             }
                         });
-                        Minecraft.getInstance().gui.setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
+                        Minecraft.getInstance().setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
                     }
                     return Optional.empty();
                 })
@@ -287,7 +294,7 @@ public class BrushEditRailScreen {
                                 compoundTag.putString("RollAngleMap", DoubleFloatMapSerializer.serializeToString(new HashMap<>()));
                             });
                         }
-                        Minecraft.getInstance().gui.setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
+                        Minecraft.getInstance().setScreen(BrushEditRailScreen.createScreen(pickedRail, pickedPosStart, pickedPosEnd, parent));
                     }
                     return Optional.empty();
                 }).build()
@@ -397,19 +404,19 @@ public class BrushEditRailScreen {
         RailExtraSupplier pickedExtra = (RailExtraSupplier) pickedRail;
         boolean propertyUpdated = false;
         if (railBrushProp.contains("ModelKey") &&
-                !mtr.mappings.CompoundTagMapper.getString(railBrushProp, "ModelKey").equals(pickedExtra.getModelKey())) {
-            String modelKey = mtr.mappings.CompoundTagMapper.getString(railBrushProp, "ModelKey");
+                !railBrushProp.getString("ModelKey").equals(pickedExtra.getModelKey())) {
+            String modelKey = railBrushProp.getString("ModelKey");
             pickedExtra.setModelKey(modelKey);
             if (anti != null) ((RailExtraSupplier) anti).setModelKey(modelKey);
             propertyUpdated = true;
         }
         if (railBrushProp.contains("VerticalCurveRadius") &&
-                mtr.mappings.CompoundTagMapper.getFloat(railBrushProp, "VerticalCurveRadius") != pickedExtra.getVerticalCurveRadius()) {
-            pickedExtra.setVerticalCurveRadius(mtr.mappings.CompoundTagMapper.getFloat(railBrushProp, "VerticalCurveRadius"));
+                railBrushProp.getFloat("VerticalCurveRadius") != pickedExtra.getVerticalCurveRadius()) {
+            pickedExtra.setVerticalCurveRadius(railBrushProp.getFloat("VerticalCurveRadius"));
             propertyUpdated = true;
         }
         if (railBrushProp.contains("RollAngleMap")) {
-            Map<Double, Float> raw = DoubleFloatMapSerializer.deserialize(mtr.mappings.CompoundTagMapper.getString(railBrushProp, "RollAngleMap"));
+            Map<Double, Float> raw = DoubleFloatMapSerializer.deserialize(railBrushProp.getString("RollAngleMap"));
             Map<Double, Float> rollAngleMap = new HashMap<>();
             Set<Map.Entry<Double, Float>> entries = new HashSet<>(raw.entrySet());
             double length = pickedRail.getLength();
@@ -420,8 +427,8 @@ public class BrushEditRailScreen {
             propertyUpdated = true;
         }
         if (railBrushProp.contains("RailType")) {
-            pickedExtra.setRailType(RailType.valueOf(mtr.mappings.CompoundTagMapper.getString(railBrushProp, "RailType")));
-            Main.LOGGER.info("RailType updated to " + mtr.mappings.CompoundTagMapper.getString(railBrushProp, "RailType"));
+            pickedExtra.setRailType(RailType.valueOf(railBrushProp.getString("RailType")));
+            Main.LOGGER.info("RailType updated to " + railBrushProp.getString("RailType"));
             propertyUpdated = true;
         }
         if (isBatchApply && !propertyUpdated) {
@@ -446,9 +453,9 @@ public class BrushEditRailScreen {
         ItemStack offHandItem = Minecraft.getInstance().player.getOffhandItem();
         CompoundTag nteTag = null;
         if (mainHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompoundOrEmpty("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompound("NTERailBrush");
         } else if (offHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompoundOrEmpty("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompound("NTERailBrush");
         }
         return nteTag;
     }
@@ -460,10 +467,10 @@ public class BrushEditRailScreen {
         CompoundTag nteTag = null;
         InteractionHand hand = null;
         if (mainHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompoundOrEmpty("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(mainHandItem).getCompound("NTERailBrush");
             hand = InteractionHand.MAIN_HAND;
         } else if (offHandItem.is(mtr.Items.BRUSH.get())) {
-            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompoundOrEmpty("NTERailBrush");
+            nteTag = ItemStackUtilities.getCustomData(offHandItem).getCompound("NTERailBrush");
             hand = InteractionHand.OFF_HAND;
         }
         if (nteTag == null) return;
@@ -554,14 +561,18 @@ public class BrushEditRailScreen {
         }
 
         @Override
-        public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-            super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+#if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#else
+        public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#endif
+            super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
             IDrawing.setPositionAndWidth(radiusInput, 80, y, 200);
             IDrawing.setPositionAndWidth(btnSetDefaultRadius, 290, y, 60);
             IDrawing.setPositionAndWidth(btnSetNoRadius, 355, y, 60);
-            radiusInput.extractRenderState(matrices, mouseX, mouseY, delta);
-            btnSetDefaultRadius.extractRenderState(matrices, mouseX, mouseY, delta);
-            btnSetNoRadius.extractRenderState(matrices, mouseX, mouseY, delta);
+            radiusInput.render(matrices, mouseX, mouseY, delta);
+            btnSetDefaultRadius.render(matrices, mouseX, mouseY, delta);
+            btnSetNoRadius.render(matrices, mouseX, mouseY, delta);
         }
 
         @Override

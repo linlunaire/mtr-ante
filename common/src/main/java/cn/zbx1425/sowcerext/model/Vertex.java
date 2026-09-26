@@ -42,12 +42,12 @@ public class Vertex {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Vertex vertex = (Vertex) o;
-        return color == vertex.color && light == vertex.light && Float.compare(vertex.u, u) == 0 && Float.compare(vertex.v, v) == 0 && position.equals(vertex.position) && normal.equals(vertex.normal);
+        return Float.compare(vertex.u, u) == 0 && Float.compare(vertex.v, v) == 0 && position.equals(vertex.position) && normal.equals(vertex.normal);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(position, normal, u, v, color, light);
+        return Objects.hash(position, normal, u, v);
     }
 
     public Vertex copy() {

@@ -8,7 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.commands.synchronization.brigadier.StringArgumentSerializer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Player;
@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import mtr.block.BlockNode;
 import net.minecraft.core.Direction;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.pipeline.RenderCall;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
@@ -57,12 +58,12 @@ public class MinecraftClientUtil {
 
     public static int worldDayTime() {
         return Minecraft.getInstance().level != null
-                ? (int) Minecraft.getInstance().level.getOverworldClockTime() : 0;
+                ? (int) Minecraft.getInstance().level.getDayTime() : 0;
     }
 
     public static void narrate(String message) {
         Minecraft.getInstance().execute(() -> {
-            Narrator.getNarrator().say(message, true, 1.0F);
+            Narrator.getNarrator().say(message, true);
         });
     }
 
@@ -70,8 +71,7 @@ public class MinecraftClientUtil {
         final Player player = Minecraft.getInstance().player;
         if (player != null) {
             Minecraft.getInstance().execute(() -> {
-                if (actionBar) player.sendOverlayMessage(Text.literal(message));
-                else player.sendSystemMessage(Text.literal(message));
+                player.displayClientMessage(Text.literal(message), actionBar);
             });
         }
     }
@@ -80,12 +80,12 @@ public class MinecraftClientUtil {
         Minecraft.getInstance().execute(runnable);
     }
 
-    public static void recordRenderCall(Runnable renderCall) {
-        Minecraft.getInstance().schedule(renderCall);
+    public static void recordRenderCall(RenderCall renderCall) {
+        RenderSystem.recordRenderCall(renderCall);
     }
 
     public static boolean isOnRenderThreadOrInit() {
-        return RenderSystem.isOnRenderThread();
+        return RenderSystem.isOnRenderThreadOrInit();
     }
 
     public static void levelEvent(int p_109534_, Vector3f p_109535_, int p_109536_) {
@@ -168,7 +168,7 @@ public class MinecraftClientUtil {
     }
 
     public static Vector3f getCameraPos() {
-        return new Vector3f(Minecraft.getInstance().gameRenderer.mainCamera().position());
+        return new Vector3f(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition());
     }
 
     public static float getCameraDistance(Vector3f from) {
@@ -233,7 +233,7 @@ public class MinecraftClientUtil {
 	}
 
     public static WrappedEntity getCameraEntity() {
-        return new WrappedEntity(Minecraft.getInstance().getCameraEntity());
+        return new WrappedEntity(Minecraft.getInstance().cameraEntity);
     }
 
     public static WrappedEntity getPlayer() {
@@ -245,15 +245,15 @@ public class MinecraftClientUtil {
     }
 
     public static int getLightColor(Vector3f pos) {
-        return net.minecraft.util.LightCoordsUtil.getLightCoords(getLevel(), pos.toBlockPos());
+        return LevelRenderer.getLightColor(getLevel(), pos.toBlockPos());
     }
 
     public static void setScreen(Screen screen) {
-        execute(() -> Minecraft.getInstance().gui.setScreen(screen));
+        execute(() -> Minecraft.getInstance().setScreen(screen));
     }
 
     public static Screen getPresentScreen() {
-        return Minecraft.getInstance().gui.screen();
+        return Minecraft.getInstance().screen;
     }
 
     public static void reloadResourcePacks() {
@@ -261,6 +261,6 @@ public class MinecraftClientUtil {
     }
 
     public static void markRendererAllChanged() {
-        Minecraft.getInstance().levelExtractor.allChanged();
+        Minecraft.getInstance().levelRenderer.allChanged();
     }
 }

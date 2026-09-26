@@ -21,13 +21,13 @@ public class ParticleHelper {
 
     public static void addParticle(ParticleOptions particle, boolean overrideLimiter, Vector3f pos, Vector3f speed) {
         Minecraft.getInstance().execute(() -> {
-            Minecraft.getInstance().level.addParticle(particle, overrideLimiter, false, pos.x(), pos.y(), pos.z(), speed.x(), speed.y(), speed.z());
+            Minecraft.getInstance().level.addParticle(particle, overrideLimiter, pos.x(), pos.y(), pos.z(), speed.x(), speed.y(), speed.z());
         });
     }
 
     public static void addParticle(ParticleOptions particle, boolean b1, boolean b2,Vector3f pos, Vector3f speed) {
         Minecraft.getInstance().execute(() -> {
-            Minecraft.getInstance().level.addParticle(particle, b1, b2, pos.x(), pos.y(), pos.z(), speed.x(), speed.y(), speed.z());
+            Minecraft.getInstance().levelRenderer.addParticle(particle, b1, b2, pos.x(), pos.y(), pos.z(), speed.x(), speed.y(), speed.z());
         });
     }
 
@@ -53,8 +53,10 @@ public class ParticleHelper {
             return (T)  ParticleTypes.ANGRY_VILLAGER;
         case "BLOCK":
             return (T)  ParticleTypes.BLOCK;
+#if MC_VERSION > "11701"
         case "BLOCK_MARKER":
             return (T)  ParticleTypes.BLOCK_MARKER;
+#endif
         case "BUBBLE":
             return (T)  ParticleTypes.BUBBLE;
         case "CLOUD":

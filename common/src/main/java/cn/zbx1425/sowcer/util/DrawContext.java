@@ -36,6 +36,10 @@ public class DrawContext {
         singleFaceCountCF = 0;
         instancedFaceCountCF = 0;
         blazeFaceCountCF = 0;
+#if DEBUG
+        debugInfo = debugInfoCF;
+        debugInfoCF = new ArrayList<>();
+#endif
     }
 
     public void recordBatches(int batchCount) {
@@ -44,10 +48,13 @@ public class DrawContext {
 
     public void recordDrawCall(BatchManager.RenderCall renderCall) {
         drawCallCountCF++;
-        if (renderCall.instanced) {
-            instancedFaceCountCF += renderCall.faceCount;
+        if (renderCall.vertArray.instanceBuf != null) {
+            instancedFaceCountCF += renderCall.vertArray.getFaceCount();
         } else {
-            singleFaceCountCF += renderCall.faceCount;
+            singleFaceCountCF += renderCall.vertArray.getFaceCount();
+#if DEBUG
+            debugInfoCF.add(String.format("%s: %d", renderCall.vertArray.materialProp.toString(), renderCall.vertArray.getFaceCount()));
+#endif
         }
     }
 

@@ -1,8 +1,0 @@
-{
-  "required": true,
-  "minVersion": "0.8",
-  "package": "cn.zbx1425.mtrsteamloco.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "mixins": ["RailMixin", "RailAngleMixin", "RailTypeMixin"],
-  "injectors": {"defaultRequire": 1}
-}

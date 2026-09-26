@@ -10,10 +10,14 @@ import mtr.client.ClientData;
 import mtr.mappings.Utilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleType;
+#if MC_VERSION >= "11903"
 import net.minecraft.core.registries.BuiltInRegistries;
+#else
+import net.minecraft.core.Registry;
+#endif
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
@@ -39,7 +43,7 @@ import java.util.List;
 public class ScriptResourceUtil {
 
     protected static Context activeContext;
-    protected static final Stack<Identifier> scriptLocationStack = new Stack<>();
+    protected static final Stack<ResourceLocation> scriptLocationStack = new Stack<>();
     protected static final Logger LOGGER = LoggerFactory.getLogger("MTR-ANTE JS");
 
     public static final boolean ANTE_FLAG = true;
@@ -48,7 +52,7 @@ public class ScriptResourceUtil {
         Main.LOGGER.info("NTE version: " + getNTEVersion() + " (int " + getNTEVersionInt() + ") (protocol " + getNTEProtoVersion() + ")");
     }
 
-    public static void executeScript(Context ctx, String script, Identifier identifier) throws IOException {
+    public static void executeScript(Context ctx, String script, ResourceLocation identifier) throws IOException {
         activeContext = ctx;
 
         scriptLocationStack.push(identifier);
@@ -67,9 +71,9 @@ public class ScriptResourceUtil {
         if (activeContext == null) throw new RuntimeException(
                 "Cannot use include in functions, as by that time ANTE no longer processes scripts."
         );
-        Identifier identifier;
-        if (pathOrIdentifier instanceof Identifier) {
-            identifier = (Identifier) pathOrIdentifier;
+        ResourceLocation identifier;
+        if (pathOrIdentifier instanceof ResourceLocation) {
+            identifier = (ResourceLocation) pathOrIdentifier;
         } else {
             identifier = idRelative(pathOrIdentifier.toString());
         }
@@ -103,38 +107,46 @@ public class ScriptResourceUtil {
         return Minecraft.getInstance().getResourceManager();
     }
 
-    public static Identifier identifier(String textForm) {
-        return Identifier.parse(textForm);
+    public static ResourceLocation identifier(String textForm) {
+        return ResourceLocation.parse(textForm);
     }
-    public static Identifier id(String textForm) {
-        return Identifier.parse(textForm);
+    public static ResourceLocation id(String textForm) {
+        return ResourceLocation.parse(textForm);
     }
 
-    public static Identifier idRelative(String textForm) {
+    public static ResourceLocation idRelative(String textForm) {
         if (scriptLocationStack.empty()) throw new RuntimeException(
                 "Cannot use idRelative in functions."
         );
         return ResourceUtil.resolveRelativePath(scriptLocationStack.peek(), textForm, null);
     }
-    public static Identifier idr(String textForm) {
+    public static ResourceLocation idr(String textForm) {
         if (scriptLocationStack.empty()) throw new RuntimeException(
                 "Cannot use idr in functions."
         );
         return ResourceUtil.resolveRelativePath(scriptLocationStack.peek(), textForm, null);
     }
 
-    public static InputStream readStream(Identifier identifier) throws IOException {
+    public static InputStream readStream(ResourceLocation identifier) throws IOException {
+#if MC_VERSION >= "11902"
         final List<Resource> resources = manager().getResourceStack(identifier);
+#else
+        final List<Resource> resources = manager().getResources(identifier);
+#endif
         if (resources.isEmpty()) throw new FileNotFoundException(identifier.toString());
         return Utilities.getInputStream(resources.get(0));
     }
 
-    public static boolean hasResource(Identifier identifier) {
+    public static boolean hasResource(ResourceLocation identifier) {
+#if MC_VERSION >= "11902"
         final List<Resource> resources = manager().getResourceStack(identifier);
         return  resources != null && resources.size() > 0;
+#else
+        return manager().hasResource(identifier);
+#endif
     }
 
-    public static String readString(Identifier identifier) {
+    public static String readString(ResourceLocation identifier) {
         try {
             return ResourceUtil.readResource(manager(), identifier);
         } catch (IOException e) {
@@ -170,25 +182,30 @@ public class ScriptResourceUtil {
         return result;
     }
 
-    public static BufferedImage readBufferedImage(Identifier identifier) throws IOException {
+    public static BufferedImage readBufferedImage(ResourceLocation identifier) throws IOException {
         try (InputStream is = readStream(identifier)) {
             return GraphicsTexture.createArgbBufferedImage(ImageIO.read(is));
         }
     }
 
-    public static Font readFont(Identifier identifier) throws IOException, FontFormatException {
+    public static Font readFont(ResourceLocation identifier) throws IOException, FontFormatException {
         try (InputStream is = readStream(identifier)) {
             return Font.createFont(Font.TRUETYPE_FONT, is);
         }
     }
 
-    public static int getParticleTypeId(Identifier identifier) {
+    public static int getParticleTypeId(ResourceLocation identifier) {
+#if MC_VERSION >= "11903"
         Optional<ParticleType<?>> particleType = BuiltInRegistries.PARTICLE_TYPE.getOptional(identifier);
         return particleType.map(BuiltInRegistries.PARTICLE_TYPE::getId).orElse(-1);
+#else
+        Optional<ParticleType<?>> particleType = Registry.PARTICLE_TYPE.getOptional(identifier);
+        return particleType.map(Registry.PARTICLE_TYPE::getId).orElse(-1);
+#endif
     }
 
     public static CompoundTag parseNbtString(String text) throws CommandSyntaxException {
-        return TagParser.parseCompoundFully(text);
+        return TagParser.parseTag(text);
     }
 
     public static String getMTRVersion() {

@@ -8,8 +8,16 @@ import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import com.mojang.blaze3d.vertex.PoseStack;
+#endif
+#if MC_VERSION >= "11903"
 import net.minecraft.client.gui.components.Renderable;
+#else
+import net.minecraft.client.gui.components.Widget;
+#endif
 import me.shedaniel.clothconfig2.api.*;
 import cn.zbx1425.mtrsteamloco.gui.entries.*;
 import net.minecraft.client.gui.components.Button;
@@ -37,9 +45,15 @@ public interface IScreen {
         }
     }
 
+#if MC_VERSION >= "11903"
     public static Button newButton(int x, int y, int width, int height, Component text, OnPress onPress) {
         return new Button.Builder(text, btn -> onPress.onPress(btn)).pos(x, y).size(width, height).build();
     }
+#else
+    public static Button newButton(int x, int y, int width, int height, Component text, OnPress onPress) {
+        return new Button(x, y, width, height, text, btn -> onPress.onPress(btn));
+    }
+#endif
 
     @FunctionalInterface
     public static interface OnPress {
@@ -70,7 +84,7 @@ public interface IScreen {
         public RenderFunction renderFunction = (screen, mouseX, mouseY, delta) -> {};
         public Consumer<WithTexture> tickFunction = screen -> {};
         public BiConsumer<WithTexture, List<Path>> onFilesDropFunction = (screen, paths) -> {};
-        public Consumer<WithTexture> onCloseFunction = screen -> Minecraft.getInstance().gui.setScreen(null);
+        public Consumer<WithTexture> onCloseFunction = screen -> Minecraft.getInstance().setScreen(null);
         public MouseClickedFunction mouseClickedFunction = (screen, p_94695_, p_94696_, p_94697_) -> false;
         public MouseMovedFunction mouseMovedFunction = (screen, p_94758_, p_94759_) -> {};
         public IsMouseOverFunction isMouseOverFunction = (screen, p_94748_, p_94749_) -> false;
@@ -93,11 +107,19 @@ public interface IScreen {
             return height;
         }
 
+#if MC_VERSION >= "11903"
         public <T extends GuiEventListener & Renderable & NarratableEntry> T _addRenderableWidget(T p_169406_) {
+#else
+        public <T extends GuiEventListener & Widget & NarratableEntry> T _addRenderableWidget(T p_169406_) {
+#endif
             return super.addRenderableWidget(p_169406_);
         }
 
+#if MC_VERSION >= "11903"
         public <T extends Renderable> T _addRenderableOnly(T p_169395_) {
+#else
+        public <T extends Widget> T _addRenderableOnly(T p_169395_) {
+#endif
             return super.addRenderableOnly(p_169395_);
         }
 
@@ -127,8 +149,7 @@ public interface IScreen {
         }
 
         @Override
-        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-            int p_96552_ = event.key(), p_96553_ = event.scancode(), p_96554_ = event.modifiers();
+        public boolean keyPressed(int p_96552_, int p_96553_, int p_96554_) {
             boolean flag = false;
             try {
                 flag = keyPressResponder.keyPressed(this, p_96552_, p_96553_, p_96554_);
@@ -137,7 +158,7 @@ public interface IScreen {
                 e.printStackTrace();
             }
 
-            return flag || super.keyPressed(event);
+            return flag || super.keyPressed(p_96552_, p_96553_, p_96554_);
         }
 
         @Override
@@ -161,12 +182,22 @@ public interface IScreen {
         }
 
         @Override
-        public void extractRenderState(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float delta) {
-            super.extractRenderState(matrices, mouseX, mouseY, delta);
+#if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int mouseX, int mouseY, float delta) {
+#else
+        public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
+#endif
+            super.render(matrices, mouseX, mouseY, delta);
 
             try {
                 if (texture != null) {
-                    matrices.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, texture.identifier, 0, 0, 0, 0, width, height, width, height);
+#if MC_VERSION >= "12000"
+                    matrices.blit(texture.identifier, 0, 0, width, height, 0, 0, 1, 1, 1, 1);
+#else
+                    RenderSystem.setShaderTexture(0, texture.identifier);
+                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                    blit(matrices, 0, 0, 0f, 0f, texture.width, texture.height, width, height);
+#endif
                 }
             } catch (Exception e) {
                 print ("blit error: " + e.getMessage());
@@ -202,10 +233,7 @@ public interface IScreen {
             if (texture != null) texture.close();
         }
 
-        @Override
-        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-            double p_94695_ = event.x(), p_94696_ = event.y();
-            int p_94697_ = event.button();
+        public boolean mouseClicked(double p_94695_, double p_94696_, int p_94697_) {
             boolean flag = false;
             try {
                 flag = mouseClickedFunction.mouseClicked(this, p_94695_, p_94696_, p_94697_);
@@ -213,7 +241,7 @@ public interface IScreen {
                 print ("mouseClickedFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.mouseClicked(event, doubleClick);
+            return flag || super.mouseClicked(p_94695_, p_94696_, p_94697_);
         }
 
         void print(String s) {
@@ -249,23 +277,19 @@ public interface IScreen {
         }
 
         @Override
-        public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        public boolean charTyped(char p_94732_, int p_94733_) {
             boolean flag = false;
             try {
-                // Keep the legacy UTF-16 callback while passing unhandled input to vanilla once.
-                for (char character : event.codepointAsString().toCharArray()) {
-                    flag |= charTypedFunction.charTyped(this, character, 0);
-                }
+                flag = charTypedFunction.charTyped(this, p_94732_, p_94733_);
             } catch (Exception e) {
                 print ("charTypedFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.charTyped(event);
+            return flag || super.charTyped(p_94732_, p_94733_);
         }
 
         @Override
-        public boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
-            int p_94750_ = event.key(), p_94751_ = event.scancode(), p_94752_ = event.modifiers();
+        public boolean keyReleased(int p_94750_, int p_94751_, int p_94752_) {
             boolean flag = false;
             try {
                 flag = keyReleasedFunction.keyReleased(this, p_94750_, p_94751_, p_94752_);
@@ -273,7 +297,7 @@ public interface IScreen {
                 print ("keyReleasedFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.keyReleased(event);
+            return flag || super.keyReleased(p_94750_, p_94751_, p_94752_);
         }
 
         @Override
@@ -289,9 +313,7 @@ public interface IScreen {
         }
 
         @Override
-        public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double p_94743_, double p_94744_) {
-            double p_94740_ = event.x(), p_94741_ = event.y();
-            int p_94742_ = event.button();
+        public boolean mouseDragged(double p_94740_, double p_94741_, int p_94742_, double p_94743_, double p_94744_) {
             boolean flag = false;
             try {
                 flag = mouseDraggedFunction.mouseDragged(this, p_94740_, p_94741_, p_94742_, p_94743_, p_94744_);
@@ -299,13 +321,11 @@ public interface IScreen {
                 print ("mouseDraggedFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.mouseDragged(event, p_94743_, p_94744_);
+            return flag || super.mouseDragged(p_94740_, p_94741_, p_94742_, p_94743_, p_94744_);
         }
 
         @Override
-        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-            double p_94753_ = event.x(), p_94754_ = event.y();
-            int p_94755_ = event.button();
+        public boolean mouseReleased(double p_94753_, double p_94754_, int p_94755_) {
             boolean flag = false;
             try {
                 flag = mouseReleasedFunction.mouseReleased(this, p_94753_, p_94754_, p_94755_);
@@ -313,7 +333,7 @@ public interface IScreen {
                 print ("mouseReleasedFunction error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return flag || super.mouseReleased(event);
+            return flag || super.mouseReleased(p_94753_, p_94754_, p_94755_);
         }
 
         public interface InitFunction {

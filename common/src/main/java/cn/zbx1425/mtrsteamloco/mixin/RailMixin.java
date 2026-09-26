@@ -423,21 +423,6 @@ public abstract class RailMixin implements RailExtraSupplier {
         return true;
     }
 
-    // MTR's deserializing constructors calculate facing angles before Mixin inserts
-    // our field initializers. Those angle calls already enter the height/roll hooks.
-    // Seed only the constructor default here; the existing TAIL readers still restore
-    // the saved roll map, offset, curve and explicit facings without losing metadata.
-    @Inject(method = {
-            "<init>(Ljava/util/Map;)V",
-            "<init>(Lnet/minecraft/network/FriendlyByteBuf;)V",
-            "<init>(Lnet/minecraft/nbt/CompoundTag;)V"
-    }, at = @At(value = "INVOKE", target = "Lmtr/data/Rail;getRailAngle(Z)Lmtr/data/RailAngle;", ordinal = 0), remap = false)
-    private void initializeRollBeforeFacing(CallbackInfo ci) {
-        if (rollAngleMap == null) {
-            rollAngleMap = new HashMap<>();
-        }
-    }
-
     @Inject(method = "<init>(Ljava/util/Map;)V", at = @At("TAIL"), remap = false)
     private void fromMessagePack(Map<String, Value> map, CallbackInfo ci) {
         MessagePackHelper messagePackHelper = new MessagePackHelper(map);

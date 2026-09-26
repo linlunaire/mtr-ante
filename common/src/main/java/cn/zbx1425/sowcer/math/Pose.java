@@ -1,7 +1,7 @@
 package cn.zbx1425.sowcer.math;
 
 import net.minecraft.util.Mth;
-
+import cn.zbx1425.mtrsteamloco.mixin.PoseAccessor;
 
 public class Pose implements Posture {
     private final Matrix4f pose;
@@ -83,10 +83,7 @@ public class Pose implements Posture {
     }
 
     public com.mojang.blaze3d.vertex.PoseStack.Pose asMoj() {
-        final var result = new com.mojang.blaze3d.vertex.PoseStack.Pose();
-        result.mulPose(pose.asMoj());
-        result.normal().set(normal.asMoj());
-        return result;
+        return PoseAccessor.create(pose.asMoj(), normal.asMoj());
     }
 
     @Override

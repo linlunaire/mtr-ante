@@ -4,68 +4,122 @@ import cn.zbx1425.sowcer.model.VertArrays;
 import cn.zbx1425.sowcer.object.VertArray;
 import cn.zbx1425.sowcer.shader.ShaderManager;
 import cn.zbx1425.sowcer.util.DrawContext;
-import mtr.mappings.RenderBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+#if DEBUG
+import org.lwjgl.opengl.KHRDebug;
+#endif
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-/** Queues immutable retained meshes where possible, with captured triangles as the fallback. */
 public class BatchManager {
-    private final List<RenderCall> calls = new ArrayList<>();
 
-    public void clear() { calls.clear(); }
+    public HashMap<BatchTuple, Queue<RenderCall>> batches = new HashMap<>();
 
-    public void enqueue(VertArrays model, EnqueueProp enqueue, ShaderProp shader) {
-        for (VertArray array : model.meshList) enqueue(array, enqueue, shader);
+    public void enqueue(VertArrays model, EnqueueProp enqueueProp, ShaderProp shaderProp) {
+        for (VertArray vertArray : model.meshList) {
+            enqueue(vertArray, enqueueProp, shaderProp);
+        }
     }
 
-    public void enqueue(VertArray array, EnqueueProp enqueue, ShaderProp shader) {
-        final var retained = array.captureRetained(enqueue.attrState, shader);
-        calls.add(new RenderCall(array, array.materialProp.copy(),
-                retained == null ? array.capture(enqueue.attrState, shader) : null, retained));
+    public void enqueue(VertArray vertArray, EnqueueProp enqueueProp, ShaderProp shaderProp) {
+        Queue<RenderCall> queue = batches.computeIfAbsent(
+                new BatchTuple(vertArray.materialProp, shaderProp),
+                (key) -> new LinkedList<>()
+        );
+        queue.add(new RenderCall(vertArray, enqueueProp));
     }
 
-    public void drawAll(ShaderManager shaders, DrawContext context) {
-        final Map<Key, List<VertArray.Face>> batches = new LinkedHashMap<>();
-        int retainedBatches = 0;
-        for (RenderCall call : calls) {
-            context.recordDrawCall(call);
-            if (call.retained != null) {
-                RenderBufferSource.current().drawRetained(call.retained.geometry(), call.retained.pose());
-                retainedBatches++;
-                continue;
-            }
-            final var material = call.material;
-            final int stage = material.translucent ? 2 : material.cutoutHack ? 1 : 0;
-            batches.computeIfAbsent(new Key(shaders.material(material), stage), key -> new ArrayList<>()).addAll(call.faces);
+    public void drawAll(ShaderManager shaderManager, DrawContext drawContext) {
+        drawContext.recordBatches(batches.size());
+
+        pushDebugGroup("SOWCER");
+        // shaderManager.unbindShader();
+
+        for (Map.Entry<BatchTuple, Queue<RenderCall>> entry : batches.entrySet()) {
+            if (entry.getKey().materialProp.translucent || entry.getKey().materialProp.cutoutHack) continue;
+            drawBatch(shaderManager, entry, drawContext);
         }
-        context.recordBatches(batches.size() + retainedBatches);
-        for (var entry : batches.entrySet().stream().sorted(Comparator.comparingInt(entry -> entry.getKey().stage)).toList()) {
-            if (entry.getKey().stage == 2) entry.getValue().sort(Comparator.comparingDouble(VertArray.Face::distanceSquared).reversed());
-            final var consumer = RenderBufferSource.current().getBuffer(entry.getKey().type);
-            for (VertArray.Face face : entry.getValue()) face.emit(consumer);
+
+        for (Map.Entry<BatchTuple, Queue<RenderCall>> entry : batches.entrySet()) {
+            if (!entry.getKey().materialProp.cutoutHack) continue;
+            drawBatch(shaderManager, entry, drawContext);
         }
-        calls.clear();
+
+        for (Map.Entry<BatchTuple, Queue<RenderCall>> entry : batches.entrySet()) {
+            if (!entry.getKey().materialProp.translucent) continue;
+            drawBatch(shaderManager, entry, drawContext);
+        }
+
+        popDebugGroup();
+
+        batches.clear();
     }
 
-    private record Key(RenderType type, int stage) { }
-
-    public static final class RenderCall {
-        public final VertArray vertArray;
-        public final int faceCount;
-        public final boolean instanced;
-        private final MaterialProp material;
-        private final List<VertArray.Face> faces;
-        private final VertArray.RetainedDraw retained;
-        private RenderCall(VertArray array, MaterialProp material, List<VertArray.Face> faces, VertArray.RetainedDraw retained) {
-            vertArray = array; this.material = material; this.faces = faces;
-            this.retained = retained;
-            faceCount = retained == null ? faces.size() : retained.geometry().vertexCount() / 3;
-            instanced = array.instanceBuf != null;
+    private void drawBatch(ShaderManager shaderManager, Map.Entry<BatchTuple, Queue<RenderCall>> entry, DrawContext drawContext) {
+        pushDebugGroup(entry.getKey().materialProp.toString());
+        shaderManager.setupShaderBatchState(entry.getKey().materialProp, entry.getKey().shaderProp);
+        Queue<RenderCall> queue = entry.getValue();
+        while (!queue.isEmpty()) {
+            RenderCall renderCall = queue.poll();
+            renderCall.draw();
+            drawContext.recordDrawCall(renderCall);
         }
+        shaderManager.cleanupShaderBatchState(entry.getKey().materialProp, entry.getKey().shaderProp);
+        popDebugGroup();
+    }
+
+    private static class BatchTuple {
+
+        public MaterialProp materialProp;
+        public ShaderProp shaderProp;
+
+        public BatchTuple(MaterialProp materialProp, ShaderProp shaderProp) {
+            this.materialProp = materialProp;
+            this.shaderProp = shaderProp;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BatchTuple that = (BatchTuple) o;
+            return materialProp.equals(that.materialProp) && shaderProp.equals(that.shaderProp);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(materialProp, shaderProp);
+        }
+    }
+
+    public static class RenderCall {
+
+        public VertArray vertArray;
+        public EnqueueProp enqueueProp;
+
+        public RenderCall(VertArray vertArray, EnqueueProp enqueueProp) {
+            this.vertArray = vertArray;
+            this.enqueueProp = enqueueProp;
+        }
+
+        public void draw() {
+            if (vertArray == null || vertArray.id == 0) return;
+            vertArray.bind();
+            if (enqueueProp.attrState != null) enqueueProp.attrState.applyGlobal();
+            if (vertArray.materialProp.attrState != null) vertArray.materialProp.attrState.applyGlobal();
+            vertArray.mapping.applyToggleableAttr(enqueueProp.attrState, vertArray.materialProp.attrState);
+            vertArray.draw();
+        }
+    }
+
+    private void pushDebugGroup(String name) {
+#if DEBUG
+        KHRDebug.glPushDebugGroup(KHRDebug.GL_DEBUG_SOURCE_APPLICATION, 65472, name);
+#endif
+    }
+
+    private void popDebugGroup() {
+#if DEBUG
+        KHRDebug.glPopDebugGroup();
+#endif
     }
 }

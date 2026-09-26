@@ -2,30 +2,39 @@ package cn.zbx1425.mtrsteamloco.gui;
 
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.mappings.UtilitiesClient;
-import mtr.mappings.ScreenMapper;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import mtr.mappings.ItemStackUtilities;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.screens.Screen;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import net.minecraft.client.gui.components.Button;
 import com.mojang.datafixers.util.Pair;
+import me.shedaniel.clothconfig2.api.ScissorsHandler;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import mtr.screen.WidgetBetterTextField;
 import net.minecraft.network.chat.FormattedText;
+import cn.zbx1425.sowcer.math.PoseStackUtil;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BannerBlock;
 import net.minecraft.core.NonNullList;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import mtr.mappings.Text;
 import net.minecraft.world.level.block.state.BlockState;
 import cn.zbx1425.mtrsteamloco.network.PacketUpdateHoldingItem;
@@ -46,16 +55,27 @@ import net.minecraft.network.chat.Component;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.components.EditBox;
 import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.Direction;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.GameRenderer;
 import mtr.data.*;
 import cn.zbx1425.mtrsteamloco.util.PinyinUtils;
 import cn.zbx1425.mtrsteamloco.gui.entries.*;
 import static cn.zbx1425.mtrsteamloco.item.CompoundCreator.*;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.CreativeModeTabs;
+#else
+import net.minecraft.client.gui.GuiComponent;
+#endif
 
+#if MC_VERSION >= "11903"
 import net.minecraft.core.registries.BuiltInRegistries;
+#else
+import net.minecraft.core.Registry;
+#endif
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +91,7 @@ import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 
-public class CompoundCreatorScreen extends ScreenMapper {
+public class CompoundCreatorScreen extends Screen {
     public static Screen createScreen(Screen parent) {
         CompoundCreatorScreen screen = new CompoundCreatorScreen(parent);
         if (screen.load()) return screen;
@@ -79,16 +99,16 @@ public class CompoundCreatorScreen extends ScreenMapper {
     }
 
     private static final String TAG_TASKS = "tasks";
-    public static final Identifier BACKGROUND_LOCATION = Identifier.withDefaultNamespace("textures/gui/options_background.png");
-    private static final Identifier WHITE = Identifier.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
+    public static final ResourceLocation BACKGROUND_LOCATION = ResourceLocation.withDefaultNamespace("textures/gui/options_background.png");
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
     private Screen parent;
     private List<Entry> entries = new ArrayList<>();
     private Entry selectedEntry = null;
-    private int scroll = 0;
-    private Rectangle scissor = new Rectangle(0, 0, 0, 0);
+    private int scroll = 0; 
+    private Rectangle scissor = null;
     private boolean draggingSlider = false;
 
-    private Button btnAdd = UtilitiesClient.newButton(20, Text.literal("+"), button -> minecraft.gui.setScreen(new TaskSelectScreen()));
+    private Button btnAdd = UtilitiesClient.newButton(20, Text.literal("+"), button -> minecraft.setScreen(new TaskSelectScreen()));
     private Button btnRemove = UtilitiesClient.newButton(20, Text.literal("-"), button -> removeEntry());
     private Button btnCopy = UtilitiesClient.newButton(20, Text.translatable("gui.mtrsteamloco.compound_creator.copy"), button -> copyEntry());
     private Button btnClear = UtilitiesClient.newButton(20, Text.translatable("gui.mtrsteamloco.compound_creator.clear"), button -> clearEntries());
@@ -104,10 +124,10 @@ public class CompoundCreatorScreen extends ScreenMapper {
         if (getTag() == null) return false;
         CompoundTag tag = getTag();
         if (!tag.contains(TAG_TASKS)) return true;
-        CompoundTag tasksTag = tag.getCompoundOrEmpty(TAG_TASKS).copy();
-        for (String key : tasksTag.keySet()) {
-            CompoundTag task = tasksTag.getCompoundOrEmpty(key);
-            String type = mtr.mappings.CompoundTagMapper.getString(task, Task.TAG_TYPE);
+        CompoundTag tasksTag = tag.getCompound(TAG_TASKS).copy();
+        for (String key : tasksTag.getAllKeys()) {
+            CompoundTag task = tasksTag.getCompound(key);
+            String type = task.getString(Task.TAG_TYPE);
             if (type.equals(SliceTask.TYPE)) {
                 tasks.add(new SliceTask(task));
             } else if (type.equals(RailModifierTask.TYPE)) {
@@ -198,34 +218,35 @@ public class CompoundCreatorScreen extends ScreenMapper {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTick) {
+#if MC_VERSION >= "12000"
+    public void render(GuiGraphics matrices, int mouseX, int mouseY, float partialTick) {
+#else
+    public void render(PoseStack matrices, int mouseX, int mouseY, float partialTick) {
+#endif
         renderDirtBackground(this, matrices);
         super.render(matrices, mouseX, mouseY, partialTick);
         fill(matrices, 0, 38, width, height - 38, 0x90000000);
-
+        
         drawCenteredString(matrices, minecraft.font, Text.translatable("gui.mtrsteamloco.compound_creator.title").getString() , width / 2, 18, 0xFFFFFFFF);
         IDrawing.setPositionAndWidth(btnAdd, width - 50, 60, 40);
         IDrawing.setPositionAndWidth(btnRemove, width - 50, 90, 40);
         IDrawing.setPositionAndWidth(btnCopy, width - 50, 120, 40);
         IDrawing.setPositionAndWidth(btnClear, width - 50, 150, 40);
         IDrawing.setPositionAndWidth(btnClose, 10, 10, 20);
-        btnAdd.extractRenderState(matrices, mouseX, mouseY, partialTick);
-        btnRemove.extractRenderState(matrices, mouseX, mouseY, partialTick);
-        btnCopy.extractRenderState(matrices, mouseX, mouseY, partialTick);
-        btnClear.extractRenderState(matrices, mouseX, mouseY, partialTick);
-        btnClose.extractRenderState(matrices, mouseX, mouseY, partialTick);
+        btnAdd.render(matrices, mouseX, mouseY, partialTick);
+        btnRemove.render(matrices, mouseX, mouseY, partialTick);
+        btnCopy.render(matrices, mouseX, mouseY, partialTick);
+        btnClear.render(matrices, mouseX, mouseY, partialTick);
+        btnClose.render(matrices, mouseX, mouseY, partialTick);
         scissor = new Rectangle(0, 40, width, height - 80);
-        scissor(matrices, scissor);
-        try {
+        ScissorsHandler.INSTANCE.scissor(scissor);
         checkAndScroll(scroll);
         int y = 40 + scroll;
         for (int i = 0; i < entries.size(); i++) {
             entries.get(i).render(matrices, mouseX, mouseY, i, y, partialTick);
             y += entries.get(i).height();
         }
-        } finally {
-            matrices.disableScissor();
-        }
+        ScissorsHandler.INSTANCE.clearScissors();
         if (canScoll()) {
             int[] pas = getSliderPositionAndSize();
             blit(matrices, WHITE, pas[0], pas[1], pas[2], pas[3]);
@@ -264,41 +285,33 @@ public class CompoundCreatorScreen extends ScreenMapper {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x(), mouseY = event.y();
-        if (event.button() == 0 && isMouseOverSlider(mouseX, mouseY)) {
+    public boolean mouseClicked(double mouseX, double mouseY, int i) {
+        if (!canScoll()) return super.mouseClicked(mouseX, mouseY, i);
+        int[] spas = getSliderPositionAndSize();
+        if (isMouseOverSlider(mouseX, mouseY)) {
             setScroll((int) mouseY);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, i);
+    }
+
+    @Override
+    public boolean mouseDragged(double sx, double sy, int i, double tx, double ty) {
+        if (isMouseOverSlider(sx, sy) || draggingSlider) {
+            setScroll((int) (sy + ty));
             draggingSlider = true;
             return true;
         }
-        if (scissor.contains(mouseX, mouseY)) return super.mouseClicked(event, doubleClick);
-        // Off-screen rows must not intercept the top/bottom toolbar's clicks.
-        for (Button button : List.of(btnAdd, btnRemove, btnCopy, btnClear, btnClose)) {
-            if (button.mouseClicked(event, doubleClick)) {
-                setFocused(button);
-                setDragging(event.button() == 0);
-                return true;
-            }
-        }
-        return false;
+        return super.mouseDragged(sx, sy, i, tx, ty);
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double tx, double ty) {
-        if (draggingSlider && event.button() == 0) {
-            setScroll((int) event.y());
-            return true;
-        }
-        return super.mouseDragged(event, tx, ty);
-    }
-
-    @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(double mouseX, double mouseY, int i) {
         if (draggingSlider) {
             draggingSlider = false;
             return true;
         }
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, i);
     }
 
     private boolean isMouseOverSlider(double mouseX, double mouseY) {
@@ -316,7 +329,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
     }
 
     private boolean canScoll() {
-        return scissor.height > 0 && entries.size() * Entry.height() > scissor.height;
+        return entries.size() * Entry.height() > scissor.height;
     }
 
     @Override
@@ -335,34 +348,51 @@ public class CompoundCreatorScreen extends ScreenMapper {
         return result;
     }
 
-    private static void drawText(GuiGraphicsExtractor guiGraphics, Font font, FormattedCharSequence text, int x, int y, int color) {
-        guiGraphics.text(font, text, x, y, color);
+#if MC_VERSION >= "12000"
+    private static void drawText(GuiGraphics guiGraphics, Font font, FormattedCharSequence text, int x, int y, int color) {
+        guiGraphics.drawString(font, text, x, y, color);
     }
 
-    private static void blit(GuiGraphicsExtractor guiGraphics, Identifier texture, int x, int y, int width, int height) {
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, width, height, width, height);
+    private static void blit(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int width, int height) {
+        guiGraphics.blit(texture, x, y, width, height, 0, 0, 1, 1, 1, 1);
     }
 
-    private static void fill(GuiGraphicsExtractor guiGraphics, int x, int y, int width, int height, int color) {
+    private static void fill(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
         guiGraphics.fill(x, y, width, height, color);
     }
 
-    private static void drawCenteredString(GuiGraphicsExtractor guiGraphics, Font font, String text, int x, int y, int color) {
-        guiGraphics.centeredText(font, text, x, y, color);
+    private static void drawCenteredString(GuiGraphics guiGraphics, Font font, String text, int x, int y, int color) {
+        guiGraphics.drawCenteredString(font, text, x, y, color);
     }
 
-    public static void renderDirtBackground(Screen screen, GuiGraphicsExtractor guiGraphics) {
-        screen.extractBackground(guiGraphics, 0, 0, 0);
+    public static void renderDirtBackground(Screen screen, GuiGraphics guiGraphics) {
+        screen.renderBackground(guiGraphics, 0, 0, 0);
+    }
+#else
+    private static void drawText(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        font.drawShadow(matrices, text, x, y, color);
     }
 
-    private static void scissor(GuiGraphicsExtractor graphics, Rectangle bounds) {
-        graphics.enableScissor(bounds.x, bounds.y, bounds.x + Math.max(0, bounds.width), bounds.y + Math.max(0, bounds.height));
+    private static void blit(PoseStack matrices, ResourceLocation texture, int x, int y, int width, int height) {
+        RenderSystem.setShaderTexture(0, texture);
+        GuiComponent.blit(matrices, x, y, width, height, 0, 0, 1, 1, 1, 1);
     }
+
+#if MC_VERSION >= "11904"
+    public static void renderDirtBackground(Screen screen, PoseStack matrices) {
+        screen.renderDirtBackground(matrices);
+    }
+#else 
+    public static void renderDirtBackground(Screen screen, PoseStack matrices) {
+        screen.renderDirtBackground(0);
+    }
+#endif
+#endif
 
     @Override
     public void onClose() {
         update();
-        minecraft.gui.setScreen(parent);
+        minecraft.setScreen(parent);
     }
 
     public class Entry implements GuiEventListener{
@@ -389,7 +419,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
         public void enter() {
             if (task instanceof SliceTask) {
-                minecraft.gui.setScreen(new SliceTaskScreen((SliceTask) task));
+                minecraft.setScreen(new SliceTaskScreen((SliceTask) task));    
             } else if (task instanceof RailModifierTask) {
                 setRailModifierScreen((RailModifierTask) task);
             } else {
@@ -414,7 +444,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
 
         private boolean isFocused = false;
-
+        
         public boolean isFocused() {
             return isFocused;
         }
@@ -433,7 +463,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
             selectedEntry = this;
         }
 
-        public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, int num, int y, float partialTick) {
+    #if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int mouseX, int mouseY, int num, int y, float partialTick) {
+    #else
+        public void render(PoseStack matrices, int mouseX, int mouseY, int num, int y, float partialTick) {
+    #endif
             this.y = y;
             if (isSelected()) {
                 fill(matrices, 0, y(), width - 55, y() + height(), 0xa0eeeeee);
@@ -450,10 +484,10 @@ public class CompoundCreatorScreen extends ScreenMapper {
             IDrawing.setPositionAndWidth(up, x, y, count * 2);
             x += count * 3;
             IDrawing.setPositionAndWidth(down, x, y, count * 2);
-            nameField.extractRenderState(matrices, mouseX, mouseY, partialTick);
-            enter.extractRenderState(matrices, mouseX, mouseY, partialTick);
-            up.extractRenderState(matrices, mouseX, mouseY, partialTick);
-            down.extractRenderState(matrices, mouseX, mouseY, partialTick);
+            nameField.render(matrices, mouseX, mouseY, partialTick);
+            enter.render(matrices, mouseX, mouseY, partialTick);
+            up.render(matrices, mouseX, mouseY, partialTick);
+            down.render(matrices, mouseX, mouseY, partialTick);
         }
 
         @Override
@@ -489,9 +523,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
 
         @Override
-        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-            double mouseX = event.x(), mouseY = event.y();
-            int i = event.button();
+        public boolean mouseClicked(double mouseX, double mouseY, int i) {
             if (isMouseOver(mouseX, mouseY)) {
                 selectedEntry = this;
                 return true;
@@ -501,17 +533,17 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
     }
 
-    public class TaskSelectScreen extends ScreenMapper {
+    public class TaskSelectScreen extends Screen {
         private Button btnReturn = UtilitiesClient.newButton(Text.literal("X"), btn -> onClose());
         private Button btnNewRailModifier = UtilitiesClient.newButton(Text.translatable("gui.mtrsteamloco.compound_creator.rail_modifier"), btn -> {
             RailModifierTask task = new RailModifierTask();
             addEntry(task);
-            minecraft.gui.setScreen(CompoundCreatorScreen.this);
+            minecraft.setScreen(CompoundCreatorScreen.this);
         });
         private Button btnNewSliceTask = UtilitiesClient.newButton(Text.translatable("gui.mtrsteamloco.compound_creator.slice_task"), btn -> {
             SliceTask task = new SliceTask();
             addEntry(task);
-            minecraft.gui.setScreen(CompoundCreatorScreen.this);
+            minecraft.setScreen(CompoundCreatorScreen.this);
         });
 
         public TaskSelectScreen() {
@@ -527,7 +559,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
             addRenderableWidget(btnNewSliceTask);
         }
 
-        public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTick) {
+    #if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int mouseX, int mouseY, float partialTick) {
+    #else 
+        public void render(PoseStack matrices, int mouseX, int mouseY, float partialTick) {
+    #endif
             IDrawing.setPositionAndWidth(btnNewRailModifier, width / 2 - 150, 50, 300);
             IDrawing.setPositionAndWidth(btnNewSliceTask, width / 2 - 150, 80, 300);
             CompoundCreatorScreen.renderDirtBackground(this, matrices);
@@ -535,7 +571,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
 
         public void onClose() {
-            minecraft.gui.setScreen(CompoundCreatorScreen.this);
+            minecraft.setScreen(CompoundCreatorScreen.this);
         }
     }
 
@@ -561,7 +597,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         String modelKey = extra.getModelKey();
         RailModelProperties properties = RailModelRegistry.ELEMENTS.get(modelKey);
         Button btnEnterSelect = UtilitiesClient.newButton(Text.translatable("gui.mtrsteamloco.brush_edit_rail.present", (properties != null ? (properties.name.getString()) : (modelKey + " (???)"))), btn -> {
-            Minecraft.getInstance().gui.setScreen(new SelectScreen(task, () -> {
+            Minecraft.getInstance().setScreen(new SelectScreen(task, () -> {
                 task0.copyFrom(task);
                 setRailModifierScreen(task0);
             }));
@@ -641,18 +677,18 @@ public class CompoundCreatorScreen extends ScreenMapper {
     }
 
     public void setRailModifierScreen(RailModifierTask task) {
-        Minecraft.getInstance().gui.setScreen(newRailModifierScreen(task));
+        Minecraft.getInstance().setScreen(newRailModifierScreen(task));
     }
 
     private class SelectScreen extends SelectListScreen {
 
         private static final String INSTRUCTION_LINK = "https://aphrodite281.github.io/mtr-ante/#/railmodel";
         private final WidgetLabel lblInstruction = new WidgetLabel(0, 0, 0, Text.translatable("gui.mtrsteamloco.eye_candy.tip_resource_pack"), () -> {
-            this.minecraft.gui.setScreen(new ConfirmLinkScreen(bl -> {
+            this.minecraft.setScreen(new ConfirmLinkScreen(bl -> {
                 if (bl) {
                     Util.getPlatform().openUri(INSTRUCTION_LINK);
                 }
-                this.minecraft.gui.setScreen(this);
+                this.minecraft.setScreen(this);
             }, INSTRUCTION_LINK, true));
         });
         private Rail rail;
@@ -679,7 +715,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         protected void loadPage() {
             clearWidgets();
 
-
+            
             String modelKey = extra.getModelKey();
             scrollList.visible = true;
             loadSelectPage(key -> !key.equals(modelKey));
@@ -704,7 +740,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
 
         @Override
-        public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    #if MC_VERSION >= "12000"
+        public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    #else
+        public void render(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
+    #endif
             this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
             super.render(guiGraphics, mouseX, mouseY, partialTick);
 
@@ -722,7 +762,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
         }
     }
 
-    public class SliceTaskScreen extends ScreenMapper {
+    public class SliceTaskScreen extends Screen {
         public SliceTask task;
         protected int tx = 0;
         protected int ty = 0;
@@ -795,7 +835,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
             nameField.setResponder(str -> {
                 task.name = str;
-                updateTask();
+                updateTask();   
             });
             updateWidgetPosition();
             addRenderableWidget(btnReturn);
@@ -817,13 +857,17 @@ public class CompoundCreatorScreen extends ScreenMapper {
             List<GuiEventListener> result = new ArrayList<>();
             result.addAll(super.children());
             result.addAll(canvas);
-            result.add(inventory);
+            result.addAll(inventory.children());
             result.add(now);
             return result;
         }
 
         @Override
-        public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTick) {
+    #if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int mouseX, int mouseY, float partialTick) {
+    #else
+        public void render(PoseStack matrices, int mouseX, int mouseY, float partialTick) {
+    #endif
             CompoundCreatorScreen.renderDirtBackground(this, matrices);
             super.render(matrices, mouseX, mouseY, partialTick);
             setTY(ty);
@@ -843,11 +887,10 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
             fill(matrices, scissor.x - 1, scissor.y - 1, scissor.x + scissor.width + 1, scissor.y + scissor.height + 1, scissor.contains(mouseX, mouseY) ? 0xffd1b2b2 : 0xff403636);
             fill(matrices, scissor.x, scissor.y, scissor.x + scissor.width, scissor.y + scissor.height, 0xff8f5d5d);
-
-            int in = 3;
-            scissor(matrices, new Rectangle(scissor.x, full.y, scissor.width, 12));
-            try {
+            
+            ScissorsHandler.INSTANCE.scissor(new Rectangle(scissor.x, full.y, scissor.width, 12));
             int a = task.width / 2;
+            int in = 3;
             int ay = 42;
             drawCenteredString(matrices, minecraft.font, "0", (int) midX, ay, 0xFFFFFFFF);
             if (a < 1) ;
@@ -860,13 +903,9 @@ public class CompoundCreatorScreen extends ScreenMapper {
                     drawCenteredString(matrices, minecraft.font, "-" + i, (int) midX - i * Square.length, ay, 0xFFFFFFFF);
                 }
             }
-            } finally {
-                matrices.disableScissor();
-            }
+            ScissorsHandler.INSTANCE.clearScissors();
 
-            scissor(matrices, new Rectangle(full.x, scissor.y, 22, scissor.height));
-
-            try {
+            ScissorsHandler.INSTANCE.scissor(new Rectangle(full.x, scissor.y, 22, scissor.height));
             int b = task.height / 2;
             int ax = 50;
             drawCenteredString(matrices, minecraft.font, "0", ax, (int) midY - 5, 0xFFFFFFFF);
@@ -880,13 +919,9 @@ public class CompoundCreatorScreen extends ScreenMapper {
                     drawCenteredString(matrices, minecraft.font, "+" + i, ax, (int) midY - 5 - i * Square.length, 0xFFFFFFFF);
                 }
             }
-            } finally {
-                matrices.disableScissor();
-            }
+            ScissorsHandler.INSTANCE.clearScissors();
 
-            scissor(matrices, scissor);
-
-            try {
+            ScissorsHandler.INSTANCE.scissor(scissor);
             for (int i = 0; i < canvas.size(); i++) {
                 canvas.get(i).render(matrices, mouseX, mouseY, x + i % task.width * Square.length, y + i / task.width * Square.length, partialTick);
             }
@@ -898,14 +933,12 @@ public class CompoundCreatorScreen extends ScreenMapper {
             fill(matrices, px, y , px + 2, y + task.height * Square.length, 0x7F00FF00);
             px += 18;
             fill(matrices, px, y , px + 2, y + task.height * Square.length, 0x7F00FF00);
-            } finally {
-                matrices.disableScissor();
-            }
+            ScissorsHandler.INSTANCE.clearScissors();
 
             now.render(matrices, mouseX, mouseY, 191, 11, partialTick);
 
             inventory.render(matrices, mouseX, mouseY, partialTick);
-
+            
             if (mouseOver != null) {
                 mouseOver.renderTooltip(matrices, mouseX, mouseY, partialTick);
             }
@@ -1020,7 +1053,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
                 updateTask();
             });
 
-            minecraft.gui.setScreen(builder.build());
+            minecraft.setScreen(builder.build());
         }
 
         private void updateWidgetPosition() {
@@ -1073,15 +1106,43 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
         @Override
         public void onClose() {
-            minecraft.gui.setScreen(CompoundCreatorScreen.this);
+            minecraft.setScreen(CompoundCreatorScreen.this);
         }
 
         private void setNowBlock(BlockState state) {
             now.state = state;
         }
 
-        private void renderBlockState(GuiGraphicsExtractor matrices, int x, int y, float partialTick, BlockState state) {
-            GuiBlockPreview.extract(matrices, state, x, y);
+    #if MC_VERSION >= "12000"
+        private void renderBlockState(GuiGraphics matrices, int x, int y, float partialTick, BlockState state) {
+            renderBlockState(matrices.pose(), x, y, partialTick, state);
+        }
+    #endif
+        private void renderBlockState(PoseStack poseStack, int x, int y, float partialTick, BlockState state) {
+            BlockRenderDispatcher blockRenderer = minecraft.getBlockRenderer();
+            
+            poseStack.pushPose();
+            poseStack.translate(x, y + 16 , 0);
+            poseStack.scale(15.5F, -15.5F, 15.5F);
+            float v = (float) (3 * Math.PI / 180F);
+            PoseStackUtil.rotX(poseStack, v);
+
+            MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(new ByteBufferBuilder(256));
+            RenderSystem.enableDepthTest();
+            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShaderTexture(0, InventoryMenu.BLOCK_ATLAS);
+            
+            blockRenderer.renderSingleBlock(
+                state,
+                poseStack,
+                buffer,
+                LightTexture.FULL_BRIGHT,
+                OverlayTexture.NO_OVERLAY
+            );
+
+            
+            buffer.endBatch();
+            poseStack.popPose();
         }
 
         public class Square implements GuiEventListener {
@@ -1095,9 +1156,9 @@ public class CompoundCreatorScreen extends ScreenMapper {
             public boolean fixed = false;
             public boolean replacement = false;
 
-            public static Identifier PURPLE_CIRCLE = Identifier.parse("mtrsteamloco:textures/gui/compound_creator/purple_circle.png");
-            public static Identifier BLUE_CIRCLE = Identifier.parse("mtrsteamloco:textures/gui/compound_creator/blue_circle.png");
-            public static Identifier MID_CIRCLE = Identifier.parse("mtrsteamloco:textures/gui/compound_creator/mid_circle.png");
+            public static ResourceLocation PURPLE_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/purple_circle.png");
+            public static ResourceLocation BLUE_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/blue_circle.png");
+            public static ResourceLocation MID_CIRCLE = ResourceLocation.parse("mtrsteamloco:textures/gui/compound_creator/mid_circle.png");
 
             public Square(Square other) {
                 this.x = other.x;
@@ -1121,7 +1182,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
                 this.replacement = replacement;
             }
 
-            public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, int tx, int ty, float partialTick) {
+        #if MC_VERSION >= "12000"
+            public void render(GuiGraphics matrices, int mouseX, int mouseY, int tx, int ty, float partialTick) {
+        #else
+            public void render(PoseStack matrices, int mouseX, int mouseY, int tx, int ty, float partialTick) {
+        #endif
                 x = tx;
                 y = ty;
                 if (!isVisible()) return;
@@ -1138,7 +1203,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
                 }
             }
 
-            public void renderTooltip(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTick) {
+        #if MC_VERSION >= "12000"
+            public void renderTooltip(GuiGraphics matrices, int mouseX, int mouseY, float partialTick) {
+        #else
+            public void renderTooltip(PoseStack matrices, int mouseX, int mouseY, float partialTick) {
+        #endif
                 String str = "";
                 if (state != null) {
                     Block block = state.getBlock();
@@ -1168,7 +1237,6 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
             public boolean isMouseOver(double mouseX, double mouseY) {
                 if (!isVisible()) return false;
-                if (this != now && !(fixed ? inventory.scissor : SliceTaskScreen.this.scissor).contains(mouseX, mouseY)) return false;
                 if (x <= mouseX && mouseX <= x + length && y <= mouseY && mouseY <= y + length) {
                     return true;
                 }
@@ -1179,15 +1247,13 @@ public class CompoundCreatorScreen extends ScreenMapper {
                 return x >= -length && x <= SliceTaskScreen.this.width && y >= -length && y <= SliceTaskScreen.this.height && visible.apply(this);
             }
 
-            public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-            double mouseX = event.x(), mouseY = event.y();
-            int i = event.button();
+            public boolean mouseClicked(double mouseX, double mouseY, int i) {
                 if (!isMouseOver(mouseX, mouseY)) return false;
                 if (i == 0) {
                     consumer.accept(this);
                 } else if (i == 1) {
                     if (state != null) {
-                        minecraft.gui.setScreen(newPropertyScreen(this, fixed));
+                        minecraft.setScreen(newPropertyScreen(this, fixed));
                     }
                 } else if (i == 2) {
                     now.state = this.state;
@@ -1261,7 +1327,7 @@ public class CompoundCreatorScreen extends ScreenMapper {
             }, null, false);
         }
 
-        public class Inventory extends net.minecraft.client.gui.components.events.AbstractContainerEventHandler {
+        public class Inventory implements GuiEventListener {
             public static final int width = 100;
             public static final int col = 5;
             private int scroll = 0;
@@ -1273,7 +1339,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
             public Inventory() {
                 NonNullList<ItemStack> items = NonNullList.create();
+        #if MC_VERSION >= "11903"
                 for (Block block : BuiltInRegistries.BLOCK) {
+        #else
+                for (Block block : Registry.BLOCK) {
+        #endif
                     markSquare(new Square(0, 0, block.defaultBlockState(), square -> {
                         now.state = square.state;
                     }, square -> square.state == now.state, square -> true, true, true));
@@ -1311,22 +1381,23 @@ public class CompoundCreatorScreen extends ScreenMapper {
                 searchedList = list;
             }
 
-            public void render(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTick) {
+        #if MC_VERSION >= "12000"
+            public void render(GuiGraphics matrices, int mouseX, int mouseY, float partialTick) {
+        #else
+            public void render(PoseStack matrices, int mouseX, int mouseY, float partialTick) {
+        #endif
                 fill(matrices, scissor.x, 0, scissor.x + scissor.width, height, 0xff212121);
                 fill(matrices, scissor.x, 0, scissor.x + 1, height, mouseX >= scissor.x ? 0xfff2f7eb : 0xffafb3aa);
                 IDrawing.setPositionAndWidth(searchField, SliceTaskScreen.this.width - width + 3, 1, width - 3);
-                searchField.extractRenderState(matrices, mouseX, mouseY, partialTick);
+                searchField.render(matrices, mouseX, mouseY, partialTick);
                 scissor = new Rectangle(SliceTaskScreen.this.width - width, 18, width, SliceTaskScreen.this.height - 18);
                 checkAndScroll(scroll);
                 int x = scissor.x + 3;
-                scissor(matrices, scissor);
-                try {
+                ScissorsHandler.INSTANCE.scissor(scissor);
                 for (int i = 0; i < searchedList.size(); i++) {
                     searchedList.get(i).render(matrices, mouseX, mouseY, x + i % col * Square.length, scissor.y + scroll + i / col * Square.length, partialTick);
                 }
-                } finally {
-                    matrices.disableScissor();
-                }
+                ScissorsHandler.INSTANCE.clearScissors();
                 if (canScoll()) {
                     int[] pas = getSliderPositionAndSize();
                     fill(matrices, pas[0], pas[1], pas[0] + pas[2], pas[1] + pas[3], 0xffb0b0b0);
@@ -1335,28 +1406,41 @@ public class CompoundCreatorScreen extends ScreenMapper {
 
             public List<? extends GuiEventListener> children() {
                 List<GuiEventListener> result = new ArrayList<>();
+                result.add(this);
                 result.add(searchField);
                 result.addAll(searchedList);
                 return result;
             }
 
             @Override
-            public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-                if (event.button() == 0 && isMouseOverSlider(event.x(), event.y())) {
-                    setScroll((int) event.y());
-                    draggingSlider = true;
+            public boolean mouseClicked(double mouseX, double mouseY, int i) {
+                if (!canScoll()) return false;
+                int[] spas = getSliderPositionAndSize();
+                if (isMouseOverSlider(mouseX, mouseY)) {
+                    setScroll((int) mouseY);
                     return true;
                 }
-                return super.mouseClicked(event, doubleClick);
+                return false;
+            }
+
+            private boolean isFocused = false;
+
+            public boolean isFocused() {
+                return isFocused;
+            }
+
+            public void setFocused(boolean focused) {
+                isFocused = focused;
             }
 
             @Override
-            public boolean mouseDragged(MouseButtonEvent event, double tx, double ty) {
-                if (draggingSlider && event.button() == 0) {
-                    setScroll((int) event.y());
+            public boolean mouseDragged(double sx, double sy, int i, double tx, double ty) {
+                if (isMouseOverSlider(sx, sy) || draggingSlider) {
+                    setScroll((int) (sy + ty));
+                    draggingSlider = true;
                     return true;
                 }
-                return super.mouseDragged(event, tx, ty);
+                return false;
             }
 
             @Override
@@ -1370,17 +1454,16 @@ public class CompoundCreatorScreen extends ScreenMapper {
             }
 
             public boolean isMouseOver(double mouseX, double mouseY) {
-                return SliceTaskScreen.this.width - width <= mouseX && mouseX < SliceTaskScreen.this.width
-                        && 0 <= mouseY && mouseY < SliceTaskScreen.this.height;
+                return scissor.x <= mouseX && mouseX <= scissor.x + scissor.width && scissor.y <= mouseY && mouseY <= scissor.y + scissor.height;
             }
 
             @Override
-            public boolean mouseReleased(MouseButtonEvent event) {
+            public boolean mouseReleased(double mouseX, double mouseY, int i) {
                 if (draggingSlider) {
                     draggingSlider = false;
                     return true;
                 }
-                return super.mouseReleased(event);
+                return false;
             }
 
             private boolean isMouseOverSlider(double mouseX, double mouseY) {
@@ -1402,11 +1485,11 @@ public class CompoundCreatorScreen extends ScreenMapper {
             }
 
             private boolean canScoll() {
-                return scissor.height > 0 && ah() > scissor.height;
+                return ah() > scissor.height;
             }
 
             private int ah() {
-                return Math.ceilDiv(searchedList.size(), col) * Square.length;
+                return (searchedList.size() / col) * Square.length;
             }
 
             private void setScroll(int mouseY) {

@@ -4,13 +4,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.*;
 import net.minecraft.core.particles.SimpleParticleType;
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.util.RandomSource;
 
-public class SteamSmokeParticle extends SingleQuadParticle {
+public class SteamSmokeParticle extends TextureSheetParticle {
 
-    SteamSmokeParticle(ClientLevel clientLevel, double d, double e, double f, double g, double h, double i, TextureAtlasSprite sprite) {
-        super(clientLevel, d, e, f, sprite);
+    SteamSmokeParticle(ClientLevel clientLevel, double d, double e, double f, double g, double h, double i) {
+        super(clientLevel, d, e, f);
         this.scale(3.0f);
         this.setSize(0.25f, 0.25f);
         this.lifetime = this.random.nextInt(10) + 30;
@@ -46,8 +44,8 @@ public class SteamSmokeParticle extends SingleQuadParticle {
     }
 
     @Override
-    protected Layer getLayer() {
-        return Layer.OPAQUE;
+    public ParticleRenderType getRenderType() {
+        return ParticleRenderType.PARTICLE_SHEET_OPAQUE;
     }
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
@@ -60,9 +58,10 @@ public class SteamSmokeParticle extends SingleQuadParticle {
 
         @Nullable
         @Override
-        public Particle createParticle(SimpleParticleType particleOptions, ClientLevel clientLevel, double d, double e, double f, double g, double h, double i, RandomSource random) {
-            SteamSmokeParticle campfireSmokeParticle = new SteamSmokeParticle(clientLevel, d, e, f, g, h, i, sprites.get(random));
+        public Particle createParticle(SimpleParticleType particleOptions, ClientLevel clientLevel, double d, double e, double f, double g, double h, double i) {
+            SteamSmokeParticle campfireSmokeParticle = new SteamSmokeParticle(clientLevel, d, e, f, g, h, i);
             campfireSmokeParticle.setAlpha(1f);
+            campfireSmokeParticle.pickSprite(this.sprites);
             return campfireSmokeParticle;
         }
     }

@@ -1,54 +1,54 @@
 package cn.zbx1425.sowcer.object;
 
+import cn.zbx1425.sowcer.util.GlStateTracker;
+import com.mojang.blaze3d.systems.RenderSystem;
+import org.lwjgl.opengl.GL33;
+import org.lwjgl.system.MemoryUtil;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
-/** Owned immutable upload data. Minecraft performs backend GPU uploads when the captured frame is drawn. */
 public class VertBuf implements Closeable {
-    private static final AtomicInteger NEXT_ID = new AtomicInteger(1);
-    public static final int USAGE_STATIC_DRAW = 0x88E4, USAGE_DYNAMIC_DRAW = 0x88E8, USAGE_STREAM_DRAW = 0x88E0;
-    public volatile int id = NEXT_ID.getAndIncrement();
-    private ByteBuffer data;
-    private int references = 1;
-    private boolean ownerClosed;
-    private long revision;
 
-    public void upload(ByteBuffer buffer, int usage) { upload(buffer, buffer.capacity(), usage); }
+    public int id;
 
-    public synchronized void upload(ByteBuffer buffer, int size, int usage) {
-        if (ownerClosed) throw new IllegalStateException("Upload to a closed buffer");
-        if (size < 0 || size > buffer.capacity()) throw new IllegalArgumentException("Invalid buffer byte count: " + size);
-        if (usage != USAGE_STATIC_DRAW && usage != USAGE_DYNAMIC_DRAW && usage != USAGE_STREAM_DRAW) throw new IllegalArgumentException("Invalid buffer usage");
-        final ByteBuffer input = buffer.duplicate().order(buffer.order());
-        input.clear().limit(size);
-        final ByteBuffer copy = ByteBuffer.allocate(size).order(buffer.order());
-        copy.put(input).flip();
-        data = copy.asReadOnlyBuffer().order(copy.order());
-        revision++;
+    public static final int USAGE_STATIC_DRAW = GL33.GL_STATIC_DRAW;
+    public static final int USAGE_DYNAMIC_DRAW = GL33.GL_DYNAMIC_DRAW;
+    public static final int USAGE_STREAM_DRAW = GL33.GL_STREAM_DRAW;
+
+    public VertBuf() {
+        
+        id = GL33.glGenBuffers();
     }
 
-    /** Pair the bytes with their upload revision under the same lock. */
-    synchronized Upload snapshotUpload() { return new Upload(snapshot(), revision); }
-
-    record Upload(ByteBuffer data, long revision) { }
-
-    public synchronized ByteBuffer snapshot() {
-        if (references == 0 || data == null) throw new IllegalStateException("Buffer is closed or not uploaded");
-        return data.asReadOnlyBuffer().order(data.order());
+    public void bind(int target) {
+        GlStateTracker.assertProtected();
+        GL33.glBindBuffer(target, id);
     }
 
-    synchronized void retain() {
-        if (references == 0) throw new IllegalStateException("Retain of a released buffer");
-        references++;
+    public void upload(ByteBuffer buffer, int usage) {
+        int vboPrev = GL33.glGetInteger(GL33.GL_ARRAY_BUFFER_BINDING);
+        GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, id);
+        buffer.clear();
+        GL33.glBufferData(GL33.GL_ARRAY_BUFFER, buffer, usage);
+        GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, vboPrev);
     }
 
-    synchronized void release() {
-        if (references == 0) throw new IllegalStateException("Buffer released twice");
-        if (--references == 0) { data = null; id = 0; }
+    public void upload(ByteBuffer buffer, int size, int usage) {
+        int vboPrev = GL33.glGetInteger(GL33.GL_ARRAY_BUFFER_BINDING);
+        GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, id);
+        buffer.clear();
+        GL33.nglBufferData(GL33.GL_ARRAY_BUFFER, size, MemoryUtil.memAddress0(buffer), usage);
+        GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, vboPrev);
     }
 
-    @Override public synchronized void close() {
-        if (!ownerClosed) { ownerClosed = true; release(); }
+    @Override
+    public void close() {
+        if (RenderSystem.isOnRenderThread()) {
+            GL33.glDeleteBuffers(id);
+            id = 0;
+        } else {
+            RenderSystem.recordRenderCall(this::close);
+        }
     }
 }

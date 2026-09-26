@@ -1,17 +1,17 @@
 package cn.zbx1425.sowcerext.model.integration;
 
-import mtr.mappings.RenderBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class BufferSourceProxy {
 
-    private final RenderBufferSource bufferSource;
+    private final MultiBufferSource bufferSource;
     private final Map<RenderType, FaceList> builders = new HashMap<>();
 
-    public BufferSourceProxy(RenderBufferSource bufferSource) {
+    public BufferSourceProxy(MultiBufferSource bufferSource) {
         this.bufferSource = bufferSource;
     }
 

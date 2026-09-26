@@ -14,9 +14,9 @@ import cn.zbx1425.sowcer.math.Vector3f;
 import mtr.MTRClient;
 import mtr.data.TrainClient;
 import mtr.render.TrainRendererBase;
-import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
@@ -37,9 +37,9 @@ public class RenderTrainD51 extends TrainRendererBase {
 
     public static void initGLModel(ResourceManager resourceManager) {
         try {
-            MainClient.atlasManager.load(resourceManager, Identifier.parse("mtrsteamloco:models/atlas/d51.json"));
+            MainClient.atlasManager.load(resourceManager, ResourceLocation.parse("mtrsteamloco:models/atlas/d51.json"));
             modelD51 = AnimatedLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    Identifier.parse("mtrsteamloco:models/d51/d51.animated"));
+                    ResourceLocation.parse("mtrsteamloco:models/d51/d51.animated"));
         } catch (IOException e) {
             modelD51 = null;
             Main.LOGGER.error("Failed loading model for D51:", e);
@@ -121,7 +121,7 @@ public class RenderTrainD51 extends TrainRendererBase {
             PoseStackUtil.rotY(matrices, (float) Math.PI);
         }
 
-        final int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, posAverage), world.getBrightness(LightLayer.SKY, posAverage));
+        final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, posAverage), world.getBrightness(LightLayer.SKY, posAverage));
 
         updateProp.update(train, carIndex, !train.isReversed());
 

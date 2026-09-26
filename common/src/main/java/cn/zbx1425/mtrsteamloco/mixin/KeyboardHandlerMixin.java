@@ -29,10 +29,9 @@ public class KeyboardHandlerMixin {
     @Shadow @Final private Minecraft minecraft;
 
     @Inject(method = "handleDebugKeys", at = @At("HEAD"), cancellable = true)
-    private void handleDebugKeysHead(net.minecraft.client.input.KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
-        int key = event.key();
+    private void handleDebugKeysHead(int key, CallbackInfoReturnable<Boolean> cir) {
         if (key == GLFW.GLFW_KEY_5 && ClientConfig.enableScriptDebugOverlay) {
-            minecraft.schedule(() -> {
+            minecraft.tell(() -> {
                 GlStateTracker.capture();
                 MtrModelRegistryUtil.loadingErrorList.clear();
                 MtrModelRegistryUtil.resourceManager = minecraft.getResourceManager();
@@ -65,7 +64,7 @@ public class KeyboardHandlerMixin {
                 GlStateTracker.restore();
                 if (!MtrModelRegistryUtil.loadingErrorList.isEmpty()) {
                     minecraft.execute(() -> {
-                        minecraft.gui.setScreen(ErrorScreen.createScreen(MtrModelRegistryUtil.loadingErrorList, minecraft.gui.screen()));
+                        minecraft.setScreen(ErrorScreen.createScreen(MtrModelRegistryUtil.loadingErrorList, minecraft.screen));
                     });
                 }
             });

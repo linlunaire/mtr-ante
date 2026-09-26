@@ -37,7 +37,11 @@ import org.jetbrains.annotations.ApiStatus;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.client.gui.Font;
 import me.shedaniel.clothconfig2.gui.entries.TooltipListEntry;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import net.minecraft.client.gui.GuiComponent;
+#endif
 
 import java.util.List;
 import java.util.Optional;
@@ -79,8 +83,12 @@ public class SimpleButtonListEntry extends TooltipListEntry<Boolean> implements 
     }
     
     @Override
-    public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-        super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+#if MC_VERSION >= "12000"
+    public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#else
+    public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#endif
+        super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         Window window = Minecraft.getInstance().getWindow();
         UtilitiesClient.setWidgetY(this.buttonWidget, y);
         UtilitiesClient.setWidgetY(this.resetButton, y);
@@ -95,8 +103,8 @@ public class SimpleButtonListEntry extends TooltipListEntry<Boolean> implements 
             UtilitiesClient.setWidgetX(this.buttonWidget, x + entryWidth - 150);
         }
         this.buttonWidget.setWidth(150 - resetButton.getWidth() - 2);
-        resetButton.extractRenderState(matrices, mouseX, mouseY, delta);
-        buttonWidget.extractRenderState(matrices, mouseX, mouseY, delta);
+        resetButton.render(matrices, mouseX, mouseY, delta);
+        buttonWidget.render(matrices, mouseX, mouseY, delta);
     }
     
     @Override
@@ -114,7 +122,13 @@ public class SimpleButtonListEntry extends TooltipListEntry<Boolean> implements 
         
     }
 
-    public static void drawString(GuiGraphicsExtractor matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
-        matrices.text(font, text, x, y, color);
+#if MC_VERSION >= "12000"
+    public static void drawString(GuiGraphics matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        matrices.drawString(font, text, x, y, color);
     }
+#else
+    public static void drawString(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        GuiComponent.drawString(matrices, font, text, x, y, color);
+    }
+#endif
 }

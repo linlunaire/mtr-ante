@@ -12,19 +12,23 @@ import cn.zbx1425.sowcerext.util.ResourceUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.client.resources.model.BakedModel;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import mtr.mappings.Text;
 import mtr.mappings.Utilities;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.client.Minecraft;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import cn.zbx1425.mtrsteamloco.BuildConfig;
+import cn.zbx1425.mtrsteamloco.scripting.ScriptResourceUtil;
 import cn.zbx1425.sowcerext.reuse.ModelManager;
 import cn.zbx1425.sowcerext.model.RawModel;
 import cn.zbx1425.sowcerext.model.RawMesh;
@@ -53,16 +57,87 @@ public class EyeCandyRegistry {
         PATH_MAP.put(properties.path, properties);
     }
 
-    public static void reload(ResourceManager resourceManager) {
-        ELEMENTS.clear();
-        PATH_MAP.clear();
-        List<Pair<Identifier, Resource>> resources =
+    public static List<ResourceLocation> getModelLoacations() {
+        ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
+        List<ResourceLocation> modelLocations = new ArrayList<>();
+        List<Pair<ResourceLocation, Resource>> resources =
                 MtrModelRegistryUtil.listResources(resourceManager, "mtrsteamloco", "eyecandies", ".json");
-        for (Pair<Identifier, Resource> pair : resources) {
+        // System.out.println("EyeCandyRegistry Model Locations: " + resources.size() + resources);
+        for (Pair<ResourceLocation, Resource> pair : resources) {
             try {
                 try (InputStream is = Utilities.getInputStream(pair.getSecond())) {
                     JsonObject rootObj = (new JsonParser()).parse(IOUtils.toString(is, StandardCharsets.UTF_8)).getAsJsonObject();
+                    if (rootObj.has("model") || rootObj.has("scriptFiles")) {
+                        if (rootObj.has("itemModel")) {
+                            String itemModelPath = rootObj.get("itemModel").getAsString();
+                            String[] parts = itemModelPath.split("/");
+							ResourceLocation loc = ResourceLocation.parse(itemModelPath);
+                            if (itemModelPath.endsWith(".png")) modelLocations.add(addImgModel(loc));
+                            else if (parts[parts.length - 1].contains("."));
+                            else modelLocations.add(loc);
+                        }
+                    } else {
+                        for (Map.Entry<String, JsonElement> entry : rootObj.entrySet()) {
+                            if (!entry.getValue().isJsonObject()) continue;
+                            JsonObject obj = entry.getValue().getAsJsonObject();
+                            if (obj.has("itemModel")) {
+                                String itemModelPath = obj.get("itemModel").getAsString();
+                                String[] parts = itemModelPath.split("/");
+								ResourceLocation loc = ResourceLocation.parse(itemModelPath);
+                                if (itemModelPath.endsWith(".png")) modelLocations.add(addImgModel(loc));
+                                else if (parts[parts.length - 1].contains("."));
+                                else modelLocations.add(loc);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        // System.out.println("EyeCandyRegistry Model Locations: " + modelLocations.size() + modelLocations);
+        return modelLocations;
+    }
+
+    private static ResourceLocation mappingItem(ResourceLocation img) {
+		return ResourceLocation.fromNamespaceAndPath(
+            "dynamic___item__" + img.getNamespace(), img.getPath().replaceAll(".png", "_png")
+        );
+    }
+
+    private static ResourceLocation addImgModel(ResourceLocation img) {
+        ResourceLocation item = mappingItem(img);
+        ResourceLocation model = prefix(item, "models/item/", ".json");
+        ResourceLocation texture = prefix(item, "textures/", ".png");
+        DynamicResource.addResourcesClient(model, () -> {
+            return new ByteArrayInputStream(String.format(
+                "{\"parent\":\"item/generated\",\"textures\":{\"layer0\":\"%s\"}}",
+                item.toString()
+            ).getBytes());
+        });
+        // System.out.println("Adding item model: " + model.toString() + "->" + texture.toString());
+        DynamicResource.addResourcesClient(texture, () -> ScriptResourceUtil.readStream(img));
+        return item;
+    }
+
+    private static ResourceLocation prefix(ResourceLocation loc, String prefix, String suffix) {
+		return ResourceLocation.fromNamespaceAndPath(loc.getNamespace(), prefix + loc.getPath() + suffix);
+    }
+
+    public static void reload(ResourceManager resourceManager) {
+        ELEMENTS.clear();
+        PATH_MAP.clear();
+        List<Pair<ResourceLocation, Resource>> resources =
+                MtrModelRegistryUtil.listResources(resourceManager, "mtrsteamloco", "eyecandies", ".json");
+        for (Pair<ResourceLocation, Resource> pair : resources) {
+            try {
+                try (InputStream is = Utilities.getInputStream(pair.getSecond())) {
+                    JsonObject rootObj = (new JsonParser()).parse(IOUtils.toString(is, StandardCharsets.UTF_8)).getAsJsonObject();
+                #if MC_VERSION >= "11902"
                     String baseGroup = rootObj.has("group") ? rootObj.get("group").getAsString() : pair.getSecond().sourcePackId() + '/' + pair.getFirst().getPath().replaceAll("eyecandies/", "").replaceAll(".json", "");
+                #else
+                    String baseGroup = rootObj.has("group") ? rootObj.get("group").getAsString() : pair.getSecond().getSourceName() + '/' + pair.getSecond().getLocation().getPath().replaceAll("eyecandies/", "").replaceAll(".json", "");
+                #endif
                     if (rootObj.has("model") || rootObj.has("scriptFiles")) {
                         String key = FilenameUtils.getBaseName(pair.getFirst().getPath());
                         register(key, loadFromJson(resourceManager, key, rootObj, baseGroup));
@@ -99,7 +174,7 @@ public class EyeCandyRegistry {
 
         if (obj.has("atlasIndex")) {
             MainClient.atlasManager.load(
-					MtrModelRegistryUtil.resourceManager, Identifier.parse(obj.get("atlasIndex").getAsString())
+					MtrModelRegistryUtil.resourceManager, ResourceLocation.parse(obj.get("atlasIndex").getAsString())
             );
         }
 
@@ -111,10 +186,10 @@ public class EyeCandyRegistry {
         ModelCluster cluster = null;
         if (obj.has("model")) {
             RawModel rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-					Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
+					ResourceLocation.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
 
             if (obj.has("textureId")) {
-				rawModel.replaceTexture("default.png", Identifier.parse(obj.get("textureId").getAsString()));
+				rawModel.replaceTexture("default.png", ResourceLocation.parse(obj.get("textureId").getAsString()));
             }
             if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
                 rawModel.applyUVMirror(false, true);
@@ -142,19 +217,20 @@ public class EyeCandyRegistry {
                 );
             }
 
-			rawModel.sourceLocation = Identifier.parse(rawModel.sourceLocation + "/" + key);
+			rawModel.sourceLocation = ResourceLocation.parse(rawModel.sourceLocation + "/" + key);
 
             cluster = MainClient.modelManager.uploadVertArrays(rawModel);
         }
         ModelCluster itemModelCluster = null;
         Matrix4f itemTransform = null;
-        Identifier itemModelId = null;
+        BakedModel itemBakedModel = null;
         if (obj.has("itemModel")) {
             String path = obj.get("itemModel").getAsString();
-			Identifier loc = Identifier.parse(path);
+			ResourceLocation loc = ResourceLocation.parse(path);
             String[] parts = path.split("/");
             if (path.endsWith(".png")) {
-                itemModelId = EyeCandyItemResources.clientItemId(loc);
+                loc = mappingItem(loc);
+                itemBakedModel = Minecraft.getInstance().getModelManager().getModel(new ModelResourceLocation(loc, "inventory"));
             } else if (parts[parts.length - 1].contains(".")) {
                 RawModel rawModel = MainClient.modelManager.loadRawModel(resourceManager,
                     loc, MainClient.atlasManager).copy();
@@ -162,7 +238,7 @@ public class EyeCandyRegistry {
                 itemModelCluster = MainClient.modelManager.uploadVertArrays(rawModel);
             }
             else {
-                itemModelId = EyeCandyItemResources.clientItemId(loc);
+                itemBakedModel = Minecraft.getInstance().getModelManager().getModel(new ModelResourceLocation(loc, "inventory"));
             };
 
         } else {
@@ -192,22 +268,22 @@ public class EyeCandyRegistry {
             float f1 = 0.5f / max(0.5f, max(xm, zm)), f2 = 1f / max(1, ym);
             itemTransform.scale(min(f1, f2));
             itemTransform.translate(0, -miny, 0);
-        }
+        }   
 
         ScriptHolderBase script = null;
         if (obj.has("scriptFiles")) {
             script = new ScriptHolderClient();
-            Map<Identifier, String> scripts = new Object2ObjectArrayMap<>();
+            Map<ResourceLocation, String> scripts = new Object2ObjectArrayMap<>();
             if (obj.has("scriptTexts")) {
                 JsonArray scriptTexts = obj.get("scriptTexts").getAsJsonArray();
                 for (int i = 0; i < scriptTexts.size(); i++) {
-					scripts.put(Identifier.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
+					scripts.put(ResourceLocation.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
                             scriptTexts.get(i).getAsString());
                 }
             }
             JsonArray scriptFiles = obj.get("scriptFiles").getAsJsonArray();
             for (int i = 0; i < scriptFiles.size(); i++) {
-				Identifier scriptLocation = Identifier.parse(scriptFiles.get(i).getAsString());
+				ResourceLocation scriptLocation = ResourceLocation.parse(scriptFiles.get(i).getAsString());
                 scripts.put(scriptLocation, ResourceUtil.readResource(resourceManager, scriptLocation));
             }
             script.load("EyeCandy " + key, "Block", resourceManager, scripts, obj, key, "create", "render", "dispose", "use");
@@ -218,12 +294,12 @@ public class EyeCandyRegistry {
         boolean isTicketBarrier = obj.has("isTicketBarrier") ? obj.get("isTicketBarrier").getAsBoolean() : false;
         boolean isEntrance = obj.has("isEntrance") ? obj.get("isEntrance").getAsBoolean() : false;
         boolean asPlatform = obj.has("asPlatform") ? obj.get("asPlatform").getAsBoolean() : false;
-        Combination combination = Combination.decode(obj.has("combination") ? obj.get("combination").getAsString() : "");
+        Combination combination = Combination.decode(obj.has("combination") ? obj.get("combination").getAsString() : ""); 
         group = obj.has("group") ? obj.get("group").getAsString() : group;
         if (cluster == null && script == null) {
             throw new IllegalArgumentException("Invalid eye-candy json: " + key);
         } else {
-            return new EyeCandyProperties(key, Text.translatable(obj.get("name").getAsString()), cluster, itemModelCluster, itemTransform, itemModelId, script, shape, collisionShape, fixedMatrix, lightLevel, isTicketBarrier, isEntrance, asPlatform, group, combination);
+            return new EyeCandyProperties(key, Text.translatable(obj.get("name").getAsString()), cluster, itemModelCluster, itemTransform, itemBakedModel, script, shape, collisionShape, fixedMatrix, lightLevel, isTicketBarrier, isEntrance, asPlatform, group, combination);
         }
     }
 }

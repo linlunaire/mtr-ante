@@ -54,7 +54,7 @@ public abstract class ItemNodeModifierBaseMixin {
 		final Block blockStart = stateStart.getBlock();
 		final BlockState stateEnd = world.getBlockState(posEnd);
 
-		if (railwayData != null && stateEnd.getBlock() instanceof BlockNode && ((BlockNode) blockStart).transportMode.toString().equals(mtr.mappings.CompoundTagMapper.getString(compoundTag, TAG_TRANSPORT_MODE))) {
+		if (railwayData != null && stateEnd.getBlock() instanceof BlockNode && ((BlockNode) blockStart).transportMode.toString().equals(compoundTag.getString(TAG_TRANSPORT_MODE))) {
 			final Player player = context.getPlayer();
 
 			if (isConnector) {
@@ -72,7 +72,7 @@ public abstract class ItemNodeModifierBaseMixin {
                     if (beStart != null && beEnd != null) {
                         if (!beStart.isBound() && !beEnd.isBound()) {
                             beStart.bind(beEnd);
-                            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"));
+                            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"), true);
                         }
                     }
                     boolean s1 = false, s2 = false;
@@ -99,24 +99,24 @@ public abstract class ItemNodeModifierBaseMixin {
                     if (s1 && !s2) {
                         Double deg = RailCalculator.calculateMaxRadiusAngle(posStart.getX(), posStart.getZ(), posEnd.getX(), posEnd.getZ(), railAngleStart.angleRadians);
                         if (deg == null) {
-                            player.sendOverlayMessage(Text.translatable("gui.mtr.invalid_orientation"));
+                            player.displayClientMessage(Text.translatable("gui.mtr.invalid_orientation"), true);
                             return;
                         } else {
                             beEnd.bind(deg);
                             railAngleEnd = RailAngleExtra.fromDegrees(deg);
                             s2 = true;
-                            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"));
+                            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"), true);
                         }
                     } else if (s2 && !s1) {
                         Double deg = RailCalculator.calculateMaxRadiusAngle(posEnd.getX(), posEnd.getZ(), posStart.getX(), posStart.getZ(), railAngleEnd.angleRadians);
                         if (deg == null) {
-                            player.sendOverlayMessage(Text.translatable("gui.mtr.invalid_orientation"));
+                            player.displayClientMessage(Text.translatable("gui.mtr.invalid_orientation"), true);
                             return;
                         } else {
                             beStart.bind(deg);
                             railAngleStart = RailAngleExtra.fromDegrees(deg);
                             s1 = true;
-                            if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"));
+                            if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.direct_node.success_bind"), true);
                         }
                     }
 
@@ -126,7 +126,7 @@ public abstract class ItemNodeModifierBaseMixin {
                         
                         onConnect(world, context.getItemInHand(), ((BlockNode) blockStart).transportMode, stateStart, stateEnd, posStart, posEnd, railAngleStart, railAngleEnd, player, railwayData);
                     } else {
-                        if (player != null) player.sendOverlayMessage(Text.translatable("gui.mtrsteamloco.direct_node.unbound"));
+                        if (player != null) player.displayClientMessage(Text.translatable("gui.mtrsteamloco.direct_node.unbound"), true);
                     }
 				}
 			} else {

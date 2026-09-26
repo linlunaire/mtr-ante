@@ -13,7 +13,12 @@ public class PoseStack implements Posture {
 
     public PoseStack(Pose pose) {
         this();
-this.impl.last().set(pose.asMoj());
+#if MC_VERSION >= "11903"
+        this.impl.last().pose().mul(pose.pose().asMoj());
+#else
+        this.impl.last().pose().multiply(pose.pose().asMoj());
+#endif
+        this.impl.last().normal().mul(pose.normal().asMoj());
     }
 
     public void pushPose() {
@@ -33,7 +38,7 @@ this.impl.last().set(pose.asMoj());
     }
 
     public boolean clear() {
-        return impl.isEmpty();
+        return impl.clear();
     }
 
     public void setIdentity() {

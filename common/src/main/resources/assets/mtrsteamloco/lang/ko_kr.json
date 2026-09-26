@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "대체",
     "gui.mtrsteamloco.no_tasks_found": "작업 없음",
     "key.mtrsteamloco.train_screen": "열차 화면",
-    "key.category.mtrsteamloco.keybinding": "ANTE 단축키",
+    "category.mtrsteamloco.keybinding": "ANTE 단축키",
     "gui.mtr.percentage_complete_slice": "슬라이스 작업 (%s%%)",
     "gui.mtr.rail_action_slice": "%s에 의한 슬라이스 작업 생성 (%s 블록 길이)",
     "gui.mtrsteamloco.direct_node.unbound": "직선 노드 미연결",

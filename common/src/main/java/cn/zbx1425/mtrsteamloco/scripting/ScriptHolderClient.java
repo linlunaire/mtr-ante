@@ -16,7 +16,7 @@ import cn.zbx1425.sowcerext.model.integration.RawMeshBuilder;
 import cn.zbx1425.sowcerext.util.ResourceUtil;
 import mtr.client.ClientData;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import mtr.block.IBlock;
 import net.minecraft.world.entity.player.Player;

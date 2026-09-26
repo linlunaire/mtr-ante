@@ -10,8 +10,8 @@ import mtr.data.Rail;
 import mtr.mappings.Text;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.util.LightCoordsUtil;
-import mtr.mappings.RenderBufferSource;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -29,8 +29,8 @@ import java.util.Map;
 public class RailDistanceRenderer {
     private static Vec3 cameraPos = null;
 
-    public static void render(PoseStack matrices, RenderBufferSource vertexConsumers) {
-        cameraPos = Minecraft.getInstance().gameRenderer.mainCamera().position();
+    public static void render(PoseStack matrices, MultiBufferSource vertexConsumers) {
+        cameraPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         synchronized (ClientData.RAILS) {
             for (Map<BlockPos, Rail> railMap : ClientData.RAILS.values()) {
                 for (Rail rail : railMap.values()) {
@@ -40,7 +40,7 @@ public class RailDistanceRenderer {
         }
     }
 
-    private static void render(Rail rail, PoseStack matrices, RenderBufferSource vertexConsumers) {
+    private static void render(Rail rail, PoseStack matrices, MultiBufferSource vertexConsumers) {
         double length = rail.getLength();
         int interval = ClientConfig.railDistanceRendererInterval;
         for (int i = 0; i < length - interval; i += interval) {
@@ -66,7 +66,7 @@ public class RailDistanceRenderer {
         return color;
     }
 
-    private static void render(Rail rail, double i, String[] contents, PoseStack matrices, RenderBufferSource vertexConsumers) {
+    private static void render(Rail rail, double i, String[] contents, PoseStack matrices, MultiBufferSource vertexConsumers) {
         Vec3 last = rail.getPosition(i);
         if (last.distanceToSqr(cameraPos) > ClientConfig.railDistanceRendererMaxDistanceSqr) return;
         Vec3 next = rail.getPosition(i + 1E-4);
@@ -89,7 +89,7 @@ public class RailDistanceRenderer {
         matrices.popPose();
     }
 
-    private static void drawInBatch(String[] contents, int color, PoseStack matrices, RenderBufferSource vertexConsumers) {
+    private static void drawInBatch(String[] contents, int color, PoseStack matrices, MultiBufferSource vertexConsumers) {
         color = adjustColor(color);
         float opacity = Minecraft.getInstance().options.getBackgroundOpacity(0.2F);
         int bgColor = (int)(opacity * 255.0F) << 24;
@@ -98,7 +98,11 @@ public class RailDistanceRenderer {
         for (var text : contents) {
             if (text != null && !StringUtils.isEmpty(text)) {
                 float xOffset = (float) (-font.width(text) / 2);
-                vertexConsumers.drawText(text, xOffset, yOffset, color, false, matrices.last().pose(), Font.DisplayMode.SEE_THROUGH, bgColor, LightCoordsUtil.FULL_BRIGHT);
+#if MC_VERSION >= "11904"
+                font.drawInBatch(text, xOffset, yOffset, color, false, matrices.last().pose(), vertexConsumers, Font.DisplayMode.SEE_THROUGH, bgColor, LightTexture.FULL_BRIGHT, false);
+#else
+                font.drawInBatch(text, xOffset, yOffset, color, false, matrices.last().pose(), vertexConsumers, false, bgColor, LightTexture.FULL_BRIGHT);
+#endif
             }
             yOffset += font.lineHeight + 2;
         }

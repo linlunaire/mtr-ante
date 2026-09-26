@@ -21,9 +21,9 @@ import mtr.model.ModelBogie;
 import mtr.render.RenderTrains;
 import mtr.render.TrainRendererBase;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
@@ -53,15 +53,15 @@ public class RenderTrainDK3 extends TrainRendererBase {
 
     public static void initGLModel(ResourceManager resourceManager) {
         try {
-            MainClient.atlasManager.load(resourceManager, Identifier.parse("mtrsteamloco:models/atlas/dk3.json"));
+            MainClient.atlasManager.load(resourceManager, ResourceLocation.parse("mtrsteamloco:models/atlas/dk3.json"));
             models[MODEL_BODY_HEAD] = AnimatedLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    Identifier.parse("mtrsteamloco:models/dk3/ch.animated"));
+                    ResourceLocation.parse("mtrsteamloco:models/dk3/ch.animated"));
             models[MODEL_BODY_TAIL] = AnimatedLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    Identifier.parse("mtrsteamloco:models/dk3/c.animated"));
+                    ResourceLocation.parse("mtrsteamloco:models/dk3/c.animated"));
             models[MODEL_AUX_HEAD] = MiLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    Identifier.parse("mtrsteamloco:models/alex/dk3auxhead.json"));
+                    ResourceLocation.parse("mtrsteamloco:models/alex/dk3auxhead.json"));
             models[MODEL_AUX_TAIL] = MiLoader.loadModel(resourceManager, MainClient.modelManager, MainClient.atlasManager,
-                    Identifier.parse("mtrsteamloco:models/alex/dk3auxtail.json"));
+                    ResourceLocation.parse("mtrsteamloco:models/alex/dk3auxtail.json"));
         } catch (IOException e) {
             Main.LOGGER.error("Failed loading model for DK3 regular:", e);
         }
@@ -163,7 +163,7 @@ public class RenderTrainDK3 extends TrainRendererBase {
         PoseStackUtil.rotZ(matrices, train.isReversed() ? roll : -roll);
         matrices.translate(0D, -1D, 0D);
 
-        final int light = LightCoordsUtil.pack(world.getBrightness(LightLayer.BLOCK, posAverage), world.getBrightness(LightLayer.SKY, posAverage));
+        final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, posAverage), world.getBrightness(LightLayer.SKY, posAverage));
 
         updateProp.update(train, carIndex, !train.isReversed());
         updateProp.miKeyframeTime = scheduleHelper.currentFrameTime;

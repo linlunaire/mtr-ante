@@ -16,9 +16,11 @@ import mtr.mappings.ItemStackUtilities;
 import mtr.mappings.UtilitiesClient;
 import mtr.screen.WidgetBetterCheckbox;
 import mtr.screen.WidgetBetterTextField;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#endif
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -58,7 +60,7 @@ public class EyeCandyScreen {
         if (itemStack.isEmpty() || !(itemStack.getItem() instanceof BlockItemEyeCandy)) {
             return parent;
         }
-        VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> ItemStackUtilities.getCustomData(Minecraft.getInstance().player.getItemInHand(hand)).getCompoundOrEmpty("BlockEntityTag"), hand);
+        VirtualEyeCandy virtualEyeCandy = new VirtualEyeCandy(() -> ItemStackUtilities.getCustomData(Minecraft.getInstance().player.getItemInHand(hand)).getCompound("BlockEntityTag"), hand);
         return createScreen(virtualEyeCandy, parent);
     }
 
@@ -100,7 +102,7 @@ public class EyeCandyScreen {
 
         common.addEntry(ButtonListEntry.createCenteredInstance(
             Text.translatable("gui.mtrsteamloco.eye_candy.present", properties.name.getString()),
-            btn -> Minecraft.getInstance().gui.setScreen(createSelectScreen(blockEntity, () -> createScreen(blockEntity, parent)))));
+            btn -> Minecraft.getInstance().setScreen(createSelectScreen(blockEntity, () -> createScreen(blockEntity, parent)))));
 
         common.addEntry(entryBuilder
                 .startBooleanToggle(
@@ -154,7 +156,7 @@ public class EyeCandyScreen {
             common.addEntry(new SimpleButtonListEntry(
                 tr("adjust_settings_and_reset_pose"), 
                 Text.translatable("gui.mtrsteamloco.adjust_settings"),
-                btn -> Minecraft.getInstance().gui.setScreen(createAdjustScreen(() -> createScreen(blockEntity, parent))),
+                btn -> Minecraft.getInstance().setScreen(createAdjustScreen(() -> createScreen(blockEntity, parent))),
                 entryBuilder.getResetButtonKey(), 
                 btn -> {
                     blockEntity.translateX = 0;

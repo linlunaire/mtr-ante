@@ -6,13 +6,11 @@ import cn.zbx1425.mtrsteamloco.gui.entries.ButtonListEntry;
 import cn.zbx1425.mtrsteamloco.network.PacketUpdateHoldingItem;
 import cn.zbx1425.mtrsteamloco.network.PacketUpdateRail;
 import cn.zbx1425.mtrsteamloco.render.RailPicker;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.util.Mth;
 import net.minecraft.util.FormattedCharSequence;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.chat.FormattedText;
 import mtr.client.IDrawing;
@@ -28,12 +26,16 @@ import net.minecraft.util.Mth;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import mtr.data.RailType;
 import cn.zbx1425.mtrsteamloco.gui.WidgetSlider;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import net.minecraft.client.gui.GuiComponent;
+#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.BlockPos;
@@ -78,7 +80,7 @@ import java.util.Optional;
 public class RollAnglesListEntry extends TooltipListEntry<String> implements ContainerEventHandler {
     private final List<Node> nodes = new ArrayList<>();
     private Node now = null;
-
+    
     Button btnAddNode = UtilitiesClient.newButton(
         Text.translatable("+"),
         sender -> addNode(new Node(0, 0)));
@@ -106,8 +108,8 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
     //     }
     // );
     private final List<AbstractWidget> widgets;
-    private static final Identifier WHITE = Identifier.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
-    private static final Identifier POS = Identifier.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/ante.png");
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/white_concrete_powder.png");
+    private static final ResourceLocation POS = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/ante.png");
     private final boolean flag;
     private int sliderWidth, sliderStartX;
     private Consumer<Map<Double, Float>> updateFunction;
@@ -141,7 +143,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         );
 
         positionInput = new SliderTextFieldGroup(
-            0F, (float) pickedRail.getLength(), 10000, e.modes[1],
+            0F, (float) pickedRail.getLength(), 10000, e.modes[1], 
             i -> {
                 e.modes[1] = i;
                 ClientConfig.save();
@@ -152,7 +154,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             Text.translatable("gui.mtrsteamloco.brush_edit_rail.position_input")
         );
 
-
+        
         angleInput = new SliderTextFieldGroup(
             e.min, e.max, e.step, e.modes[0],
             i -> {
@@ -182,7 +184,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         btnAdjust = UtilitiesClient.newButton(
             Text.translatable("gui.mtrsteamloco.adjust_settings"),
             sender -> {
-                Minecraft.getInstance().gui.setScreen(createAdjustScreen(parent));
+                Minecraft.getInstance().setScreen(createAdjustScreen(parent));
             }
         );
 
@@ -250,7 +252,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             btnRemoveNode.active = false;
         }
     }
-
+    
     public void addNode(Node node) {
         addNode(node, true);
     }
@@ -292,7 +294,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
     }
     @Override
     public void save() {
-
+        
     }
     @Override
     public int getItemHeight() {
@@ -308,7 +310,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         res.addAll(angleInput.children());
         return res;
     }
-
+    
     @Override
     public List<? extends NarratableEntry> narratables() {
         List<NarratableEntry> res = new ArrayList<>(widgets);
@@ -320,8 +322,12 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-        super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+#if MC_VERSION >= "12000"
+    public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#else
+    public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#endif
+        super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         FormattedCharSequence displayedFieldName = Text.translatable("gui.mtrsteamloco.brush_edit_rail.roll_setting").getVisualOrderText();
         Window window = Minecraft.getInstance().getWindow();
         if (Minecraft.getInstance().font.isBidirectional()) {
@@ -332,7 +338,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         y += 24;
 
         offsetInput.render(matrices, x, y, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
-
+    
         y += 24;
 
         y += 2;
@@ -366,13 +372,13 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         IDrawing.setPositionAndWidth(btnCopy, s, y, w);
         s += w + in;
         IDrawing.setPositionAndWidth(btnAdjust, s, y, w);
-        btnAddNode.extractRenderState(matrices, mouseX, mouseY, delta);
-        btnRemoveNode.extractRenderState(matrices, mouseX, mouseY, delta);
-        btnClear.extractRenderState(matrices, mouseX, mouseY, delta);
-        btnCopy.extractRenderState(matrices, mouseX, mouseY, delta);
-        btnAdjust.extractRenderState(matrices, mouseX, mouseY, delta);
+        btnAddNode.render(matrices, mouseX, mouseY, delta);
+        btnRemoveNode.render(matrices, mouseX, mouseY, delta);
+        btnClear.render(matrices, mouseX, mouseY, delta);
+        btnCopy.render(matrices, mouseX, mouseY, delta);
+        btnAdjust.render(matrices, mouseX, mouseY, delta);
         y += 22;
-
+        
         if (now == null) return;
         positionInput.render(matrices, x, y, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
 
@@ -385,32 +391,61 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
 
     protected FormattedCharSequence[] wrapLines(Component[] lines, int width) {
         final Font font = Minecraft.getInstance().font;
-
+        
         return Arrays.stream(lines)
                 .map(line -> font.split(line, width))
                 .flatMap(List::stream)
                 .toArray(FormattedCharSequence[]::new);
     }
 
-    public static void drawString(GuiGraphicsExtractor matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
-        matrices.text(font, text, x, y, color);
+#if MC_VERSION >= "12000"
+    public static void drawString(GuiGraphics matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        matrices.drawString(font, text, x, y, color);
     }
-    private static int drawText(GuiGraphicsExtractor guiGraphics, Font font, String text, int x, int y, int color) {
+#else
+    public static void drawString(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        GuiComponent.drawString(matrices, font, text, x, y, color);
+    }
+#endif
+#if MC_VERSION >= "12000"
+    private static int drawText(GuiGraphics guiGraphics, Font font, String text, int x, int y, int color) {
         FormattedText formattedText = FormattedText.of(text);
         List<FormattedCharSequence> lines = font.split(formattedText, Minecraft.getInstance().getWindow().getGuiScaledWidth() - 40);
         for (FormattedCharSequence line : lines) {
-            guiGraphics.text(font, line, x, y, color);
+            guiGraphics.drawString(font, line, x, y, color);
             y += Mth.ceil(font.lineHeight * 1.1f);
         }
         return y;
     }
-    private static void blit(GuiGraphicsExtractor guiGraphics, Identifier texture, int x, int y, int width, int height) {
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, width, height, width, height);
+    private static void blit(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int width, int height) {
+        guiGraphics.blit(texture, x, y, width, height, 0, 0, 1, 1, 1, 1);
     }
-    // private static void blit(GuiGraphicsExtractor guiGraphics, int x1, int y1, int x2, int y2, int argb) {
+    // private static void blit(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int argb) {
     // }
+#else
+    private static int drawText(PoseStack matrices, Font font, String text, int x, int y, int color) {
+        FormattedText formattedText = FormattedText.of(text);
+        List<FormattedCharSequence> lines = font.split(formattedText, Minecraft.getInstance().getWindow().getGuiScaledWidth() - 40);
+        for (FormattedCharSequence line : lines) {
+            font.drawShadow(matrices, line, x, y, color);
+            y += Mth.ceil(font.lineHeight * 1.1f);
+        }
+        return y;
+    }
+    private static void blit(PoseStack matrices, ResourceLocation texture, int x, int y, int width, int height) {
+        RenderSystem.setShaderTexture(0, texture);
+        GuiComponent.blit(matrices, x, y, width, height, 0, 0, 1, 1, 1, 1);
+    }
+    // private static void blit(PoseStack matrices, int x1, int y1, int x2, int y2, int argb) {
+    //     GuiComponent.fill(matrices, x1, y1, x2, y2, argb);
+    // }
+#endif
 
-    private void blitPos(GuiGraphicsExtractor matrices, int x, int y, int mx, int my) {
+#if MC_VERSION >= "12000"
+    private void blitPos(GuiGraphics matrices, int x, int y, int mx, int my) {
+#else
+    private void blitPos(PoseStack matrices, int x, int y, int mx, int my) {
+#endif
         blit(matrices, POS, x, y, 20, 20);
 
         if (x <= mx && mx <= x + 20 && y <= my && my <= y + 20) {
@@ -426,29 +461,29 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             this.textGetter = textGetter;
             this.valueSetter = valueSetter;
         }
-
+        
         @Override
         public void updateMessage() {
             setMessage(textGetter.apply(value));
         }
-
+        
         @Override
         protected void applyValue() {
             valueSetter.accept(value);
         }
-
+        
         @Override
-        public boolean keyPressed(KeyEvent event) {
+        public boolean keyPressed(int int_1, int int_2, int int_3) {
             if (!isEditable())
                 return false;
-            return super.keyPressed(event);
+            return super.keyPressed(int_1, int_2, int_3);
         }
-
+        
         @Override
-        public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        public boolean mouseDragged(double double_1, double double_2, int int_1, double double_3, double double_4) {
             if (!isEditable())
                 return false;
-            return super.mouseDragged(event, dx, dy);
+            return super.mouseDragged(double_1, double_2, int_1, double_3, double_4);
         }
         public void setValue(double value, boolean air) {
             double d0 = this.value;
@@ -464,12 +499,12 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         private float angle;
         private int y;
         private boolean dragged = false;
-        // private static final Identifier P = new Identifier(Main.MOD_ID, "textures/gui/rail/p.png");
-        private static final Identifier P = Identifier.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/pi.png");
-        private static final Identifier Y = Identifier.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/y.png");
+        // private static final ResourceLocation P = new ResourceLocation(Main.MOD_ID, "textures/gui/rail/p.png");
+        private static final ResourceLocation P = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/pi.png");
+        private static final ResourceLocation Y = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/rail/y.png");
         private static final int NW = 6;
         private static final int NH = 10;
-
+        
         public Node(double value, float angle) {
             this.value = value / pickedRail.getLength();
             this.angle = angle;
@@ -480,7 +515,11 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             this.angle = node.angle;
         }
 
-        public void render(GuiGraphicsExtractor matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+#if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+#else 
+        public void render(PoseStack matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+#endif  
             this.y = y;
             if (isActive()) {
                 blit(matrices, Y, getX() - NW / 2, this.y - NH / 2,  NW, NH);
@@ -530,8 +569,9 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             return now == this;
         }
 
+#if MC_VERSION >= "11904"
         boolean isFocused = false;
-
+        
         @Override
         public boolean isFocused() {
             return isFocused;
@@ -540,6 +580,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         public void setFocused(boolean b) {
             isFocused = b;
         }
+#endif
 
         @Override
         public boolean isMouseOver(double mouseX, double mouseY) {
@@ -551,8 +592,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             return mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY;
         }
         @Override
-        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-            double mouseX = event.x(), mouseY = event.y();
+        public boolean mouseClicked(double mouseX, double mouseY, int in) {
             if (isMouseOver(mouseX, mouseY)) {
                 focusNode(this);
                 return true;
@@ -560,18 +600,17 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             return false;
         }
         @Override
-        public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-            double sx = event.x(), sy = event.y();
+        public boolean mouseDragged(double sx, double sy, int t, double dx, double dy) {
             if ((isActive() && dragged) || isMouseOver(sx, sy)) {
                 focusNode(this);
-                setValue((int) sx);
+                setValue((int) (sx + dx));
                 dragged = true;
                 return true;
             }
             return false;
         }
         @Override
-        public boolean mouseReleased(MouseButtonEvent event) {
+        public boolean mouseReleased(double x, double y, int t) {
             if (isActive() && dragged) {
                 dragged = false;
                 return true;
@@ -579,8 +618,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             return false;
         }
         @Override
-        public boolean keyPressed(KeyEvent event) {
-            int p_93596_ = event.key();
+        public boolean keyPressed(int p_93596_, int p_93597_, int p_93598_) {
             boolean flag = p_93596_ == 263;
             if (flag || p_93596_ == 262) {
                 double f = flag ? -0.025 : 0.025;
@@ -654,7 +692,7 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
         public void switchMode(int mode) {
             mode = mode % 2;
             if (mode == this.mode) return;
-
+                
             this.mode = mode;
             saveModeConsumer.accept(mode);
 
@@ -692,7 +730,11 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             return min + level / (float) step * (max - min);
         }
 
-        public void render(GuiGraphicsExtractor matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+    #if MC_VERSION >= "12000"
+        public void render(GuiGraphics matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+    #else 
+        public void render(PoseStack matrices, int x, int y, int width, int height, int mouseX, int mouseY, boolean isHovered, float delta) {
+    #endif 
             y += 2;
             int v1 = (int) Math.round(width * 0.5D);
             int v4 = Math.min(v1, 380);
@@ -715,10 +757,10 @@ public class RollAnglesListEntry extends TooltipListEntry<String> implements Con
             x += v5 + v2;
             IDrawing.setPositionAndWidth(btnReset, x, y, v7);
 
-            if (mode == 0) textField.extractRenderState(matrices, mouseX, mouseY, delta);
-            else slider.extractRenderState(matrices, mouseX, mouseY, delta);
-            btnChangeMode.extractRenderState(matrices, mouseX, mouseY, delta);
-            btnReset.extractRenderState(matrices, mouseX, mouseY, delta);
+            if (mode == 0) textField.render(matrices, mouseX, mouseY, delta);
+            else slider.render(matrices, mouseX, mouseY, delta);
+            btnChangeMode.render(matrices, mouseX, mouseY, delta);
+            btnReset.render(matrices, mouseX, mouseY, delta);
         }
 
         public List<GuiEventListener> children() {

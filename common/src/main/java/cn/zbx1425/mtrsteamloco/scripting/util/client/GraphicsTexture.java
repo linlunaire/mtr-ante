@@ -1,73 +1,61 @@
 package cn.zbx1425.mtrsteamloco.scripting.util.client;
 
+import cn.zbx1425.mtrsteamloco.Main;
+import cn.zbx1425.mtrsteamloco.mixin.NativeImageAccessor;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.minecraft.resources.ResourceLocation;
+import org.lwjgl.system.MemoryUtil;
 
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.awt.image.*;
 import java.io.Closeable;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.concurrent.*;
 
 @SuppressWarnings("unused")
 public class GraphicsTexture implements Closeable {
-    private static final Logger LOGGER = LoggerFactory.getLogger("MTR-ANTE");
 
-    public final Identifier identifier;
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+
+    private final DynamicTexture dynamicTexture;
+    public final ResourceLocation identifier;
+
     public final BufferedImage bufferedImage;
     public final Graphics2D graphics;
+
     public final int width, height;
-    private final Consumer<Runnable> clientQueue;
-    private final BiConsumer<Runnable, Integer> delayedQueue;
-    private volatile boolean isClosed;
-    // Accessed only by jobs on the client/render thread.
-    private TextureBackend backend;
+    private boolean isClosed = false;
 
-    public GraphicsTexture(int width, int height, Identifier path) {
-        this(width, height, path, task -> Minecraft.getInstance().execute(task),
-                (task, delay) -> CompletableFuture.delayedExecutor(delay, TimeUnit.MILLISECONDS).execute(task),
-                () -> new MinecraftTexture(width, height, path));
-    }
-
-    public GraphicsTexture(int width, int height) {
-        this(width, height, Identifier.fromNamespaceAndPath("mtrsteamloco", "dynamic/graphics/" + UUID.randomUUID().toString().replace('-', '_')));
-    }
-
-    // The GPU/dispatch boundary is replaceable for headless lifetime checks; script APIs stay unchanged.
-    GraphicsTexture(int width, int height, Identifier path, Consumer<Runnable> clientQueue,
-                    BiConsumer<Runnable, Integer> delayedQueue, Supplier<TextureBackend> factory) {
+    public GraphicsTexture(int width, int height, ResourceLocation path) {
         this.width = width;
         this.height = height;
+        dynamicTexture = new DynamicTexture(new NativeImage(width, height, false));
         identifier = path;
-        this.clientQueue = clientQueue;
-        this.delayedQueue = delayedQueue;
+        Minecraft.getInstance().execute(() -> {
+            Minecraft.getInstance().getTextureManager().register(identifier, dynamicTexture);
+        });
         bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         graphics = bufferedImage.createGraphics();
         graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         graphics.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-        clientQueue.accept(() -> {
-            if (!isClosed) backend = factory.get();
-        });
+    }
+
+    public GraphicsTexture(int width, int height){
+        this(width, height, ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, String.format("dynamic/graphics/%s", UUID.randomUUID().toString().replace("-", "_"))));
     }
 
     public static BufferedImage createArgbBufferedImage(BufferedImage src) {
-        BufferedImage result = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics = result.createGraphics();
-        try {
-            graphics.drawImage(src, 0, 0, null);
-        } finally {
-            graphics.dispose();
-        }
-        return result;
+        BufferedImage newImage = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = newImage.createGraphics();
+        graphics.drawImage(src, 0, 0, null);
+        graphics.dispose();
+        return newImage;
     }
 
     public void upload() {
@@ -75,22 +63,86 @@ public class GraphicsTexture implements Closeable {
     }
 
     public synchronized void upload(BufferedImage image) {
-        if (isClosed) return;
-        if (image == null || image.getWidth() != width || image.getHeight() != height) {
-            LOGGER.warn("Invalid image dimensions for GraphicsTexture {} (expected {} x {})", identifier, width, height);
+        if (image == null) {
+            Main.LOGGER.warn("BufferedImage is null, skipping upload GraphicsTexture");
             return;
         }
-        // getRGB respects raster offsets/stride and yields ARGB for every BufferedImage type.
-        // The queued GPU upload must not observe later script writes to the image.
-        int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
-        clientQueue.accept(() -> {
-            if (isClosed || backend == null) return;
+
+        if (image.getWidth() != width || image.getHeight() != height) {
+            Main.LOGGER.warn("BufferedImage size does not match GraphicsTexture size: expect(" + width + "," + height + ") actual(" + image.getWidth() + "," + image.getHeight() + ")," + "skipping upload GraphicsTexture");
+            return;
+        }
+
+        if (isClosed || dynamicTexture.getPixels() == null) {
+            Main.LOGGER.info("GraphicsTexture already closed");
+            return;
+        }
+
+        if (image.getType() != BufferedImage.TYPE_INT_ARGB) {
+            Main.LOGGER.warn("Image type is not TYPE_INT_ARGB, converting...");
+            image = createArgbBufferedImage(image);
+        }
+
+        Raster raster = image.getRaster();
+        if (raster == null) {
+            Main.LOGGER.error("Image raster is null");
+            return;
+        }
+
+        DataBuffer dataBuffer = raster.getDataBuffer();
+        if (!(dataBuffer instanceof DataBufferInt)) {
+            Main.LOGGER.error("Image data buffer is not an instance of DataBufferInt");
+            return;
+        }
+
+        IntBuffer imgData = IntBuffer.wrap(((DataBufferInt) dataBuffer).getData());
+        if (imgData == null || imgData.remaining() < width * height) {
+            Main.LOGGER.error("Image data buffer is null or insufficient data");
+            return;
+        }
+
+        NativeImage nativeImage = dynamicTexture.getPixels();
+        if (nativeImage == null) {
+            Main.LOGGER.error("DynamicTexture pixels are null");
+            return;
+        }
+
+        long pixelAddr = ((NativeImageAccessor) (Object) nativeImage).getPixels();
+        if (pixelAddr == 0) {
+            Main.LOGGER.error("Pixel address is 0");
+            return;
+        }
+
+        ByteBuffer target = MemoryUtil.memByteBuffer(pixelAddr, width * height * 4);
+        if (target == null || target.remaining() < width * height * 4) {
+            Main.LOGGER.error("Target ByteBuffer is null or insufficient size");
+            return;
+        }
+
+        for (int i = 0; i < width * height; i++) {
+            // ARGB to RGBA
+            int pixel = imgData.get();
+            target.put((byte) ((pixel >> 16) & 0xFF)); // R
+            target.put((byte) ((pixel >> 8) & 0xFF));  // G
+            target.put((byte) (pixel & 0xFF));         // B
+            target.put((byte) ((pixel >> 24) & 0xFF));  // A
+        }
+
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(() -> {
+                try {
+                    dynamicTexture.upload();
+                } catch (Exception e) {
+                    Main.LOGGER.error("Failed to upload texture", e);
+                }
+            });
+        } else {
             try {
-                backend.upload(pixels);
+                dynamicTexture.upload();
             } catch (Exception e) {
-                LOGGER.error("Failed to upload GraphicsTexture {}", identifier, e);
+                Main.LOGGER.error("Failed to upload texture", e);
             }
-        });
+        }
     }
 
     public boolean isClosed() {
@@ -102,61 +154,26 @@ public class GraphicsTexture implements Closeable {
         close(10000);
     }
 
-    public synchronized void close(int delay) {
-        if (isClosed) return;
+    public void close(int delay) {
+        if (isClosed) {
+            Main.LOGGER.info("GraphicsTexture already closed");
+            return;
+        }
         isClosed = true;
         graphics.dispose();
-        delayedQueue.accept(() -> clientQueue.accept(() -> {
-            if (backend == null) return;
-            try {
-                backend.close();
-            } finally {
-                backend = null;
+        executor.schedule(() -> {
+            if (isClosed) {
+                Main.LOGGER.info("GraphicsTexture already closed");
+            } else {
+                Minecraft.getInstance().execute(() -> {
+                    try {
+                        Minecraft.getInstance().getTextureManager().release(identifier);
+                        dynamicTexture.close();
+                    } catch (Exception e) {
+                        Main.LOGGER.error("Failed to close GraphicsTexture", e);
+                    }
+                });
             }
-        }), Math.max(0, delay));
-    }
-
-    interface TextureBackend {
-        void upload(int[] pixels);
-        void close();
-    }
-
-    private static final class MinecraftTexture implements TextureBackend {
-        private final Identifier identifier;
-        private final DynamicTexture texture;
-
-        private MinecraftTexture(int width, int height, Identifier identifier) {
-            this.identifier = identifier;
-            NativeImage pixels = new NativeImage(width, height, false);
-            try {
-                pixels.fillRect(0, 0, width, height, 0);
-                texture = new DynamicTexture(identifier::toString, pixels);
-            } catch (RuntimeException | Error failure) {
-                pixels.close();
-                throw failure;
-            }
-            try {
-                Minecraft.getInstance().getTextureManager().register(identifier, texture);
-            } catch (RuntimeException | Error failure) {
-                texture.close();
-                throw failure;
-            }
-        }
-
-        @Override
-        public void upload(int[] pixels) {
-            NativeImage image = texture.getPixels();
-            if (image == null) return;
-            for (int y = 0, index = 0; y < image.getHeight(); y++) {
-                for (int x = 0; x < image.getWidth(); x++) image.setPixel(x, y, pixels[index++]);
-            }
-            texture.upload();
-        }
-
-        @Override
-        public void close() {
-            // TextureManager.release already closes both the native image and the GPU texture.
-            Minecraft.getInstance().getTextureManager().release(identifier);
-        }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 }

@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "Substituição",
     "gui.mtrsteamloco.no_tasks_found": "Nenhuma Tarefa Encontrada",
     "key.mtrsteamloco.train_screen": "Ecrã do Comboio",
-    "key.category.mtrsteamloco.keybinding": "Teclas ANTE",
+    "category.mtrsteamloco.keybinding": "Teclas ANTE",
     "gui.mtr.percentage_complete_slice": "Tarefa de Corte (%s%%)",
     "gui.mtr.rail_action_slice": "Tarefa de Corte criada por %s (%s blocos)",
     "gui.mtrsteamloco.direct_node.unbound": "Nodo Reto não vinculado",

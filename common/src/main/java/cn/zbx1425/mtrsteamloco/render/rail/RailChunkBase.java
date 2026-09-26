@@ -14,18 +14,19 @@ import cn.zbx1425.sowcerext.reuse.DrawScheduler;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import cn.zbx1425.mtrsteamloco.Main;
-import java.util.function.Supplier;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public abstract class RailChunkBase implements Closeable {
 
-    private static final RailBuildScheduler BUILD_SCHEDULER = new RailBuildScheduler();
-    private volatile boolean closed;
+    protected static ExecutorService EXECUTOR = Executors.newCachedThreadPool();
+    protected static ConcurrentLinkedQueue<Runnable> UPLOAD_QUEUE = new ConcurrentLinkedQueue<>();
 
     public Long chunkId;
     public AABB boundingBox;
@@ -87,31 +88,23 @@ public abstract class RailChunkBase implements Closeable {
         isDirty = true;
     }
 
-    public abstract void rebuildBuffer(Level world);
-
-    protected final void rebuildAsync(Supplier<RailBuildScheduler.Upload> build) {
-        if (closed || bufferBuilding) return;
-        BUILD_SCHEDULER.trySchedule(() -> {
-            containingRails.clear();
-            containingRails.putAll(containingRailsWriting);
-            bufferBuilding = true;
-            isDirty = false;
-        }, build, () -> !closed, () -> bufferBuilding = false, error -> {
-            isDirty = true;
-            Main.LOGGER.error("Unable to rebuild rail chunk {} for {}", chunkId, modelKey, error);
-        });
-    }
-
-    protected final void closeBuild() {
-        closed = true;
-        bufferBuilding = false;
-        bufferBuilt = false;
-        BUILD_SCHEDULER.discardStale();
+    public void rebuildBuffer(Level world) {
+        bufferBuilding = true;
+        isDirty = false;
+        bufferBuilt = true;
+        containingRails.clear();
+        containingRails.putAll(containingRailsWriting);
     }
     public abstract void enqueue(BatchManager batchManager, ShaderProp shaderProp);
 
+    // private static long lastUploadTime = 0L;
     public static void upload() {
-        BUILD_SCHEDULER.uploadOne();
+        if (!UPLOAD_QUEUE.isEmpty()) {
+            // if (lastUploadTime < System.currentTimeMillis() - 100) {
+                UPLOAD_QUEUE.poll().run();
+                // lastUploadTime = System.currentTimeMillis();
+            // }
+        }
     }
 
     @Override

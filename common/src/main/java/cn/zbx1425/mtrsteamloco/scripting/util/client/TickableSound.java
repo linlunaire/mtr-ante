@@ -8,18 +8,26 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import cn.zbx1425.sowcer.math.Vector3f;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class TickableSound extends TickableSoundInstanceMapper {
-    public TickableSound(Identifier sound) {
+    public TickableSound(ResourceLocation sound) {
         super(
+#if MC_VERSION >= "11903"
         SoundEvent.createVariableRangeEvent(sound)
+#else
+        new SoundEvent(sound)
+#endif
         , SoundSource.BLOCKS);
     }
 
-    public TickableSound(Identifier sound, SoundSource source) {
+    public TickableSound(ResourceLocation sound, SoundSource source) {
         super(
+#if MC_VERSION >= "11903"
         SoundEvent.createVariableRangeEvent(sound)
+#else
+        new SoundEvent(sound)
+#endif
         , source);
     }
 

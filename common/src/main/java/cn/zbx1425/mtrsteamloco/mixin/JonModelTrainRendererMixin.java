@@ -5,7 +5,7 @@ import cn.zbx1425.mtrsteamloco.data.TrainExtraSupplier;
 import mtr.data.TrainClient;
 import mtr.render.TrainRendererBase;
 import mtr.render.JonModelTrainRenderer;
-import mtr.mappings.RenderBufferSource;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.Vec3;
 import cn.zbx1425.sowcer.math.PoseStackUtil;
 

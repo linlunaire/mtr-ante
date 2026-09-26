@@ -152,7 +152,7 @@ public abstract class TrainClientMixin extends Train implements IGui{
 						if (isShifting && !previousShifting) {
 							isSitting = !isSitting;
 						}
-						clientPlayer.setPose(isSitting && !client.gameRenderer.mainCamera().isDetached() ? Pose.CROUCHING : Pose.STANDING);
+						clientPlayer.setPose(isSitting && !client.gameRenderer.getMainCamera().isDetached() ? Pose.CROUCHING : Pose.STANDING);
 					}
 					previousShifting = isShifting;
 				});
@@ -172,7 +172,7 @@ public abstract class TrainClientMixin extends Train implements IGui{
 		vehicleRidingClient.end();
 		justMounted = false;
 
-		final Entity camera = client.getCameraEntity();
+		final Entity camera = client.cameraEntity;
 		final Vec3 cameraPos = camera == null ? Vec3.ZERO : camera.position();
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		int nearestCar = 0;

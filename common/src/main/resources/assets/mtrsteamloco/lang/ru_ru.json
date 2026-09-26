@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "Замена",
     "gui.mtrsteamloco.no_tasks_found": "Задач нет",
     "key.mtrsteamloco.train_screen": "Экран поезда",
-    "key.category.mtrsteamloco.keybinding": "Управление ANTE",
+    "category.mtrsteamloco.keybinding": "Управление ANTE",
     "gui.mtr.percentage_complete_slice": "Срез (%s%%)",
     "gui.mtr.rail_action_slice": "Создано %s (%s блоков)",
     "gui.mtrsteamloco.direct_node.unbound": "Прямой узел не связан",

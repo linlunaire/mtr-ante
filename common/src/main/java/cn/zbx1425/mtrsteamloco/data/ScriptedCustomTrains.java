@@ -15,7 +15,7 @@ import mtr.client.*;
 import mtr.mappings.Utilities;
 import mtr.mappings.UtilitiesClient;
 import mtr.render.TrainRendererBase;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.IOException;
@@ -44,18 +44,18 @@ public class ScriptedCustomTrains implements IResourcePackCreatorProperties, ICu
                         final float bogiePosition = getOrDefault(jsonObject, "bogie_position", prevTrainProp.bogiePosition, JsonElement::getAsFloat);
 
                         ScriptHolderBase scriptContext = new ScriptHolderClient();
-                        Map<Identifier, String> scripts = new Object2ObjectArrayMap<>();
+                        Map<ResourceLocation, String> scripts = new Object2ObjectArrayMap<>();
                         if (jsonObject.has("script_texts")) {
                             JsonArray scriptTexts = jsonObject.get("script_texts").getAsJsonArray();
                             for (int i = 0; i < scriptTexts.size(); i++) {
-								scripts.put(Identifier.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + trainId + "/" + i),
+								scripts.put(ResourceLocation.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + trainId + "/" + i),
                                         scriptTexts.get(i).getAsString());
                             }
                         }
                         if (jsonObject.has("script_files")) {
                             JsonArray scriptFiles = jsonObject.get("script_files").getAsJsonArray();
                             for (int i = 0; i < scriptFiles.size(); i++) {
-								Identifier scriptLocation = Identifier.parse(scriptFiles.get(i).getAsString());
+								ResourceLocation scriptLocation = ResourceLocation.parse(scriptFiles.get(i).getAsString());
                                 scripts.put(scriptLocation, null);
                             }
                         }
@@ -87,7 +87,7 @@ public class ScriptedCustomTrains implements IResourcePackCreatorProperties, ICu
 
     private static void readResource(ResourceManager manager, String path, Consumer<JsonObject> callback) {
         try {
-			UtilitiesClient.getResources(manager, Identifier.parse(path)).forEach(resource -> {
+			UtilitiesClient.getResources(manager, ResourceLocation.parse(path)).forEach(resource -> {
                 try (final InputStream stream = Utilities.getInputStream(resource)) {
                     callback.accept(new JsonParser().parse(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject());
                 } catch (Exception e) { Main.LOGGER.error("On behalf of MTR: Parsing JSON " + path, e); }

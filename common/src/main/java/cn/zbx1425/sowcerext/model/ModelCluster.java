@@ -11,7 +11,7 @@ import cn.zbx1425.sowcer.vertex.VertAttrState;
 import cn.zbx1425.sowcer.math.Matrix4f;
 import cn.zbx1425.sowcerext.model.integration.BufferSourceProxy;
 import cn.zbx1425.sowcerext.reuse.ModelManager;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.Closeable;
 import java.util.function.Function;
@@ -50,21 +50,10 @@ public class ModelCluster implements Closeable {
                 opaqueParts.append(mesh);
             }
         }
-        this.uploadedOpaqueParts = uploadOwned(opaqueParts, mapping);
-        this.uploadedTranslucentParts = uploadOwned(translucentParts, mapping);
-    }
-
-    private static VertArrays uploadOwned(RawModel raw, VertAttrMapping mapping) {
-        // The retained arrays take ownership of the upload after the temporary Model is closed.
-        try (var model = raw.upload(mapping)) {
-            return VertArrays.createAll(model, mapping, null);
-        }
-    }
-
-    /** A frame owns its material/geometry snapshot and retained upload handles until commit. */
-    public ModelCluster snapshotForDrawing() {
-        return new ModelCluster(uploadedOpaqueParts.copyForMaterialChanges(), opaqueParts.copy(),
-                uploadedTranslucentParts.copyForMaterialChanges(), translucentParts.copy());
+        this.uploadedOpaqueParts = VertArrays.createAll(
+                opaqueParts.upload(mapping), mapping, null);
+        this.uploadedTranslucentParts = VertArrays.createAll(
+                translucentParts.upload(mapping), mapping, null);
     }
 
     private ModelCluster(VertArrays uploadedOpaqueParts, RawModel opaqueParts, VertArrays uploadedTranslucentParts, RawModel translucentParts) {
@@ -114,14 +103,14 @@ public class ModelCluster implements Closeable {
     }
 
 
-    public void replaceTexture(String oldTexture, Identifier newTexture) {
+    public void replaceTexture(String oldTexture, ResourceLocation newTexture) {
         uploadedOpaqueParts.replaceTexture(oldTexture, newTexture);
         opaqueParts.replaceTexture(oldTexture, newTexture);
         uploadedTranslucentParts.replaceTexture(oldTexture, newTexture);
         translucentParts.replaceTexture(oldTexture, newTexture);
     }
 
-    public void replaceAllTexture(Identifier newTexture) {
+    public void replaceAllTexture(ResourceLocation newTexture) {
         uploadedOpaqueParts.replaceAllTexture(newTexture);
         opaqueParts.replaceAllTexture(newTexture);
         uploadedTranslucentParts.replaceAllTexture(newTexture);

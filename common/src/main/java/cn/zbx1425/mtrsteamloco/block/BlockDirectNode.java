@@ -35,7 +35,7 @@ public class BlockDirectNode extends BlockNode implements EntityBlockMapper {
 
     @Override
     public RenderShape getRenderShape(@NotNull BlockState blockState) {
-        return RenderShape.INVISIBLE;
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Override
@@ -168,7 +168,7 @@ public class BlockDirectNode extends BlockNode implements EntityBlockMapper {
         @Override
         public void readCompoundTag(CompoundTag compoundTag) {
             if (compoundTag.contains(KEY_ANGLE)) {
-                double angle = mtr.mappings.CompoundTagMapper.getDouble(compoundTag, KEY_ANGLE);
+                double angle = compoundTag.getDouble(KEY_ANGLE);
                 railAngle = RailAngleExtra.fromDegrees(angle);
                 if (angle != this.angle) {
                     this.angle = angle;

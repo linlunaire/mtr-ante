@@ -8,7 +8,9 @@ import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;
 import mtr.screen.WidgetBetterTextField;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#endif
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
@@ -64,7 +66,7 @@ public abstract class SelectListScreen extends ScreenMapper {
                     Text.literal(btnText),
                     (sender) -> {
                         onBtnClick(btnKey);
-                        Minecraft.getInstance().schedule(this::loadPage);
+                        Minecraft.getInstance().tell(this::loadPage);
                     }
             );
             IDrawing.setPositionAndWidth(
@@ -89,7 +91,11 @@ public abstract class SelectListScreen extends ScreenMapper {
 
     protected abstract List<Pair<String, String>> getRegistryEntries();
 
-    protected void renderSelectPage(GuiGraphicsExtractor guiGraphics) {
+#if MC_VERSION >= "12000"
+    protected void renderSelectPage(GuiGraphics guiGraphics) {
+#else
+    protected void renderSelectPage(PoseStack guiGraphics) {
+#endif
 
     }
 
@@ -112,7 +118,11 @@ public abstract class SelectListScreen extends ScreenMapper {
     }
 
     @Override
-    public void renderBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+#if MC_VERSION >= "12000"
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+#else
+    public void renderBackground(PoseStack guiGraphics) {
+#endif
         if (scrollList.visible) return;
         super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
     }

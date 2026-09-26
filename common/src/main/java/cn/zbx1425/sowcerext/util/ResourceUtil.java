@@ -2,7 +2,7 @@ package cn.zbx1425.sowcerext.util;
 
 import cn.zbx1425.sowcer.batch.MaterialProp;
 import mtr.mappings.Utilities;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.apache.commons.io.IOUtils;
@@ -18,18 +18,22 @@ import java.util.Locale;
 
 public class ResourceUtil {
 
-    public static String readResource(ResourceManager manager, Identifier location) throws IOException {
+    public static String readResource(ResourceManager manager, ResourceLocation location) throws IOException {
+#if MC_VERSION >= "11902"
         final List<Resource> resources = manager.getResourceStack(location);
+#else
+        final List<Resource> resources = manager.getResources(location);
+#endif
         if (resources.isEmpty()) return "";
         return IOUtils.toString(new BOMInputStream(Utilities.getInputStream(resources.get(0))), StandardCharsets.UTF_8);
     }
 
-    public static Identifier resolveRelativePath(Identifier baseFile, String relative, String expectExtension) {
+    public static ResourceLocation resolveRelativePath(ResourceLocation baseFile, String relative, String expectExtension) {
         relative = relative.toLowerCase(Locale.ROOT).replace('\\', '/');
 
         if (relative.contains(":")) {
             relative = relative.replaceAll("[^a-z0-9/.:_-]", "_");
-            return Identifier.parse(relative);
+            return ResourceLocation.parse(relative);
         }
 
         relative = relative.replaceAll("[^a-z0-9/._-]", "_");
@@ -70,6 +74,6 @@ public class ResourceUtil {
         String path = sb.toString();
         if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
 
-        return Identifier.fromNamespaceAndPath(baseFile.getNamespace(), path);
+        return ResourceLocation.fromNamespaceAndPath(baseFile.getNamespace(), path);
     }
 }

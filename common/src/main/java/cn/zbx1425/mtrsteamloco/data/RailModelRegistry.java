@@ -16,7 +16,7 @@ import mtr.mappings.Text;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import mtr.mappings.Utilities;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderBase;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderClient;
@@ -59,20 +59,24 @@ public class RailModelRegistry {
 
         try {
             RawModel railNodeRawModel = MainClient.modelManager.loadRawModel(resourceManager,
-					Identifier.parse("mtrsteamloco:models/rail_node.csv"), MainClient.atlasManager);
+					ResourceLocation.parse("mtrsteamloco:models/rail_node.csv"), MainClient.atlasManager);
             railNodeModel = MainClient.modelManager.uploadVertArrays(railNodeRawModel);
         } catch (Exception ex) {
             Main.LOGGER.error("Failed loading rail node model", ex);
             MtrModelRegistryUtil.recordLoadingError("Failed loading Rail Node", ex);
         }
 
-        List<Pair<Identifier, Resource>> resources =
+        List<Pair<ResourceLocation, Resource>> resources =
                 MtrModelRegistryUtil.listResources(resourceManager, "mtrsteamloco", "rails", ".json");
-        for (Pair<Identifier, Resource> pair : resources) {
+        for (Pair<ResourceLocation, Resource> pair : resources) {
             try {
                 try (InputStream is = Utilities.getInputStream(pair.getSecond())) {
                     JsonObject rootObj = (new JsonParser()).parse(IOUtils.toString(is, StandardCharsets.UTF_8)).getAsJsonObject();
+                #if MC_VERSION >= "11902"
                     String baseGroup = rootObj.has("group") ? rootObj.get("group").getAsString() : pair.getSecond().sourcePackId() + '/' + pair.getFirst().getPath().replaceAll("rails/", "").replaceAll(".json", "");
+                #else 
+                    String baseGroup = rootObj.has("group") ? rootObj.get("group").getAsString() : pair.getSecond().getSourceName() + '/' + pair.getSecond().getLocation().getPath().replaceAll("rails/", "").replaceAll(".json", "");
+                #endif
                     if (rootObj.has("model")) {
                         String key = FilenameUtils.getBaseName(pair.getFirst().getPath());
                         register(key, loadFromJson(resourceManager, key, rootObj, baseGroup));
@@ -106,7 +110,7 @@ public class RailModelRegistry {
     private static RailModelProperties loadFromJson(ResourceManager resourceManager, String key, JsonObject obj, String baseGroup) throws Exception {
         if (obj.has("atlasIndex")) {
             MainClient.atlasManager.load(
-					MtrModelRegistryUtil.resourceManager, Identifier.parse(obj.get("atlasIndex").getAsString())
+					MtrModelRegistryUtil.resourceManager, ResourceLocation.parse(obj.get("atlasIndex").getAsString())
             );
         }
         
@@ -114,16 +118,16 @@ public class RailModelRegistry {
 
         if (obj.has("model")) {
             rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-					Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
+					ResourceLocation.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
 
             if (obj.has("textureId")) {
-				rawModel.replaceTexture("default.png", Identifier.parse(obj.get("textureId").getAsString()));
+				rawModel.replaceTexture("default.png", ResourceLocation.parse(obj.get("textureId").getAsString()));
             }
             if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
                 rawModel.applyUVMirror(false, true);
             }
 
-			rawModel.sourceLocation = Identifier.parse(rawModel.sourceLocation + "/" + key);
+			rawModel.sourceLocation = ResourceLocation.parse(rawModel.sourceLocation + "/" + key);
         }
         
         float repeatInterval = obj.has("repeatInterval") ? obj.get("repeatInterval").getAsFloat() : 0.5f;
@@ -133,17 +137,17 @@ public class RailModelRegistry {
         ScriptHolderBase script = null;
         if (obj.has("scriptFiles")) {
             script = new ScriptHolderClient();
-            Map<Identifier, String> scripts = new Object2ObjectArrayMap<>();
+            Map<ResourceLocation, String> scripts = new Object2ObjectArrayMap<>();
             if (obj.has("scriptTexts")) {
                 JsonArray scriptTexts = obj.get("scriptTexts").getAsJsonArray();
                 for (int i = 0; i < scriptTexts.size(); i++) {
-					scripts.put(Identifier.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
+					scripts.put(ResourceLocation.fromNamespaceAndPath("mtrsteamloco", "script_texts/" + key + "/" + i),
                             scriptTexts.get(i).getAsString());
                 }
             }
             JsonArray scriptFiles = obj.get("scriptFiles").getAsJsonArray();
             for (int i = 0; i < scriptFiles.size(); i++) {
-				Identifier scriptLocation = Identifier.parse(scriptFiles.get(i).getAsString());
+				ResourceLocation scriptLocation = ResourceLocation.parse(scriptFiles.get(i).getAsString());
                 scripts.put(scriptLocation, ResourceUtil.readResource(resourceManager, scriptLocation));
             }
             script.load("Rail " + key, "Rail", resourceManager, scripts, obj, key, "create", "render", "dispose");

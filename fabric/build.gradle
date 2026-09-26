@@ -1,40 +1,128 @@
+plugins {
+	id "com.gradleup.shadow"
+}
+
 architectury {
-    platformSetupLoomIde()
-    fabric()
+	platformSetupLoomIde()
+	fabric()
 }
-// Architectury transforms the common JAR separately in development. The access
-// widener must also be under this loader mod's own resource root for Fabric.
-processResources {
-    from(project(':common').file('src/main/resources')) {
-        include 'mtrsteamloco.accesswidener', 'mtrsteamloco.mixins.json'
-    }
+
+repositories {
+	maven {
+		name = "TerraformersMC"
+		url = uri("https://maven.terraformersmc.com/releases")
+	}
 }
+
+loom {
+	mixin {
+		defaultRefmapName = "mixins.mtrsteamloco_fabric.refmap.json"
+	}
+	accessWidenerPath = project(":common").loom.accessWidenerPath
+}
+
 configurations {
-    common
-    compileClasspath.extendsFrom common
-    runtimeClasspath.extendsFrom common
-    developmentFabric.extendsFrom common
+	common
+	shadowCommon
+	clothConfigJar
+	compileClasspath.extendsFrom common
+	runtimeClasspath.extendsFrom common
+	developmentFabric.extendsFrom common
 }
+
 dependencies {
-    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    api "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
-    api "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
-    implementation files(new File(rootProject.mtrRoot, "build/release/MTR-fabric-${rootProject.mtrVersion}.jar"))
-    compileOnly "com.terraformersmc:modmenu:${rootProject.mod_menu_version}"
-    common(project(':common')) { transitive = false }
-    shadowCommon(project(path: ':common', configuration: 'transformProductionFabric')) { transitive = false }
-    api("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive = false }
-    clothConfigJar("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive = false }
-    clothConfigJar('me.shedaniel.cloth:basic-math:0.6.1') { transitive = false }
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+	modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+	modImplementation files(rootProject.ext.mtrFabricDevJarFile)
+
+	modApi("com.terraformersmc:modmenu:${rootProject.ext.mod_menu_version}") { transitive false }
+
+	common(project(path: ":common", configuration: "namedElements")) { transitive = false }
+	shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive = false }
+
+	modApi("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive false }
+	modApi("me.shedaniel.cloth:basic-math:0.6.1") { transitive false }
+	clothConfigJar("me.shedaniel.cloth:cloth-config-fabric:${rootProject.cloth_config_version}") { transitive false }
+	clothConfigJar("me.shedaniel.cloth:basic-math:0.6.1") { transitive false }
 }
 
-tasks.register('checkMixinTargetCompatibility', JavaExec) {
-    group = 'verification'
-    dependsOn ':common:compileMixinTargetCompatibility', tasks.named('compileJava')
-    classpath = files(project(':common').layout.buildDirectory.dir('classes/mixinTargetCompatibility')) +
-            sourceSets.main.output + configurations.compileClasspath
-    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.MixinTargetCompatibilityCheck'
-    args new File(rootProject.projectDir, 'fabric/src/main/resources/mtrsteamloco_fabric.mixins.json').absolutePath
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand (
+			"version": project.version,
+			"minecraft_version": rootProject.supports_minecraft_version,
+			"mtr_min_version": rootProject.mtr_min_version
+		)
+	}
 }
 
-tasks.named('check') { dependsOn 'checkMixinTargetCompatibility' }
+shadowJar {
+	mergeServiceFiles() 
+
+	exclude "*.bmp"
+	exclude '**/*.kotlin_metadata'
+    exclude '**/*.kotlin_module'
+    exclude '**/*.kotlin_builtins'
+
+	if (rootProject.ext.assetExcludeFont) {
+		exclude "assets/mtr/font/**"
+	}
+
+	relocate 'de.javagl', 'vendor.cn.zbx1425.sowcerext.de.javagl'
+	// relocate 'org.mozilla', 'vendor.cn.zbx1425.mtrsteamloco.org.mozilla'
+
+	from project.configurations.clothConfigJar.files.collect {
+		return zipTree(it).matching { filter ->
+			filter.include { e ->
+				matchInnerClass e.path as String,
+						"me/shedaniel/clothconfig2",
+						"me/shedaniel/math",
+						"assets/cloth-config2"
+			}
+		}
+	}
+
+	relocate "me.shedaniel", "cn.zbx1425.mtrsteamloco.vendor.me.shedaniel"
+
+	relocate 'com.github.stuxuhai', 'vendor.cn.zbx1425.mtrsteamloco.com.github.stuxuhai'
+
+	configurations = [project.configurations.shadowCommon]
+	archiveClassifier.set("dev-shadow")
+}
+
+static boolean matchInnerClass(String path, String... names) {
+	names.any { name -> path.startsWith(name) }
+}
+
+remapJar {
+	input.set shadowJar.archiveFile
+	dependsOn shadowJar
+	archiveBaseName.set("MTR-ANTE-fabric")
+	archiveClassifier.set("")
+}
+
+components.java {
+	withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+		skip()
+	}
+}
+
+tasks.register("moveFabricBuilds") {
+	doLast {
+		delete fileTree("../build").matching {
+			include "**/MTR-ANTE-fabric*"
+		}
+		copy {
+			from "build/libs"
+			into "../build"
+			include "MTR-ANTE-fabric-${project.version}.jar"
+		}
+	}
+}
+
+
+tasks.named("build") {
+	finalizedBy(tasks.named("moveFabricBuilds"))
+}

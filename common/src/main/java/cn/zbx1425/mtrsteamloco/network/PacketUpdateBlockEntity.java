@@ -8,7 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,16 +19,20 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class PacketUpdateBlockEntity {
 
-    public static Identifier PACKET_UPDATE_BLOCK_ENTITY = Identifier.fromNamespaceAndPath(Main.MOD_ID, "update_block_entity");
+    public static ResourceLocation PACKET_UPDATE_BLOCK_ENTITY = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "update_block_entity");
 
     public static void sendUpdateC2S(BlockEntityMapper blockEntity) {
         Level level = blockEntity.getLevel();
         if (level == null) return;
 
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-        packet.writeIdentifier(level.dimension().identifier());
+        packet.writeResourceLocation(level.dimension().location());
         packet.writeBlockPos(blockEntity.getBlockPos());
+#if MC_VERSION >= "11903"
         packet.writeVarInt(net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
+#else
+        packet.writeVarInt(net.minecraft.core.Registry.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
+#endif
         CompoundTag tag = new CompoundTag();
         blockEntity.writeCompoundTag(tag);
         packet.writeNbt(tag);
@@ -37,9 +41,17 @@ public class PacketUpdateBlockEntity {
     }
 
     public static void receiveUpdateC2S(MinecraftServer server, ServerPlayer player, FriendlyByteBuf packet) {
+#if MC_VERSION >= "11903"
         ResourceKey<Level> levelKey = packet.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION);
+#else
+        ResourceKey<Level> levelKey = ResourceKey.create(net.minecraft.core.Registry.DIMENSION_REGISTRY, packet.readResourceLocation());
+#endif
         BlockPos blockPos = packet.readBlockPos();
+#if MC_VERSION >= "11903"
         BlockEntityType<?> blockEntityType = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.byId(packet.readVarInt());
+#else
+        BlockEntityType<?> blockEntityType = net.minecraft.core.Registry.BLOCK_ENTITY_TYPE.byId(packet.readVarInt());
+#endif
 
         CompoundTag compoundTag = packet.readNbt();
 

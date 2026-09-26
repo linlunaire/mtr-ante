@@ -37,7 +37,7 @@ import cn.zbx1425.mtrsteamloco.network.PacketScreen;
 import mtr.data.RailAngle;
 import cn.zbx1425.mtrsteamloco.Main;
 import net.minecraft.world.InteractionResult;
-
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.InteractionHand;
 import cn.zbx1425.mtrsteamloco.data.RailModelProperties;
 import cn.zbx1425.mtrsteamloco.data.RailModelRegistry;
@@ -97,7 +97,7 @@ public class DisplacementTool extends ItemWithCreativeTabBase {
             if (world instanceof ServerLevel sw) {
                 final float fr = (float) rot;
                 sw.getServer().execute(() -> {
-                    sp.teleportTo(sw, t.x, t.y, t.z, java.util.Set.of(), player.getYRot() + fr, player.getXRot(), false);
+                    sp.teleportTo(sw, t.x, t.y, t.z, player.getYRot() + fr, player.getXRot());
                 });
             }
         }

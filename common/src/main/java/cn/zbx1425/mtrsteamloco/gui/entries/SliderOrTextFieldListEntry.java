@@ -10,7 +10,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.util.Mth;
 import net.minecraft.util.FormattedCharSequence;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.chat.FormattedText;
 import mtr.client.IDrawing;
@@ -26,11 +26,15 @@ import net.minecraft.util.Mth;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import mtr.data.RailType;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+#if MC_VERSION >= "12000"
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import net.minecraft.client.gui.GuiComponent;
+#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.BlockPos;
@@ -189,8 +193,12 @@ public class SliderOrTextFieldListEntry extends TooltipListEntry<Float> implemen
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
-        super.extractRenderState(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
+#if MC_VERSION >= "12000"
+    public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#else
+    public void render(PoseStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean isHovered, float delta) {
+#endif
+        super.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, isHovered, delta);
         Window window = Minecraft.getInstance().getWindow();
         UtilitiesClient.setWidgetY(this.btnSwitches, y);
         this.widget.active = isEditable();
@@ -206,8 +214,8 @@ public class SliderOrTextFieldListEntry extends TooltipListEntry<Float> implemen
             UtilitiesClient.setWidgetX(this.widget, x + entryWidth - 150);
         }
         this.widget.setWidth(150 - btnSwitches.getWidth() - 2);
-        btnSwitches.extractRenderState(matrices, mouseX, mouseY, delta);
-        widget.extractRenderState(matrices, mouseX, mouseY, delta);
+        btnSwitches.render(matrices, mouseX, mouseY, delta);
+        widget.render(matrices, mouseX, mouseY, delta);
     }
 
     @Override
@@ -220,7 +228,13 @@ public class SliderOrTextFieldListEntry extends TooltipListEntry<Float> implemen
         return widgets;
     }
 
-    public static void drawString(GuiGraphicsExtractor matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
-        matrices.text(font, text, x, y, color);
+#if MC_VERSION >= "12000"
+    public static void drawString(GuiGraphics matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        matrices.drawString(font, text, x, y, color);
     }
+#else
+    public static void drawString(PoseStack matrices, Font font, FormattedCharSequence text, int x, int y, int color) {
+        GuiComponent.drawString(matrices, font, text, x, y, color);
+    }
+#endif
 }

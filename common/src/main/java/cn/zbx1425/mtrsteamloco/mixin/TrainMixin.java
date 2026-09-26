@@ -215,7 +215,7 @@ public abstract class TrainMixin implements TrainExtraSupplier{
 			CompoundTag compoundTag, CallbackInfo ci
 	) {
 		try {
-			customConfigs = StringMapSerializer.deserialize(mtr.mappings.CompoundTagMapper.getString(compoundTag, "custom_configs"));
+			customConfigs = StringMapSerializer.deserialize(compoundTag.getString("custom_configs"));
 		} catch (IOException e) {
 			customConfigs = new HashMap<>();
 		}

@@ -1,23 +1,50 @@
 package cn.zbx1425.sowcer.util;
 
-/** Compatibility guard for old call sites. Blaze3D now owns GPU bindings; these are CPU preparation scopes. */
-public final class GlStateTracker {
-    private static final ThreadLocal<Integer> DEPTH = ThreadLocal.withInitial(() -> 0);
-    public static volatile boolean isStateProtected;
+import com.mojang.blaze3d.shaders.ProgramManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.renderer.ShaderInstance;
+import org.lwjgl.opengl.GL33;
+
+public class GlStateTracker {
+
+    private static int vertArrayBinding;
+    private static int arrayBufBinding;
+    private static int elementBufBinding;
+
+    private static ShaderInstance currentShaderInstance;
+
+    public static boolean isStateProtected;
 
     public static void capture() {
-        DEPTH.set(DEPTH.get() + 1);
+        // if (isStateProtected) throw new IllegalStateException("GlStateTracker: Nesting");
+        if (isStateProtected) return;
+
+        vertArrayBinding = GL33.glGetInteger(GL33.GL_VERTEX_ARRAY_BINDING);
+        arrayBufBinding = GL33.glGetInteger(GL33.GL_ARRAY_BUFFER_BINDING);
+        elementBufBinding = GL33.glGetInteger(GL33.GL_ELEMENT_ARRAY_BUFFER_BINDING);
+
+        currentShaderInstance = RenderSystem.getShader();
+
         isStateProtected = true;
     }
 
     public static void restore() {
-        final int depth = DEPTH.get();
-        if (depth == 0) throw new IllegalStateException("Render preparation scope not captured");
-        DEPTH.set(depth - 1);
-        isStateProtected = depth > 1;
+        if (!isStateProtected) throw new IllegalStateException("GlStateTracker: Not captured");
+        GL33.glBindVertexArray(vertArrayBinding);
+        GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, arrayBufBinding);
+        GL33.glBindBuffer(GL33.GL_ELEMENT_ARRAY_BUFFER, elementBufBinding);
+
+        RenderSystem.setShader(() -> currentShaderInstance);
+
+        // Obtain original state from RenderSystem?
+        RenderSystem.enableCull();
+        RenderSystem.depthMask(true);
+
+        isStateProtected = false;
     }
 
     public static void assertProtected() {
-        if (DEPTH.get() == 0) throw new IllegalStateException("Render preparation scope not protected");
+        if (!isStateProtected) throw new IllegalStateException("GlStateTracker: Not protected");
     }
+
 }

@@ -11,7 +11,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mtr.model.ModelTrainBase;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -48,7 +48,7 @@ public class CapturingVertexConsumer implements VertexConsumer {
         }
     }
 
-    public void beginStage(Identifier texture, ModelTrainBase.RenderStage stage) {
+    public void beginStage(ResourceLocation texture, ModelTrainBase.RenderStage stage) {
         MaterialProp materialProp = new MaterialProp();
         materialProp.texture = texture;
         switch (stage) {
@@ -94,17 +94,6 @@ public class CapturingVertexConsumer implements VertexConsumer {
     @Override
     public @NotNull VertexConsumer setColor(int red, int green, int blue, int alpha) {
         // Unused
-        return this;
-    }
-
-    @Override
-    public @NotNull VertexConsumer setColor(int color) {
-        return setColor(color >> 16 & 255, color >> 8 & 255, color & 255, color >>> 24);
-    }
-
-    @Override
-    public @NotNull VertexConsumer setLineWidth(float width) {
-        // Captured ModelPart cubes are filled quads, not line primitives.
         return this;
     }
 

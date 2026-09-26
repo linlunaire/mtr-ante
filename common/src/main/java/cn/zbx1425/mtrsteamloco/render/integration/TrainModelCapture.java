@@ -5,8 +5,8 @@ import cn.zbx1425.sowcer.math.Vector3f;
 import cn.zbx1425.sowcerext.model.RawModel;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.model.ModelTrainBase;
-import net.minecraft.util.LightCoordsUtil;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -15,12 +15,12 @@ public class TrainModelCapture {
 
     public static final float DOOR_OFFSET = 2048;
 
-    public static CaptureResult captureModels(ModelTrainBase mtrModel, Identifier texture) {
+    public static CaptureResult captureModels(ModelTrainBase mtrModel, ResourceLocation texture) {
         CaptureResult result = new CaptureResult();
 
         CapturingVertexConsumer vertices = new CapturingVertexConsumer();
         PoseStack matrices = new PoseStack();
-        int light = LightCoordsUtil.FULL_BRIGHT;
+        int light = LightTexture.FULL_BRIGHT;
         float doorLeftX = 0, doorRightX = 0, doorLeftZ = DOOR_OFFSET * 16, doorRightZ = DOOR_OFFSET * 16;
         boolean renderDetails = true, isEnd1Head = false, isEnd2Head = false, head1IsFront = true;
 

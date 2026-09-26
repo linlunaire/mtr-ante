@@ -38,23 +38,23 @@ public abstract class ItemWithCreativeTabBaseMixin extends Item {
             if (block instanceof BlockNode) {
                 if (blockEntity instanceof BlockEntityDirectNode e) {
                     if (state.getValue(BlockNode.IS_CONNECTED) == false) {
-                        if (!level.isClientSide()) {
+                        if (!level.isClientSide) {
                             PacketScreen.sendScreenBlockS2C((ServerPlayer) context.getPlayer(), "direct_node", pos);
                         }
                         return InteractionResult.SUCCESS;
                     }
                 }
                 if (context.isSecondaryUseActive()) {
-                    if (level.isClientSide()) {
+                    if (level.isClientSide) {
                         // BrushEditRailScreen.acquirePickInfoWhenUse();
                         return super.useOn(context);
                     } else {
                         PacketScreen.sendScreenS2C((ServerPlayer) context.getPlayer(), "brush_edit_rail");
                     }
                 } else {
-                    if (level.isClientSide()) {
+                    if (level.isClientSide) {
                         // BrushEditRailScreen.acquirePickInfoWhenUse();
-                        CompoundTag railBrushProp = ItemStackUtilities.getCustomData(context.getPlayer().getMainHandItem()).getCompoundOrEmpty("NTERailBrush");
+                        CompoundTag railBrushProp = ItemStackUtilities.getCustomData(context.getPlayer().getMainHandItem()).getCompound("NTERailBrush");
                         BrushEditRailScreen.applyBrushToPickedRail(railBrushProp, true);
                     } else {
                         return super.useOn(context);

@@ -123,7 +123,7 @@
     "gui.mtrsteamloco.compound_creator.replacement": "Replacement",
     "gui.mtrsteamloco.no_tasks_found": "No Tasks Found",
     "key.mtrsteamloco.train_screen": "Train Screen",
-    "key.category.mtrsteamloco.keybinding": "ANTE Key Bindings",
+    "category.mtrsteamloco.keybinding": "ANTE Key Bindings",
     "gui.mtr.percentage_complete_slice": "Slice Task (%s%%)",
     "gui.mtr.rail_action_slice": "Created slice task by %s (%s blocks)",
     "gui.mtrsteamloco.direct_node.unbound": "Direct Node Unbound",

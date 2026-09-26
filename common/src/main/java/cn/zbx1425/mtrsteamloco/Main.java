@@ -11,7 +11,7 @@ import mtr.item.ItemWithCreativeTabBase;
 import mtr.mappings.BlockEntityMapper;
 import mtr.mappings.RegistryUtilities;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -52,52 +52,56 @@ public class Main {
 		enableRegistry = enableRegistry1;
 	}
 
-	public static final RegistryObject<Block> BLOCK_DEPARTURE_BELL = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "departure_bell"), BlockDepartureBell::new));
+	public static final RegistryObject<Block> BLOCK_DEPARTURE_BELL = new RegistryObject<>(BlockDepartureBell::new);
 
-	public static final RegistryObject<Block> BLOCK_EYE_CANDY = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "eye_candy"), BlockEyeCandy::new));
+	public static final RegistryObject<Block> BLOCK_EYE_CANDY = new RegistryObject<>(BlockEyeCandy::new);
 	public static final RegistryObject<BlockEntityType<BlockEyeCandy.BlockEntityEyeCandy>>
 			BLOCK_ENTITY_TYPE_EYE_CANDY = new RegistryObject<>(() ->
 			RegistryUtilities.getBlockEntityType(
 					BlockEyeCandy.BlockEntityEyeCandy::new,
 					BLOCK_EYE_CANDY.get()
 			));
-	public static final RegistryObject<Item> ITEM_EYE_CANDY = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "eye_candy"), () -> new BlockItemEyeCandy(BLOCK_EYE_CANDY.get())));
+	public static final RegistryObject<Item> ITEM_EYE_CANDY = new RegistryObject<>(() -> new BlockItemEyeCandy(BLOCK_EYE_CANDY.get()));
 	
-	public static final RegistryObject<Block> BLOCK_DIRECT_NODE = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "direct_node"), BlockDirectNode::new));
+	public static final RegistryObject<Block> BLOCK_DIRECT_NODE = new RegistryObject<>(BlockDirectNode::new);
 	public static final RegistryObject<BlockEntityType<BlockDirectNode.BlockEntityDirectNode>>
 			BLOCK_ENTITY_TYPE_DIRECT_NODE = new RegistryObject<>(() ->
 			RegistryUtilities.getBlockEntityType(
 					BlockDirectNode.BlockEntityDirectNode::new,
 					BLOCK_DIRECT_NODE.get()
 			));
-	public static final RegistryObject<Item> ITEM_DIRECT_NODE = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "direct_node"), () -> new BlockItemDirectNode(CreativeModeTabs.CORE, BLOCK_DIRECT_NODE.get())));
+	public static final RegistryObject<Item> ITEM_DIRECT_NODE = new RegistryObject<>(() -> new BlockItemDirectNode(CreativeModeTabs.CORE, BLOCK_DIRECT_NODE.get()));
 
-	public static final RegistryObject<ItemWithCreativeTabBase> BRIDGE_CREATOR_1 = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "bridge_creator_1"), () -> new ItemBridgeCreator(1)));
-	public static final RegistryObject<ItemWithCreativeTabBase> COMPOUND_CREATOR = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "compound_creator"), () -> new CompoundCreator()));
-	public static final RegistryObject<ItemWithCreativeTabBase> DISPLACEMENT_TOOL = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "displacement_tool"), () -> new DisplacementTool()));
-	public static final RegistryObject<ItemWithCreativeTabBase> RAIL_PATH_EDITOR = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "rail_path_editor"), () -> new RailPathEditor()));
-	public static final RegistryObject<ItemWithCreativeTabBase> ROUTE_PATH_CREATOR = new RegistryObject<>(() -> mtr.mappings.RegistrationContext.construct(net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "route_path_creator"), () -> new RoutePathCreator()));
+	public static final RegistryObject<ItemWithCreativeTabBase> BRIDGE_CREATOR_1 = new RegistryObject<>(() -> new ItemBridgeCreator(1));
+	public static final RegistryObject<ItemWithCreativeTabBase> COMPOUND_CREATOR = new RegistryObject<>(() -> new CompoundCreator());
+	public static final RegistryObject<ItemWithCreativeTabBase> DISPLACEMENT_TOOL = new RegistryObject<>(() -> new DisplacementTool());
+	public static final RegistryObject<ItemWithCreativeTabBase> RAIL_PATH_EDITOR = new RegistryObject<>(() -> new RailPathEditor());
+	public static final RegistryObject<ItemWithCreativeTabBase> ROUTE_PATH_CREATOR = new RegistryObject<>(() -> new RoutePathCreator());
 	public static RegistriesWrapper REGISTERIES;
 
+#if MC_VERSION <= "12000"
+	public static CreativeModeTab EYE_CANDY_TAB = Registry.getCreativeModeTab(ResourceLocation.fromNamespaceAndPath(MOD_ID, "eye_candy"), () -> new ItemStack(ITEM_EYE_CANDY.get())).get();
+#else
 	public static CreativeModeTab EYE_CANDY_TAB = CreativeModeTab.builder(null, -1).title(Text.translatable("itemGroup.mtrsteamloco.eye_candy")).icon(() -> new ItemStack(ITEM_EYE_CANDY.get())).displayItems((v1, v2) -> {
 		NonNullList<ItemStack> items = NonNullList.create();
 		BlockItemEyeCandy.Client.fillItemCategory(items);
 		v2.acceptAll(items);
 	}).build();
+#endif
 
-	public static final SoundEvent SOUND_EVENT_BELL = RegistryUtilities.createSoundEvent(Identifier.parse("mtrsteamloco:bell"));
+	public static final SoundEvent SOUND_EVENT_BELL = RegistryUtilities.createSoundEvent(ResourceLocation.parse("mtrsteamloco:bell"));
 
 	public static SimpleParticleType PARTICLE_STEAM_SMOKE;
 
 	public static void init(RegistriesWrapper registries) {
-		mtr.mappings.NetworkUtilities.registerServerS2CTypes(dev.architectury.platform.Platform.getEnvironment(),
-				PacketVersionCheck.PACKET_VERSION_CHECK, PacketScreen.PACKET_SHOW_SCREEN, PacketRoutePathCreator.ROUTE_S2C);
 		LOGGER.info("MTR-ANTE " + BuildConfig.MOD_VERSION + " built at "
 				+ DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.systemDefault()).format(BuildConfig.BUILD_TIME));
 		if (enableRegistry) {
 			REGISTERIES = registries;
 
+		#if MC_VERSION >= "12000"
 			registries.registerCreativeModeTab("eye_candy", EYE_CANDY_TAB);
+		#endif
 			registries.registerItem("eye_candy", ITEM_EYE_CANDY, EYE_CANDY_TAB);
 			registries.registerBlock("eye_candy", BLOCK_EYE_CANDY);
 			registries.registerBlockEntityType("eye_candy", BLOCK_ENTITY_TYPE_EYE_CANDY);
