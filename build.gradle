@@ -12,13 +12,25 @@ apply from: "build_dep_ver.gradle"
 
 rootProject.ext.assetExcludeFont = rootProject.hasProperty("assetExcludeFont")
 
-def mtrProjectDir = file("../Minecraft-Transit-Railway-3.x.x")
+def mtrProjectDir = file(findProperty("mtrProjectDir") ?: "../Minecraft-Transit-Railway-1.21.1")
 def mtrProperties = new Properties()
-mtrProjectDir.toPath().resolve("gradle.properties").toFile().withInputStream { mtrProperties.load(it) }
+def mtrPropertiesFile = new File(mtrProjectDir, "gradle.properties")
+if (!mtrPropertiesFile.isFile()) {
+	throw new GradleException("MTR source not found at ${mtrProjectDir}. Set -PmtrProjectDir to the Minecraft 1.21.1 checkout.")
+}
+mtrPropertiesFile.withInputStream { mtrProperties.load(it) }
+if (mtrProperties.getProperty("minecraft_version", "1.21.1") != minecraft_version) {
+	throw new GradleException("ANTE ${minecraft_version} cannot use MTR for ${mtrProperties.getProperty('minecraft_version')} at ${mtrProjectDir}.")
+}
 def mtrVersion = "${minecraft_version}-${mtrProperties.getProperty("mod_version")}"
 def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
 def mtrFabricDevJar = file("${mtrProjectDir}/fabric/build/devlibs/fabric-${mtrVersion}-dev.jar")
 def mtrNeoForgeDevJar = file("${mtrProjectDir}/forge/build/devlibs/neoforge-${mtrVersion}-dev.jar")
+for (def jar : [mtrCommonDevJar, mtrFabricDevJar, mtrNeoForgeDevJar]) {
+	if (!jar.isFile()) {
+		throw new GradleException("Missing MTR development JAR: ${jar}. Build the Minecraft 1.21.1 MTR checkout first (gradlew build).")
+	}
+}
 
 ext {
 	graaljsVersion = "24.2.2"
@@ -91,6 +103,9 @@ allprojects {
 }
 
 tasks.register("setupFiles") {
+	inputs.file("common/src/main/BuildConfigTemplate.java")
+	inputs.properties(version: rootProject.mod_version, protocol: rootProject.mod_protocol_version)
+	outputs.file("common/src/main/java/cn/zbx1425/mtrsteamloco/BuildConfig.java")
 	doLast {
 		copy {
 			from "common/src/main/BuildConfigTemplate.java"
@@ -110,3 +125,5 @@ subprojects {
 		dependsOn rootProject.tasks.named("setupFiles")
 	}
 }
+
+apply from: 'gradle/compatibility-checks.gradle'

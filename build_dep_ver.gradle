@@ -1,5 +1,8 @@
 def requestedMinecraftVersion = gradle.startParameter.projectProperties.get("buildVersion")?.toString()
-rootProject.ext.minecraft_version = requestedMinecraftVersion?.matches("\\d+\\.\\d+\\.\\d+") ? requestedMinecraftVersion : "1.21.1"
+if (requestedMinecraftVersion != null && requestedMinecraftVersion != "1.21.1") {
+	throw new GradleException("This branch builds Minecraft 1.21.1 only.")
+}
+rootProject.ext.minecraft_version = "1.21.1"
 rootProject.ext.minecraft_main_version = rootProject.minecraft_version.split("\\.")[1] as int
 rootProject.ext.minecraft_version_int = "12101"
 rootProject.ext.supports_minecraft_version = "1.21.1"
@@ -12,4 +15,3 @@ rootProject.ext.neoforge_version = "21.1.248"
 rootProject.ext.architectury_version = "13.0.11"
 rootProject.ext.architectury_id = "dev.architectury"
 rootProject.ext.cloth_config_version = "15.0.140"
-rootProject.ext.mtr_min_version = "0"
