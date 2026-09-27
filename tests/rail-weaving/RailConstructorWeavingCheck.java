@@ -4,6 +4,7 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.jar.JarFile;
 import org.msgpack.core.MessagePack;
 import org.msgpack.value.Value;
 import org.msgpack.value.ValueFactory;
@@ -18,6 +19,12 @@ import org.spongepowered.asm.transformers.MixinClassWriter;
 /** Execute actually woven Rail constructors. A supplied save is read only; no server or graphics start. */
 public final class RailConstructorWeavingCheck {
     public static void main(String[] args) throws Exception {
+        boolean packaged = args.length > 0 && args[0].equals("--packaged");
+        if (packaged) {
+            require(args.length == 3, "Expected --packaged MTR-jar ANTE-jar");
+            for (String name : List.of("mtr/data/Rail", "mtr/data/RailAngle", "mtr/data/RailType")) verifySource(Path.of(args[1]), name);
+            for (String name : List.of("mixin/RailMixin", "mixin/RailAngleMixin", "mixin/RailTypeMixin", "data/RailAngleExtra", "data/RailExtraSupplier")) verifySource(Path.of(args[2]), "cn/zbx1425/mtrsteamloco/" + name);
+        }
         System.setProperty("mixin.service", CameraWeavingCheck.HeadlessService.class.getName());
         MixinBootstrap.init();
         var environment = MixinEnvironment.getDefaultEnvironment();
@@ -52,6 +59,25 @@ public final class RailConstructorWeavingCheck {
             }
         };
         Class<?> rail = loader.loadClass("mtr.data.Rail");
+        checkNewConnections(loader, rail);
+        Class<?> railType = loader.loadClass("mtr.data.RailType");
+        Object[] railTypes = (Object[]) railType.getMethod("values").invoke(null);
+        require(railTypes.length == 637, "Custom RailType extension inventory changed");
+        Object custom = railType.getMethod("valueOf", String.class).invoke(null, "P600");
+        require(custom != null && (int) railType.getField("speedLimit").get(custom) == 600, "Custom speed lookup failed");
+        if (Arrays.stream(railType.getDeclaredAnnotations()).anyMatch(annotation -> annotation.annotationType().getName().equals("kotlin.Metadata"))) {
+            List<?> entries = (List<?>) railType.getMethod("getEntries").invoke(null);
+            require(entries.equals(Arrays.asList(railTypes)), "Kotlin RailType.entries lost ANTE custom speed entries");
+        }
+        Class<?> angleHelper = loader.loadClass("cn.zbx1425.mtrsteamloco.data.RailAngleExtra");
+        Class<?> angleType = loader.loadClass("mtr.data.RailAngle");
+        for (double degrees : new double[]{-720, -0.0, 0, 22.3, 90, 123.456, 360, 720}) {
+            Object angle = angleHelper.getMethod("fromDegrees", double.class).invoke(null, degrees);
+            require(Double.doubleToRawLongBits(angleType.getField("angleRadians").getDouble(angle)) == Double.doubleToRawLongBits(Math.toRadians(degrees)), "Degree interface dispatch lost precision");
+            Object radians = angleHelper.getMethod("fromRadians", double.class).invoke(null, degrees);
+            require(Double.doubleToRawLongBits(angleType.getField("angleRadians").getDouble(radians)) == Double.doubleToRawLongBits(degrees), "Radian interface dispatch lost precision");
+        }
+        System.out.println("PASS: 637 woven rail types in Java values/Kotlin entries and actual RailAngleExtra static dispatch");
         Map<String, Value> record = straightRail();
         Object restored = construct(rail, Map.class, record);
         checkPosition(rail, restored);
@@ -95,7 +121,7 @@ public final class RailConstructorWeavingCheck {
             require((float)rail.getMethod("getRollingOffset").invoke(fromPacket)==0.75F,"Packet constructor dropped rolling offset");
         } finally { packet.release(); }
         System.out.println("PASS: woven packet constructor restores nonzero roll metadata through actual write/read packet round trip");
-        if(args.length>0) {
+        if(args.length>0 && !packaged) {
             int count=0;
             for(Map<String,Value> saved:records(Path.of(args[0]))) {
                 Object item=construct(rail,Map.class,saved);
@@ -105,6 +131,41 @@ public final class RailConstructorWeavingCheck {
             require(count>0,"No real rail connections tested");
             System.out.println("PASS: actually constructed "+count+" connections from read-only real save rail records");
         }
+    }
+    private static void verifySource(Path source, String name) throws IOException {
+        byte[] expected, actual;
+        try (JarFile jar = new JarFile(source.toFile()); var input = jar.getInputStream(jar.getJarEntry(name + ".class"))) { expected = input.readAllBytes(); }
+        try (var input = RailConstructorWeavingCheck.class.getClassLoader().getResourceAsStream(name + ".class")) { require(input != null, "Missing runtime type " + name); actual = input.readAllBytes(); }
+        require(Arrays.equals(expected, actual), "Packaged weaving loaded stale class " + name);
+    }
+    private static void checkNewConnections(ClassLoader loader, Class<?> rail) throws Exception {
+        Class<?> angle = loader.loadClass("mtr.data.RailAngle");
+        Class<?> railType = loader.loadClass("mtr.data.RailType");
+        Class<?> transport = loader.loadClass("mtr.data.TransportMode");
+        Class<?> angleHelper = loader.loadClass("cn.zbx1425.mtrsteamloco.data.RailAngleExtra");
+        Object facingStart = angleHelper.getMethod("fromDegrees", double.class).invoke(null, 0D);
+        Object facingEnd = angleHelper.getMethod("fromDegrees", double.class).invoke(null, 180D);
+        var constructor = rail.getConstructor(net.minecraft.core.BlockPos.class, angle,
+                net.minecraft.core.BlockPos.class, angle, railType, transport);
+        var start = new net.minecraft.core.BlockPos(0, 64, 0);
+        var end = new net.minecraft.core.BlockPos(16, 64, 0);
+        Object train = transport.getField("TRAIN").get(null);
+        Object iron = railType.getField("IRON").get(null);
+        for (boolean reversed : new boolean[]{false, true}) {
+            Object connected = constructor.newInstance(reversed ? end : start, reversed ? facingEnd : facingStart,
+                    reversed ? start : end, reversed ? facingStart : facingEnd, iron, train);
+            // ItemRailModifier.onConnect calls isValid before it can add either rail or send it to clients.
+            require((boolean) rail.getMethod("isValid").invoke(connected), "New straight connection is invalid");
+            checkPosition(rail, connected);
+            require("".equals(rail.getMethod("getModelKey").invoke(connected)), "New rail lost default model key");
+            for (String getter : List.of("getRollAngleMap", "getCustomConfigs", "getCustomResponders")) {
+                require(rail.getMethod(getter).invoke(connected) instanceof Map<?, ?> map && map.isEmpty(),
+                        "New rail lost default collection: " + getter);
+            }
+            require((float) rail.getMethod("getRollingOffset").invoke(connected) == 1.435F / 2F,
+                    "New rail lost default rolling offset");
+        }
+        System.out.println("PASS: both newly connected rails validate with initialized extension metadata");
     }
     private static Object construct(Class<?> type,Class<?> argument,Object value) throws Exception {
         try { return type.getConstructor(argument).newInstance(value); }

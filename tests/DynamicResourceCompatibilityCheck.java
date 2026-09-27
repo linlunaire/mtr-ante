@@ -25,10 +25,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.nio.file.Path;
+import java.lang.reflect.InvocationTargetException;
 
 /** Runs actual 26.2 resource-manager lookup without creating Minecraft or an OpenGL window. */
 public final class DynamicResourceCompatibilityCheck {
     public static void main(String[] args) throws Exception {
+        if (args.length > 0) {
+            Path expected = Path.of(args[0]).toRealPath();
+            require(Path.of(DynamicResource.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath().equals(expected), "Wrong dynamic-resource implementation");
+            require(java.util.Arrays.stream(DynamicResource.class.getDeclaredAnnotations()).anyMatch(annotation -> annotation.annotationType().getName().equals("kotlin.Metadata")) == java.nio.file.Files.isDirectory(expected), "Wrong dynamic-resource language");
+        }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         final Identifier overridden = id("existing", "textures/test.txt");
@@ -36,7 +43,7 @@ public final class DynamicResourceCompatibilityCheck {
         final PackResources baseline = new FixturePack(Map.of(overridden, "base", untouched, "untouched"));
         try (MultiPackResourceManager first = new MultiPackResourceManager(PackType.CLIENT_RESOURCES, List.of(baseline))) {
             final Identifier added = id("new_namespace", "textures/added.txt");
-            DynamicResource.addResources(first, added, stream("new resource"));
+            addResources(first, added, stream("new resource"));
             require(first.getResource(added).isPresent(), "An existing dynamic resource must be returned by the actual manager");
             require(read(first.getResource(added).orElseThrow()).equals("new resource"), "Dynamic stream contents changed");
             final PackResources dynamic = first.listPacks().filter(pack -> pack != baseline).findFirst().orElseThrow();
@@ -45,19 +52,19 @@ public final class DynamicResourceCompatibilityCheck {
             require(first.getResource(id("absent", "missing.txt")).isEmpty(), "An absent namespace must remain absent");
             require(first.getNamespaces().contains("new_namespace"), "New namespaces must become visible to the manager");
 
-            DynamicResource.addResources(first, overridden, stream("dynamic override"));
+            addResources(first, overridden, stream("dynamic override"));
             require(read(first.getResource(overridden).orElseThrow()).equals("dynamic override"), "The dynamic pack must keep highest priority");
             require(read(first.getResource(untouched).orElseThrow()).equals("untouched"), "Unmodified lower-priority resources must remain available");
             require(first.getResourceStack(overridden).size() == 2, "Both original and dynamic resources must remain in the stack");
-            DynamicResource.addResources(first, overridden, stream("replacement"));
+            addResources(first, overridden, stream("replacement"));
             require(read(first.getResource(overridden).orElseThrow()).equals("replacement"), "Repeated additions must replace the supplier");
             require(first.getResourceStack(overridden).size() == 2 && first.listPacks().count() == 2,
                     "Repeated additions must not push the same dynamic pack twice");
 
             final Identifier nested = id("new_namespace", "textures/sub/nested.txt");
             final Identifier sibling = id("new_namespace", "textures_extra/sibling.txt");
-            DynamicResource.addResources(first, nested, stream("nested"));
-            DynamicResource.addResources(first, sibling, stream("sibling"));
+            addResources(first, nested, stream("nested"));
+            addResources(first, sibling, stream("sibling"));
             final Map<Identifier, IoSupplier<InputStream>> listed = new HashMap<>();
             dynamic.listResources(PackType.CLIENT_RESOURCES, "new_namespace", "textures", listed::put);
             require(listed.keySet().equals(Set.of(added, nested)), "Directory listing must exclude sibling prefixes and other namespaces");
@@ -83,9 +90,32 @@ public final class DynamicResourceCompatibilityCheck {
             }
             require(dynamic.getMetadataSection(new MetadataSectionType<>("absent", Codec.STRING)) == null, "Unknown metadata must be absent");
 
+            final Set<String> namespaceSnapshot = dynamic.getNamespaces(PackType.CLIENT_RESOURCES);
+            try { namespaceSnapshot.add("mutation"); throw new AssertionError("Namespaces must be immutable"); }
+            catch (UnsupportedOperationException expected) { }
+            final Identifier lazy = id("later_namespace", "textures/lazy.txt");
+            final int[] opened = {0}, closed = {0};
+            addResources(first, lazy, () -> { opened[0]++; return new ByteArrayInputStream(new byte[]{42}) {
+                @Override public void close() { closed[0]++; }
+            }; });
+            require(opened[0] == 0 && !namespaceSnapshot.contains("later_namespace"), "Registration opened a lazy stream or mutated a namespace snapshot");
+            try (InputStream input = first.getResource(lazy).orElseThrow().open()) { require(input.read() == 42, "Lazy stream changed"); }
+            require(opened[0] == 1 && closed[0] == 1, "Stream ownership changed");
+            final Identifier absentSupplier = id("later_namespace", "nullable.txt");
+            addResources(first, absentSupplier, null);
+            require(dynamic.getResource(PackType.CLIENT_RESOURCES, absentSupplier) == null, "Nullable supplier must remain absent on lookup");
+            final Map<Identifier, IoSupplier<InputStream>> nullableListing = new HashMap<>();
+            dynamic.listResources(PackType.CLIENT_RESOURCES, "later_namespace", "", nullableListing::put);
+            require(nullableListing.containsKey(absentSupplier) && nullableListing.get(absentSupplier) == null, "Legacy list callback must receive the original nullable supplier");
+            final var failure = new java.io.IOException("supplier fixture");
+            final Identifier failing = id("later_namespace", "failing.txt");
+            addResources(first, failing, () -> { throw failure; });
+            try { first.getResource(failing).orElseThrow().open(); throw new AssertionError("Supplier failure swallowed"); }
+            catch (java.io.IOException error) { require(error == failure, "Supplier failure identity changed"); }
+
             try (MultiPackResourceManager reloaded = new MultiPackResourceManager(PackType.CLIENT_RESOURCES, List.of(baseline))) {
                 final Identifier afterReload = id("after_reload", "textures/new.txt");
-                DynamicResource.addResources(reloaded, afterReload, stream("reloaded"));
+                addResources(reloaded, afterReload, stream("reloaded"));
                 require(reloaded.getResource(added).isEmpty() && !reloaded.getNamespaces().contains("new_namespace"), "Reload must not leak old dynamic resources or namespaces");
                 require(read(reloaded.getResource(overridden).orElseThrow()).equals("base"), "Reload must not retain old dynamic overrides");
                 require(read(reloaded.getResource(afterReload).orElseThrow()).equals("reloaded"), "The reloaded manager must accept new dynamic resources");
@@ -95,6 +125,16 @@ public final class DynamicResourceCompatibilityCheck {
             }
         }
         System.out.println("DynamicResource compatibility checks passed (lookup, priority, namespaces, listing, reload isolation, metadata).");
+    }
+
+    private static void addResources(MultiPackResourceManager manager, Identifier id, IoSupplier<InputStream> supplier) throws Exception {
+        var method = DynamicResource.class.getDeclaredMethod("addResources", MultiPackResourceManager.class, Identifier.class, IoSupplier.class);
+        method.setAccessible(true);
+        try { method.invoke(null, manager, id, supplier); }
+        catch (InvocationTargetException error) {
+            if (error.getCause() instanceof Exception exception) throw exception;
+            throw new AssertionError(error.getCause());
+        }
     }
 
     private static Identifier id(String namespace, String path) {

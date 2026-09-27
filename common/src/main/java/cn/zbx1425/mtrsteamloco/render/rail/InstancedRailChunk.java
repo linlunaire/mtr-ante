@@ -1,6 +1,7 @@
 package cn.zbx1425.mtrsteamloco.render.rail;
 
 import cn.zbx1425.mtrsteamloco.Main;
+import io.github.linlunaire.transitcore.concurrent.BoundedTaskDispatcher;
 import cn.zbx1425.mtrsteamloco.data.RailModelRegistry;
 import cn.zbx1425.mtrsteamloco.render.ByteBufferOutputStream;
 import cn.zbx1425.sowcer.batch.BatchManager;
@@ -99,7 +100,7 @@ public class InstancedRailChunk extends RailChunkBase {
 
                 final float minY = Math.min(yMin, yMax);
                 final float maxY = yMax;
-                RailBuildScheduler.Upload result = new RailBuildScheduler.Upload() {
+                BoundedTaskDispatcher.Upload result = new BoundedTaskDispatcher.Upload() {
                     @Override public void upload() {
                         instanceBuf.upload(byteBuf, VertBuf.USAGE_DYNAMIC_DRAW);
                         instanceBuf.size = instanceCount;

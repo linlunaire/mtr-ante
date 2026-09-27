@@ -54,14 +54,14 @@ public abstract class RailMixin implements RailExtraSupplier {
 	@Shadow(remap = false) @Final @Mutable private int yStart, yEnd;
 	@Shadow(remap = false) @Final @Mutable private boolean reverseT1, isStraight1, reverseT2, isStraight2;
 
-    private String modelKey = "";
+    private String modelKey;
     private boolean isSecondaryDir = false;
     private float verticalCurveRadius = 0f;
-    private Map<String, String> customConfigs = new HashMap<>();
-    private Map<String, ConfigResponder> customResponders = new HashMap<>();
-    private Map<Double, Float> rollAngleMap = new HashMap<>();
+    private Map<String, String> customConfigs;
+    private Map<String, ConfigResponder> customResponders;
+    private Map<Double, Float> rollAngleMap;
     private int openingDirection = 0;// 0 不开 1 左 2 右 3 双向
-    private float rollingOffset = 1.435F / 2F;
+    private float rollingOffset;
     private int pathMode = 0;
     // 0: 曲线 + 直线(原版模式) 1: 贝塞尔曲线
     private BezierCurve bezier = null;
@@ -297,6 +297,7 @@ public abstract class RailMixin implements RailExtraSupplier {
 
     @Inject(method = "<init>(Lnet/minecraft/core/BlockPos;Lmtr/data/RailAngle;Lnet/minecraft/core/BlockPos;Lmtr/data/RailAngle;Lmtr/data/RailType;Lmtr/data/TransportMode;)V", at = @At("TAIL"))
     private void onCreate(BlockPos posStart, RailAngle facingStart, BlockPos posEnd, RailAngle facingEnd, RailType railType, TransportMode transportMode, CallbackInfo ci) {
+        initializeExtensionDefaults();
         this.facingStart = facingStart;
         this.facingEnd = facingEnd;
         this.posStart = posStart;
@@ -423,19 +424,24 @@ public abstract class RailMixin implements RailExtraSupplier {
         return true;
     }
 
-    // MTR's deserializing constructors calculate facing angles before Mixin inserts
-    // our field initializers. Those angle calls already enter the height/roll hooks.
-    // Seed only the constructor default here; the existing TAIL readers still restore
-    // the saved roll map, offset, curve and explicit facings without losing metadata.
+    // Explicit constructor hooks do not depend on Mixin copying field initializers.
+    // Deserializers need these defaults before facing calculation enters our roll
+    // hooks; their TAIL readers then replace defaults with the saved metadata.
+    private void initializeExtensionDefaults() {
+        modelKey = "";
+        customConfigs = new HashMap<>();
+        customResponders = new HashMap<>();
+        rollAngleMap = new HashMap<>();
+        rollingOffset = 1.435F / 2F;
+    }
+
     @Inject(method = {
             "<init>(Ljava/util/Map;)V",
             "<init>(Lnet/minecraft/network/FriendlyByteBuf;)V",
             "<init>(Lnet/minecraft/nbt/CompoundTag;)V"
     }, at = @At(value = "INVOKE", target = "Lmtr/data/Rail;getRailAngle(Z)Lmtr/data/RailAngle;", ordinal = 0), remap = false)
-    private void initializeRollBeforeFacing(CallbackInfo ci) {
-        if (rollAngleMap == null) {
-            rollAngleMap = new HashMap<>();
-        }
+    private void initializeExtensionBeforeFacing(CallbackInfo ci) {
+        initializeExtensionDefaults();
     }
 
     @Inject(method = "<init>(Ljava/util/Map;)V", at = @At("TAIL"), remap = false)

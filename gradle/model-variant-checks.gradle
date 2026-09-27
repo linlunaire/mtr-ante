@@ -1,0 +1,46 @@
+def variantClasses = layout.buildDirectory.dir('classes/modelVariantPreparation')
+tasks.register('compileModelVariantPreparation', JavaCompile) {
+    source rootProject.file('tests/ModelVariantPreparationCheck.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = variantClasses
+}
+tasks.register('checkModelVariantPreparation', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileModelVariantPreparation'
+    classpath = files(variantClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelVariantPreparationCheck'
+    args rootProject.file('tests/fixtures/model-variant-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileJava').get().destinationDirectory.get().asFile.absolutePath,
+            "--module-source=${tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath}"
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaModelVariantBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileModelVariantPreparation'
+        classpath = files(variantClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelVariantPreparationCheck'
+        args rootProject.file('tests/fixtures/model-variant-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--java-baseline'
+        if (rootProject.hasProperty('recordModelVariantBaseline')) args '--record'
+    }
+}
+tasks.named('check') { dependsOn 'checkModelVariantPreparation' }
+
+def variantCommonProject = project
+['fabric', 'neoforge'].each { platform ->
+    def loaderProject = rootProject.project(":${platform}")
+    loaderProject.tasks.register('checkPackagedModelVariantPreparation', JavaExec) {
+        group = 'verification'
+        dependsOn ':common:compileModelVariantPreparation', loaderProject.tasks.named('shadowJar')
+        def anteArtifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        classpath = loaderProject.files(anteArtifact, mtrArtifact, variantClasses) +
+                variantCommonProject.configurations.compileClasspath + loaderProject.configurations.kotlinArtifactRuntime
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelVariantPreparationCheck'
+        workingDir = loaderProject.layout.buildDirectory.dir('model-variant-compatibility-run').get().asFile
+        doFirst { workingDir.mkdirs() }
+        args rootProject.file('tests/fixtures/model-variant-java-1.1.1-26.2.tsv').absolutePath,
+                anteArtifact.get().asFile.absolutePath
+    }
+    loaderProject.tasks.named('check') { dependsOn 'checkPackagedModelVariantPreparation' }
+}

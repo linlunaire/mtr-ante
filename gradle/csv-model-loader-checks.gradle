@@ -1,0 +1,83 @@
+def csvClasses = layout.buildDirectory.dir('classes/csvModelLoaderCompatibility')
+def csvGolden = rootProject.file('tests/fixtures/csv-model-loader-java-1.1.1-26.2.tsv')
+def csvBaselineBlob = '86ef037dfb87ea6bf57e8cc5bd17f926db264d0b'
+def csvBaselineSources = layout.buildDirectory.dir('generated/csvJavaBaseline')
+def csvBaselineClasses = layout.buildDirectory.dir("classes/csvJavaBaseline/${csvBaselineBlob}")
+
+tasks.register('compileCsvModelLoaderCompatibility', JavaCompile) {
+    source rootProject.file('tests/CsvModelLoaderCompatibilityCheck.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = csvClasses
+}
+
+tasks.register('checkCsvModelLoaderCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileCsvModelLoaderCompatibility'
+    classpath = files(csvClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.CsvModelLoaderCompatibilityCheck'
+    args csvGolden.absolutePath, tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+// This optional oracle task extracts one immutable Java blob, never the current
+// working tree. Ordinary builds use the committed golden and need no git history.
+tasks.register('prepareCsvJavaBaseline') {
+    outputs.dir(csvBaselineSources)
+    inputs.property('gitBlob', csvBaselineBlob)
+    doLast {
+        def process = new ProcessBuilder('git', 'cat-file', 'blob', csvBaselineBlob).directory(rootProject.projectDir).start()
+        def data = process.inputStream.bytes
+        def error = process.errorStream.text
+        if (process.waitFor() != 0) throw new GradleException("Missing CSV Java baseline blob ${csvBaselineBlob}; fetch tag 1.1.1-26.2. ${error}")
+        def digest = java.security.MessageDigest.getInstance('SHA-1')
+        digest.update("blob ${data.length}\u0000".getBytes('UTF-8'))
+        digest.update(data)
+        if (java.util.HexFormat.of().formatHex(digest.digest()) != csvBaselineBlob) throw new GradleException('CSV Java baseline blob hash mismatch')
+        def source = csvBaselineSources.get().file('cn/zbx1425/sowcerext/model/loader/CsvModelLoader.java').asFile
+        source.parentFile.mkdirs()
+        source.bytes = data
+    }
+}
+
+tasks.register('compileCsvJavaBaseline', JavaCompile) {
+    dependsOn 'prepareCsvJavaBaseline'
+    source csvBaselineSources
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = csvBaselineClasses
+}
+
+tasks.register('checkJavaCsvModelLoaderBaseline', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileCsvModelLoaderCompatibility', 'compileCsvJavaBaseline'
+    classpath = files(csvBaselineClasses, csvClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.CsvModelLoaderCompatibilityCheck'
+    args csvGolden.absolutePath, csvBaselineClasses.get().asFile.absolutePath, '--java-baseline'
+    if (rootProject.hasProperty('recordCsvModelLoaderBaseline')) args '--record'
+}
+
+tasks.register('checkKotlinCsvModelLoaderAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-csv-loader-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+tasks.named('check') { dependsOn 'checkCsvModelLoaderCompatibility', 'checkKotlinCsvModelLoaderAbi' }
+
+def commonProject = project
+['fabric', 'neoforge'].each { platform ->
+    def loaderProject = rootProject.project(":${platform}")
+    loaderProject.tasks.register('checkPackagedCsvModelLoaderCompatibility', JavaExec) {
+        group = 'verification'
+        dependsOn ':common:compileCsvModelLoaderCompatibility', loaderProject.tasks.named('shadowJar')
+        def artifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        classpath = loaderProject.files(artifact, mtrArtifact, csvClasses) + commonProject.configurations.compileClasspath + loaderProject.configurations.kotlinArtifactRuntime
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.CsvModelLoaderCompatibilityCheck'
+        workingDir = loaderProject.layout.buildDirectory.dir('csv-model-loader-compatibility-run').get().asFile
+        doFirst { workingDir.mkdirs() }
+        args csvGolden.absolutePath, artifact.get().asFile.absolutePath, '--packaged'
+    }
+    loaderProject.tasks.named('check') { dependsOn 'checkPackagedCsvModelLoaderCompatibility' }
+}

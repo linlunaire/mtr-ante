@@ -1,5 +1,6 @@
 package cn.zbx1425.mtrsteamloco.render.rail;
 
+import io.github.linlunaire.transitcore.concurrent.BoundedTaskDispatcher;
 import cn.zbx1425.mtrsteamloco.data.RailModelRegistry;
 import cn.zbx1425.sowcer.batch.BatchManager;
 import cn.zbx1425.sowcer.batch.ShaderProp;
@@ -24,7 +25,8 @@ import java.util.LinkedList;
 
 public abstract class RailChunkBase implements Closeable {
 
-    private static final RailBuildScheduler BUILD_SCHEDULER = new RailBuildScheduler();
+    private static final BoundedTaskDispatcher BUILD_SCHEDULER = new BoundedTaskDispatcher(
+            BoundedTaskDispatcher.newWorkerPool(2, "ANTE rail builder "), 4);
     private volatile boolean closed;
 
     public Long chunkId;
@@ -89,7 +91,7 @@ public abstract class RailChunkBase implements Closeable {
 
     public abstract void rebuildBuffer(Level world);
 
-    protected final void rebuildAsync(Supplier<RailBuildScheduler.Upload> build) {
+    protected final void rebuildAsync(Supplier<BoundedTaskDispatcher.Upload> build) {
         if (closed || bufferBuilding) return;
         BUILD_SCHEDULER.trySchedule(() -> {
             containingRails.clear();

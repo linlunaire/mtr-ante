@@ -1,0 +1,9 @@
+# Source: MTR-ANTE-neoforge-1.1.1-26.2.jar
+# SHA-256: db3662a772ad746bcdbfe81b2e44fed09ea084d73f11b29022be9b11e9f4d79c
+C:cn/zbx1425/mtrsteamloco/data/IRoute	[ABSTRACT, INTERFACE, PUBLIC] java/lang/Object []
+M:cn/zbx1425/mtrsteamloco/data/IRoute.getPathData()Ljava/util/List;	[ABSTRACT, PUBLIC] ()Ljava/util/List<Lmtr/path/PathData;>; []
+M:cn/zbx1425/mtrsteamloco/data/IRoute.setPathData(Ljava/util/List;)V	[ABSTRACT, PUBLIC] (Ljava/util/List<Lmtr/path/PathData;>;)V []
+C:cn/zbx1425/mtrsteamloco/mixin/RouteMixin	[ABSTRACT, PUBLIC] java/lang/Object [cn/zbx1425/mtrsteamloco/data/IRoute]
+M:cn/zbx1425/mtrsteamloco/mixin/RouteMixin.<init>()V	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/mixin/RouteMixin.getPathData()Ljava/util/List;	[PUBLIC] ()Ljava/util/List<Lmtr/path/PathData;>; []
+M:cn/zbx1425/mtrsteamloco/mixin/RouteMixin.setPathData(Ljava/util/List;)V	[PUBLIC] (Ljava/util/List<Lmtr/path/PathData;>;)V []

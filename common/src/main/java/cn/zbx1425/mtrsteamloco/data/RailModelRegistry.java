@@ -6,6 +6,7 @@ import cn.zbx1425.mtrsteamloco.render.integration.MtrModelRegistryUtil;
 import cn.zbx1425.sowcer.math.Vector3f;
 import cn.zbx1425.sowcer.model.Model;
 import cn.zbx1425.sowcerext.model.ModelCluster;
+import cn.zbx1425.sowcerext.model.ModelVariantPreparation;
 import cn.zbx1425.sowcerext.model.RawModel;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -113,17 +114,10 @@ public class RailModelRegistry {
         RawModel rawModel = null;
 
         if (obj.has("model")) {
-            rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-					Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
-
-            if (obj.has("textureId")) {
-				rawModel.replaceTexture("default.png", Identifier.parse(obj.get("textureId").getAsString()));
-            }
-            if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
-                rawModel.applyUVMirror(false, true);
-            }
-
-			rawModel.sourceLocation = Identifier.parse(rawModel.sourceLocation + "/" + key);
+            rawModel = ModelVariantPreparation.prepare(
+                    MainClient.modelManager.loadRawModel(resourceManager,
+                            Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager),
+                    key, obj, ModelVariantPreparation.Geometry.IGNORE);
         }
         
         float repeatInterval = obj.has("repeatInterval") ? obj.get("repeatInterval").getAsFloat() : 0.5f;

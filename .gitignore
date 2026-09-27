@@ -1,6 +1,7 @@
 # gradle
 
 .gradle/
+.kotlin/
 build/
 out/
 classes/
@@ -60,6 +61,8 @@ _Minecraft-Transit-Railway-3.x.x
 # logs
 
 *.log
+# Headless Minecraft fixtures also create rotated logs in Gradle modules.
+logs/
 
 # Extracted changelog
 extracted_changelog.md

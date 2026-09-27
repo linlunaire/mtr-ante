@@ -26,6 +26,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,9 @@ public final class SowcerCompatibilityCheck {
     private static int assertions;
 
     public static void main(String[] args) throws Exception {
+        for (Class<?> type : List.of(Vertex.class, Face.class, RawModel.class, RawMesh.class)) {
+            require(Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath().equals(Path.of(args[0]).toRealPath()), "Stale copied geometry in upload fixture: " + type);
+        }
         buffers();
         globalAndReplay();
         instances();

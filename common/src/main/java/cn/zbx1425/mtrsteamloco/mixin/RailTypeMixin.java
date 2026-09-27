@@ -2,6 +2,8 @@ package cn.zbx1425.mtrsteamloco.mixin;
 
 import net.minecraft.world.level.material.MapColor;
 import mtr.data.RailType;
+import kotlin.enums.EnumEntries;
+import kotlin.enums.EnumEntriesKt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +25,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class RailTypeMixin {
     @Shadow(remap = false) @Final @Mutable
     private static RailType[] $VALUES;
+    @Shadow(remap = false) @Final @Mutable
+    private static EnumEntries<RailType> $ENTRIES;
     private static final Map<String, RailType> MAP = new HashMap<>();
 
     @Invoker(value = "<init>")
@@ -39,6 +43,8 @@ public abstract class RailTypeMixin {
 
         RailType[] values = railTypes.toArray(new RailType[0]);
         $VALUES = values;
+        // Kotlin snapshots enum entries before this Mixin extends the values array.
+        $ENTRIES = EnumEntriesKt.enumEntries(values);
 
         for (RailType railType : $VALUES) {
             MAP.put(railType.name(), railType);

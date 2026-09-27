@@ -14,6 +14,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mtr.MTRClient;
 import mtr.client.ClientData;
+import io.github.linlunaire.transitcore.collection.FrameMembership;
 import mtr.data.Rail;
 import mtr.data.RailType;
 import mtr.data.TransportMode;
@@ -37,6 +38,7 @@ import cn.zbx1425.mtrsteamloco.Main;
 import cn.zbx1425.mtrsteamloco.render.RenderUtil;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class RailRenderDispatcher {
 
@@ -45,7 +47,9 @@ public class RailRenderDispatcher {
     private final List<RailChunkBase> railChunkList = new LinkedList<>();
     private boolean isInstanced;
 
-    private final HashSet<Rail> currentFrameRails = new HashSet<>();
+    private final FrameMembership<Rail> frameRails = new FrameMembership<>();
+    private final Consumer<Rail> addFrameRail = this::addRail;
+    private final Consumer<Rail> removeFrameRail = this::removeRail;
 
     public static boolean isHoldingRailItem = false;
     public static boolean isHoldingBrush = false;
@@ -91,12 +95,12 @@ public class RailRenderDispatcher {
 
     public boolean registerRail(Rail rail) {
         if (getModelKeyForRender(rail).isEmpty() || rail.railType == RailType.NONE) return false;
-        currentFrameRails.add(rail);
+        frameRails.mark(rail);
         return true;
     }
 
     public void clearRail() {
-        currentFrameRails.clear();
+        frameRails.clear();
         Collection<BakedRail> bakedRails = railRefMap.values();
         for (BakedRail rail : bakedRails) {
             rail.dispose();
@@ -148,13 +152,7 @@ public class RailRenderDispatcher {
         if (isInstanced != shouldBeInstanced) clearRail();
         isInstanced = shouldBeInstanced;
 
-        HashSet<Rail> railsToAdd = new HashSet<>(currentFrameRails);
-        railsToAdd.removeAll(railRefMap.keySet());
-        for (Rail rail : railsToAdd) addRail(rail);
-        HashSet<Rail> railsToRemove = new HashSet<>(railRefMap.keySet());
-        railsToRemove.removeAll(currentFrameRails);
-        for (Rail rail : railsToRemove) removeRail(rail);
-        currentFrameRails.clear();
+        frameRails.reconcile(addFrameRail, removeFrameRail);
 
         Vec3 cameraBlockPos = Minecraft.getInstance().gameRenderer.mainCamera().position();
         Vector3f cameraPos = new Vector3f(cameraBlockPos);

@@ -7,6 +7,7 @@ import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderBase;
 import cn.zbx1425.mtrsteamloco.scripting.ScriptHolderClient;
 import cn.zbx1425.sowcer.math.Vector3f;
 import cn.zbx1425.sowcerext.model.ModelCluster;
+import cn.zbx1425.sowcerext.model.ModelVariantPreparation;
 import cn.zbx1425.sowcerext.model.RawModel;
 import cn.zbx1425.sowcerext.util.ResourceUtil;
 import com.google.gson.JsonArray;
@@ -110,39 +111,10 @@ public class EyeCandyRegistry {
 
         ModelCluster cluster = null;
         if (obj.has("model")) {
-            RawModel rawModel = MainClient.modelManager.loadRawModel(resourceManager,
-					Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager).copy();
-
-            if (obj.has("textureId")) {
-				rawModel.replaceTexture("default.png", Identifier.parse(obj.get("textureId").getAsString()));
-            }
-            if (obj.has("flipV") && obj.get("flipV").getAsBoolean()) {
-                rawModel.applyUVMirror(false, true);
-            }
-
-            if (obj.has("translation")) {
-                JsonArray vec = obj.get("translation").getAsJsonArray();
-                rawModel.applyTranslation(vec.get(0).getAsFloat(), vec.get(1).getAsFloat(), vec.get(2).getAsFloat());
-            }
-            if (obj.has("rotation")) {
-                JsonArray vec = obj.get("rotation").getAsJsonArray();
-                rawModel.applyRotation(new Vector3f(1, 0, 0), vec.get(0).getAsFloat());
-                rawModel.applyRotation(new Vector3f(0, 1, 0), vec.get(1).getAsFloat());
-                rawModel.applyRotation(new Vector3f(0, 0, 1), vec.get(2).getAsFloat());
-            }
-            if (obj.has("scale")) {
-                JsonArray vec = obj.get("scale").getAsJsonArray();
-                rawModel.applyScale(vec.get(0).getAsFloat(), vec.get(1).getAsFloat(), vec.get(2).getAsFloat());
-            }
-            if (obj.has("mirror")) {
-                JsonArray vec = obj.get("mirror").getAsJsonArray();
-                rawModel.applyMirror(
-                        vec.get(0).getAsBoolean(), vec.get(1).getAsBoolean(), vec.get(2).getAsBoolean(),
-                        vec.get(0).getAsBoolean(), vec.get(1).getAsBoolean(), vec.get(2).getAsBoolean()
-                );
-            }
-
-			rawModel.sourceLocation = Identifier.parse(rawModel.sourceLocation + "/" + key);
+            RawModel rawModel = ModelVariantPreparation.prepare(
+                    MainClient.modelManager.loadRawModel(resourceManager,
+                            Identifier.parse(obj.get("model").getAsString()), MainClient.atlasManager),
+                    key, obj, ModelVariantPreparation.Geometry.APPLY);
 
             cluster = MainClient.modelManager.uploadVertArrays(rawModel);
         }

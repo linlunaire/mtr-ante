@@ -2,6 +2,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import java.time.Instant
 
 architectury { common('fabric', 'neoforge') }
+apply from: rootProject.file('gradle/riding-state-checks.gradle')
 
 def buildConfigSources = layout.buildDirectory.dir('generated/sources/buildConfig')
 def generateBuildConfig = tasks.register('generateBuildConfig', Copy) {
@@ -17,6 +18,7 @@ sourceSets.main.java.srcDir(buildConfigSources)
 // Ignore a generated source left by historical builds without deleting local files.
 sourceSets.main.java.exclude { it.file == file('src/main/java/cn/zbx1425/mtrsteamloco/BuildConfig.java') }
 tasks.named('compileJava') { dependsOn generateBuildConfig }
+tasks.named('compileKotlin') { dependsOn generateBuildConfig }
 
 dependencies {
     implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
@@ -114,16 +116,57 @@ tasks.named('checkCompatibility') { dependsOn 'checkJsonTagCompatibility' }
 
 def dynamicClasses = layout.buildDirectory.dir('classes/dynamicResourceCompatibility')
 def compileDynamicResources = tasks.register('compileDynamicResourceCompatibility', JavaCompile) {
-    source 'src/main/java/cn/zbx1425/mtrsteamloco/data/DynamicResource.java', '../tests/DynamicResourceCompatibilityCheck.java'
-    classpath = configurations.compileClasspath
+    source '../tests/DynamicResourceCompatibilityCheck.java', '../tests/EyeCandyPropertiesCompatibilityCheck.java',
+            '../tests/RailModelPropertiesCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
     destinationDirectory = dynamicClasses
 }
 tasks.register('checkDynamicResourceCompatibility', JavaExec) {
     group = 'verification'
     dependsOn compileDynamicResources
-    classpath = files(dynamicClasses) + configurations.compileClasspath
+    classpath = files(dynamicClasses) + sourceSets.main.output + configurations.compileClasspath
     mainClass = 'cn.zbx1425.mtrsteamloco.data.DynamicResourceCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
 }
+
+tasks.register('checkEyeCandyPropertiesCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn compileDynamicResources
+    classpath = files(dynamicClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.data.EyeCandyPropertiesCompatibilityCheck'
+    args rootProject.file('tests/fixtures/eye-candy-properties-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkRailModelPropertiesCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn compileDynamicResources
+    classpath = files(dynamicClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.data.RailModelPropertiesCompatibilityCheck'
+    args rootProject.file('tests/fixtures/rail-model-properties-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    ['DynamicResource', 'EyeCandyProperties', 'RailModelProperties'].each { area ->
+        tasks.register("checkJava${area}Baseline", JavaExec) {
+            group = 'verification'
+            dependsOn compileDynamicResources
+            classpath = files(dynamicClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+            mainClass = "cn.zbx1425.mtrsteamloco.data.${area}CompatibilityCheck"
+            if (area == 'EyeCandyProperties') args rootProject.file('tests/fixtures/eye-candy-properties-java-1.1.1-26.2.tsv').absolutePath
+            if (area == 'RailModelProperties') args rootProject.file('tests/fixtures/rail-model-properties-java-1.1.1-26.2.tsv').absolutePath
+            args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+        }
+    }
+}
+tasks.register('checkKotlinDynamicPropertiesAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-dynamic-properties-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkEyeCandyPropertiesCompatibility', 'checkRailModelPropertiesCompatibility', 'checkKotlinDynamicPropertiesAbi' }
 
 def nbtClasses = layout.buildDirectory.dir('classes/nbtSourceCompatibility')
 def compileNbtSource = tasks.register('compileNbtSourceCompatibility', JavaCompile) {
@@ -144,38 +187,40 @@ tasks.named('checkCompatibility') {
 
 def faceClasses = layout.buildDirectory.dir('classes/faceCaptureCompatibility')
 def compileFaceCapture = tasks.register('compileFaceCaptureCompatibility', JavaCompile) {
-    dependsOn compileMaterials
-    source 'src/main/java/cn/zbx1425/sowcer/math/Vector3f.java',
-            'src/main/java/cn/zbx1425/sowcerext/model/Vertex.java',
-            'src/main/java/cn/zbx1425/sowcerext/model/integration/BufferSourceProxy.java',
-            'src/main/java/cn/zbx1425/sowcerext/model/integration/FaceList.java',
-            '../tests/FaceCaptureCompatibilityCheck.java'
-    classpath = configurations.compileClasspath + files(materialClasses)
+    source '../tests/FaceCaptureCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
     destinationDirectory = faceClasses
 }
 tasks.register('checkFaceCaptureCompatibility', JavaExec) {
     group = 'verification'
     dependsOn compileFaceCapture
-    classpath = files(faceClasses, materialClasses) + configurations.compileClasspath
+    classpath = files(faceClasses) + sourceSets.main.output + configurations.compileClasspath
     mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.FaceCaptureCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
 }
 tasks.named('checkCompatibility') { dependsOn 'checkFaceCaptureCompatibility' }
 
 def eyeCandyItemClasses = layout.buildDirectory.dir('classes/eyeCandyItemResourceCompatibility')
 def compileEyeCandyItemResources = tasks.register('compileEyeCandyItemResourceCompatibility', JavaCompile) {
-    source fileTree('src/main/java') {
-        include 'cn/zbx1425/mtrsteamloco/data/DynamicResource.java'
-        include 'cn/zbx1425/mtrsteamloco/data/EyeCandyItemResources.java'
-        include 'cn/zbx1425/mtrsteamloco/mixin/ModelBakeryMixin.java'
-    }, '../tests/EyeCandyItemResourceCompatibilityCheck.java'
-    classpath = configurations.compileClasspath
+    source '../tests/EyeCandyItemResourceCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
     destinationDirectory = eyeCandyItemClasses
 }
 tasks.register('checkEyeCandyItemResourceCompatibility', JavaExec) {
     group = 'verification'
     dependsOn compileEyeCandyItemResources
-    classpath = files(eyeCandyItemClasses) + configurations.compileClasspath
+    classpath = files(eyeCandyItemClasses) + sourceSets.main.output + configurations.compileClasspath
     mainClass = 'cn.zbx1425.mtrsteamloco.data.EyeCandyItemResourceCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaEyeCandyItemResourcesBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn compileEyeCandyItemResources
+        classpath = files(eyeCandyItemClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.data.EyeCandyItemResourceCompatibilityCheck'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
 }
 tasks.named('checkCompatibility') { dependsOn 'checkEyeCandyItemResourceCompatibility' }
 
@@ -199,32 +244,16 @@ tasks.named('checkCompatibility') { dependsOn 'checkItemRenderStateCompatibility
 
 def sowcerClasses = layout.buildDirectory.dir('classes/sowcerCompatibility')
 def compileSowcer = tasks.register('compileSowcerCompatibility', JavaCompile) {
-    dependsOn generateBuildConfig
-    source fileTree('src/main/java') {
-        include 'cn/zbx1425/sowcer/math/*.java', 'cn/zbx1425/sowcer/vertex/*.java',
-                'cn/zbx1425/sowcer/object/*.java', 'cn/zbx1425/sowcer/model/*.java', 'cn/zbx1425/sowcer/batch/*.java',
-                'cn/zbx1425/sowcer/shader/BlazeRenderType.java', 'cn/zbx1425/sowcer/shader/ShaderManager.java',
-                'cn/zbx1425/sowcer/util/AttrUtil.java', 'cn/zbx1425/sowcer/util/DrawContext.java',
-                'cn/zbx1425/sowcer/util/OffHeapAllocator.java', 'cn/zbx1425/sowcer/util/GlStateTracker.java',
-                'cn/zbx1425/sowcerext/model/RawModel.java', 'cn/zbx1425/sowcerext/model/RawMesh.java',
-                'cn/zbx1425/sowcerext/model/Vertex.java', 'cn/zbx1425/sowcerext/model/Face.java',
-                'cn/zbx1425/sowcerext/model/integration/FaceList.java', 'cn/zbx1425/sowcerext/model/integration/BufferSourceProxy.java'
-        include 'cn/zbx1425/sowcerext/model/ModelCluster.java', 'cn/zbx1425/sowcerext/model/loader/*.java',
-                'cn/zbx1425/sowcerext/reuse/*.java', 'cn/zbx1425/sowcerext/util/*.java', 'de/javagl/obj/*.java',
-                'cn/zbx1425/mtrsteamloco/scripting/util/client/DynamicModelHolder.java',
-                'cn/zbx1425/mtrsteamloco/scripting/AbstractDrawCalls.java', 'cn/zbx1425/sowcer/ContextCapability.java',
-                'cn/zbx1425/mtrsteamloco/mixin/GLFWMixin.java'
-    }
-    classpath = configurations.compileClasspath
-    source buildConfigSources
+    source '../tests/SowcerCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
     destinationDirectory = sowcerClasses
 }
-compileSowcer.configure { source '../tests/SowcerCompatibilityCheck.java' }
 tasks.register('checkSowcerCompatibility', JavaExec) {
     group = 'verification'
     dependsOn compileSowcer
-    classpath = files(sowcerClasses) + configurations.compileClasspath + compatibilityNatives
+    classpath = files(sowcerClasses) + sourceSets.main.output + configurations.compileClasspath + compatibilityNatives
     mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.SowcerCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
 }
 tasks.named('checkCompatibility') { dependsOn 'checkSowcerCompatibility' }
 
@@ -385,19 +414,624 @@ tasks.register('checkServerTickWeaving', JavaExec) {
 }
 tasks.named('check') { dependsOn 'checkServerTickWeaving' }
 
+configurations {
+    coreChecks {
+        canBeConsumed = false
+        attributes { attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME)) }
+    }
+}
+dependencies {
+    coreChecks files(rootProject.transitCoreJar)
+    coreChecks "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+}
+def coreRuntime = configurations.coreChecks
+
 def railBuildSchedulerClasses = layout.buildDirectory.dir('classes/railBuildSchedulerCompatibility')
 def compileRailBuildScheduler = tasks.register('compileRailBuildSchedulerCompatibility', JavaCompile) {
-    source 'src/main/java/cn/zbx1425/mtrsteamloco/render/rail/RailBuildScheduler.java',
-            '../tests/RailBuildSchedulerCompatibilityCheck.java'
-    classpath = files()
+    source '../tests/RailBuildSchedulerCompatibilityCheck.java'
+    classpath = coreRuntime
     destinationDirectory = railBuildSchedulerClasses
 }
 tasks.register('checkRailBuildSchedulerCompatibility', JavaExec) {
     group = 'verification'
     description = 'Checks bounded rail builds, pending upload admission and stale/error result disposal without a game.'
     dependsOn compileRailBuildScheduler
-    classpath = files(railBuildSchedulerClasses)
+    classpath = files(railBuildSchedulerClasses) + coreRuntime
     mainClass = 'cn.zbx1425.mtrsteamloco.render.rail.RailBuildSchedulerCompatibilityCheck'
     args rootProject.projectDir.absolutePath
 }
 tasks.named('checkCompatibility') { dependsOn 'checkRailBuildSchedulerCompatibility' }
+
+def railMembershipClasses = layout.buildDirectory.dir('classes/railFrameMembershipCompatibility')
+tasks.register('compileRailFrameMembershipCompatibility', JavaCompile) {
+    dependsOn rootProject.tasks.named('verifyMtrArtifacts')
+    source '../tests/RailFrameMembershipCompatibilityCheck.java'
+    classpath = files(rootProject.mtrCommonJar) + coreRuntime
+    destinationDirectory = railMembershipClasses
+}
+tasks.register('checkRailFrameMembershipCompatibility', JavaExec) {
+    group = 'verification'
+    description = 'Executes rail registration, clear and frame transitions against the independent Transit Core.'
+    dependsOn 'compileRailFrameMembershipCompatibility'
+    classpath = files(railMembershipClasses, rootProject.mtrCommonJar) + coreRuntime
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RailFrameMembershipCompatibilityCheck'
+    args rootProject.projectDir.absolutePath
+}
+tasks.named('checkCompatibility') { dependsOn 'checkRailFrameMembershipCompatibility' }
+
+// Append after fixture-specific classpaths: all isolated checks share one runtime.
+def kotlinProductionClasses = files(tasks.named('compileKotlin').flatMap { it.destinationDirectory })
+def sowcerRemainingKotlinClasses = layout.buildDirectory.dir('classes/sowcerRemainingKotlinCompatibility')
+tasks.register('compileSowcerRemainingKotlinCompatibility', JavaCompile) {
+    source '../tests/SowcerRemainingKotlinCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = sowcerRemainingKotlinClasses
+}
+tasks.register('checkSowcerRemainingKotlinCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileSowcerRemainingKotlinCompatibility'
+    classpath = files(sowcerRemainingKotlinClasses) + sourceSets.main.output + configurations.compileClasspath + compatibilityNatives
+    mainClass = 'cn.zbx1425.sowcer.object.SowcerRemainingKotlinCompatibilityCheck'
+    // Exercise core LWJGL allocation without probing an optional jemalloc implementation.
+    systemProperty 'org.lwjgl.system.allocator', 'system'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaSowcerRemainingBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileSowcerRemainingKotlinCompatibility'
+        classpath = files(sowcerRemainingKotlinClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath + compatibilityNatives
+        mainClass = 'cn.zbx1425.sowcer.object.SowcerRemainingKotlinCompatibilityCheck'
+        systemProperty 'org.lwjgl.system.allocator', 'system'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+}
+tasks.register('checkKotlinSowcerRemainingAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/sowcer-remaining-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+def itemModelWeavingClasses = layout.buildDirectory.dir('classes/itemModelWeaving')
+tasks.register('compileItemModelWeaving', JavaCompile) {
+    source '../tests/item-model-weaving/ItemModelWeavingCheck.java', '../tests/camera-weaving/CameraWeavingCheck.java'
+    classpath = configurations.compileClasspath
+    destinationDirectory = itemModelWeavingClasses
+    options.compilerArgs += ['-proc:none']
+}
+tasks.register('checkItemModelWeaving', JavaExec) {
+    group = 'verification'
+    description = 'Applies real ANTE item mixins and all ten model invokers to migrated Kotlin MTR classes.'
+    dependsOn 'compileItemModelWeaving', 'classes'
+    classpath = files(itemModelWeavingClasses, '../tests/item-model-weaving/resources', '../tests/camera-weaving/resources',
+            sourceSets.main.output.classesDirs) + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ItemModelWeavingCheck'
+}
+tasks.register('checkKotlinMigrationAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/sowcer-math-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkKotlinVertexAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/sowcer-vertex-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+def sowcerVertexKotlinClasses = layout.buildDirectory.dir('classes/sowcerVertexKotlinCompatibility')
+tasks.register('checkKotlinModelBatchAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/sowcer-model-batch-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+def sowcerModelBatchKotlinClasses = layout.buildDirectory.dir('classes/sowcerModelBatchKotlinCompatibility')
+tasks.register('compileSowcerModelBatchKotlinCompatibility', JavaCompile) {
+    source '../tests/SowcerModelBatchKotlinCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = sowcerModelBatchKotlinClasses
+}
+tasks.register('checkSowcerModelBatchKotlinCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileSowcerModelBatchKotlinCompatibility'
+    classpath = files(sowcerModelBatchKotlinClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.SowcerModelBatchKotlinCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('compileSowcerVertexKotlinCompatibility', JavaCompile) {
+    source '../tests/SowcerVertexKotlinCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = sowcerVertexKotlinClasses
+}
+tasks.register('checkSowcerVertexKotlinCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileSowcerVertexKotlinCompatibility'
+    classpath = files(sowcerVertexKotlinClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.SowcerVertexKotlinCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+def sowcerMathKotlinClasses = layout.buildDirectory.dir('classes/sowcerMathKotlinCompatibility')
+tasks.register('compileSowcerMathKotlinCompatibility', JavaCompile) {
+    source '../tests/SowcerMathKotlinCompatibilityCheck.java'
+    classpath = configurations.compileClasspath
+    destinationDirectory = sowcerMathKotlinClasses
+}
+tasks.register('checkSowcerMathKotlinCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileSowcerMathKotlinCompatibility'
+    classpath = files(sowcerMathKotlinClasses) + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.SowcerMathKotlinCompatibilityCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    ['ModelBatch', 'Vertex'].each { area ->
+        tasks.register("checkJava${area}Baseline", JavaExec) {
+            group = 'verification'
+            dependsOn "compileSowcer${area}KotlinCompatibility"
+            classpath = files(layout.buildDirectory.dir("classes/sowcer${area}KotlinCompatibility"), rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+            mainClass = "cn.zbx1425.mtrsteamloco.compatibility.Sowcer${area}KotlinCompatibilityCheck"
+            args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+        }
+    }
+    tasks.register('checkJavaMathBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileSowcerMathKotlinCompatibility'
+        classpath = files(sowcerMathKotlinClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.SowcerMathKotlinCompatibilityCheck'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+}
+tasks.named('check') { dependsOn 'checkKotlinMigrationAbi', 'checkSowcerMathKotlinCompatibility', 'checkKotlinVertexAbi', 'checkSowcerVertexKotlinCompatibility', 'checkKotlinModelBatchAbi', 'checkSowcerModelBatchKotlinCompatibility' }
+tasks.named('check') { dependsOn 'checkKotlinSowcerRemainingAbi', 'checkItemModelWeaving' }
+tasks.named('check') { dependsOn 'checkSowcerRemainingKotlinCompatibility' }
+def pathWeavingClasses = layout.buildDirectory.dir('classes/pathWeaving')
+tasks.register('compilePathWeaving', JavaCompile) {
+    source '../tests/path-weaving/PathWeavingCheck.java', '../tests/camera-weaving/CameraWeavingCheck.java'
+    classpath = configurations.compileClasspath
+    destinationDirectory = pathWeavingClasses
+    options.compilerArgs += ['-proc:none']
+}
+tasks.register('checkPathWeaving', JavaExec) {
+    group = 'verification'
+    description = 'Weaves and executes actual ANTE path interception through Java and Kotlin entrypoints.'
+    dependsOn 'compilePathWeaving', 'classes'
+    classpath = files(pathWeavingClasses, '../tests/path-weaving/resources', '../tests/camera-weaving/resources',
+            sourceSets.main.output.classesDirs) + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.PathWeavingCheck'
+}
+tasks.named('check') { dependsOn 'checkPathWeaving' }
+def antePathClasses = layout.buildDirectory.dir('classes/antePathCompatibility')
+tasks.register('compileAntePathCompatibility', JavaCompile) {
+    source '../tests/AntePathCompatibilityCheck.java', '../tests/AntePathScalingCheck.java', new File(rootProject.mtrRoot, 'tests/KotlinPathCompatibilityCheck.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = antePathClasses
+    options.compilerArgs += ['-proc:none']
+}
+tasks.register('checkAntePathCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileAntePathCompatibility'
+    classpath = files(antePathClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.AntePathCompatibilityCheck'
+    args rootProject.file('tests/fixtures/ante-path-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkKotlinPathAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-path-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkAntePathScaling', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileAntePathCompatibility'
+    classpath = files(antePathClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.AntePathScalingCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+def depotPathClasses = layout.buildDirectory.dir('classes/depotPathCompatibility')
+tasks.register('compileDepotPathCompatibility', JavaCompile) {
+    source '../tests/depot-path/DepotPathCompatibilityCheck.java', '../tests/depot-path/DepotPathScenario.java', '../tests/camera-weaving/CameraWeavingCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = depotPathClasses
+    options.compilerArgs += ['-proc:none']
+}
+def depotPathRuntime = files(depotPathClasses, '../tests/depot-path/resources', '../tests/camera-weaving/resources',
+        sourceSets.main.output.classesDirs) + configurations.compileClasspath
+tasks.register('checkDepotPathCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileDepotPathCompatibility'
+    classpath = depotPathRuntime
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.DepotPathCompatibilityCheck'
+    args rootProject.file('tests/fixtures/depot-path-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkDepotRoutePlan', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileDepotPathCompatibility'
+    classpath = depotPathRuntime
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.DepotPathCompatibilityCheck'
+    args rootProject.file('tests/fixtures/depot-path-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath, '--direct-plan'
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaAntePathBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileAntePathCompatibility'
+        classpath = files(antePathClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.AntePathCompatibilityCheck'
+        args rootProject.file('tests/fixtures/ante-path-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+    tasks.register('checkJavaAntePathScalingBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileAntePathCompatibility'
+        classpath = files(antePathClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.AntePathScalingCheck'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--baseline'
+    }
+    tasks.register('checkJavaDepotPathBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileDepotPathCompatibility'
+        classpath = depotPathRuntime
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.DepotPathCompatibilityCheck'
+        args rootProject.file('tests/fixtures/depot-path-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+}
+tasks.named('check') { dependsOn 'checkKotlinPathAbi', 'checkAntePathCompatibility', 'checkDepotPathCompatibility', 'checkDepotRoutePlan', 'checkAntePathScaling' }
+
+def routeWeavingClasses = layout.buildDirectory.dir('classes/routeWeaving')
+tasks.register('compileRouteWeaving', JavaCompile) {
+    source '../tests/route-weaving/RouteWeavingCheck.java', '../tests/route-weaving/RouteWeavingScenario.java', '../tests/camera-weaving/CameraWeavingCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = routeWeavingClasses
+    options.compilerArgs += ['-proc:none']
+}
+def routeWeavingRuntime = files(routeWeavingClasses, '../tests/route-weaving/resources', '../tests/camera-weaving/resources')
+tasks.register('checkRouteWeaving', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRouteWeaving', 'classes'
+    classpath = routeWeavingRuntime + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RouteWeavingCheck'
+    args rootProject.file('tests/fixtures/route-weaving-java-1.1.1-26.2.tsv').absolutePath, rootProject.mtrCommonJar.absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar') && rootProject.hasProperty('mtrJavaBaselineJar')) {
+    tasks.register('checkJavaRouteWeavingBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileRouteWeaving'
+        classpath = routeWeavingRuntime + files(rootProject.file(rootProject.property('mtrJavaBaselineJar')),
+                rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RouteWeavingCheck'
+        args rootProject.file('tests/fixtures/route-weaving-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('mtrJavaBaselineJar')).absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--java-baseline'
+    }
+}
+tasks.register('checkKotlinRouteAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-route-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkRouteWeaving', 'checkKotlinRouteAbi' }
+
+tasks.register('checkDepotWeaving', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileDepotPathCompatibility', 'classes'
+    classpath = depotPathRuntime
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.DepotPathCompatibilityCheck'
+    args rootProject.file('tests/fixtures/depot-path-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath, '--through-depot', "--target=${rootProject.mtrCommonJar.absolutePath}"
+}
+tasks.register('checkKotlinDepotAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-depot-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkDepotWeaving', 'checkKotlinDepotAbi' }
+def resourceTreeClasses = layout.buildDirectory.dir('classes/resourceTreeCompatibility')
+tasks.register('compileResourceTreeCompatibility', JavaCompile) {
+    source '../tests/ResourceTreeCompatibilityCheck.java', '../tests/ResourceTreeScalingCheck.java', '../tests/RelativePositionAllocationCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = resourceTreeClasses
+    options.compilerArgs += ['-proc:none']
+}
+tasks.register('checkResourceTreeCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileResourceTreeCompatibility'
+    classpath = files(resourceTreeClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ResourceTreeCompatibilityCheck'
+    args rootProject.file('tests/fixtures/resource-tree-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkResourceTreeScaling', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileResourceTreeCompatibility'
+    classpath = files(resourceTreeClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ResourceTreeScalingCheck'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkRelativePositionAllocation', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileResourceTreeCompatibility'
+    classpath = files(resourceTreeClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RelativePositionAllocationCheck'
+    jvmArgs '-Xint'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaResourceTreeBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileResourceTreeCompatibility'
+        classpath = files(resourceTreeClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ResourceTreeCompatibilityCheck'
+        args rootProject.file('tests/fixtures/resource-tree-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+    tasks.register('checkJavaResourceTreeScalingBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileResourceTreeCompatibility'
+        classpath = files(resourceTreeClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ResourceTreeScalingCheck'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--baseline'
+    }
+    tasks.register('checkJavaRelativePositionAllocationBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileResourceTreeCompatibility'
+        classpath = files(resourceTreeClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RelativePositionAllocationCheck'
+        jvmArgs '-Xint'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--baseline'
+    }
+}
+tasks.register('checkKotlinResourceTreeAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-resource-tree-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkResourceTreeCompatibility', 'checkResourceTreeScaling', 'checkRelativePositionAllocation', 'checkKotlinResourceTreeAbi' }
+
+def shapeRollingClasses = layout.buildDirectory.dir('classes/shapeRollingCompatibility')
+tasks.register('compileShapeRollingCompatibility', JavaCompile) {
+    source '../tests/ShapeRollingCompatibilityCheck.java', '../tests/ShapeRollingScenario.java', '../tests/ExtraSupplierCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = shapeRollingClasses
+    options.compilerArgs += ['-proc:none']
+}
+['checkShapeRollingCompatibility': [], 'checkShapeCacheReuse': ['--cache']].each { taskName, options ->
+    tasks.register(taskName, JavaExec) {
+        group = 'verification'
+        dependsOn 'compileShapeRollingCompatibility'
+        classpath = files(shapeRollingClasses) + sourceSets.main.output + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ShapeRollingCompatibilityCheck'
+        args rootProject.file('tests/fixtures/shape-rolling-java-1.1.1-26.2.tsv').absolutePath,
+                tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+        args options
+    }
+}
+tasks.register('checkExtraSupplierCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileShapeRollingCompatibility'
+    classpath = files(shapeRollingClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ExtraSupplierCompatibilityCheck'
+    args rootProject.file('tests/fixtures/extra-supplier-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    ['ShapeRolling': ['ShapeRollingCompatibilityCheck', 'shape-rolling'], 'ExtraSupplier': ['ExtraSupplierCompatibilityCheck', 'extra-supplier']].each { area, details ->
+        tasks.register("checkJava${area}Baseline", JavaExec) {
+            group = 'verification'
+            dependsOn 'compileShapeRollingCompatibility'
+            classpath = files(shapeRollingClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+            mainClass = "cn.zbx1425.mtrsteamloco.compatibility.${details[0]}"
+            args rootProject.file("tests/fixtures/${details[1]}-java-1.1.1-26.2.tsv").absolutePath,
+                    rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+        }
+    }
+}
+tasks.register('checkKotlinShapeRollingExtraAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-shape-rolling-extra-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkShapeRollingCompatibility', 'checkShapeCacheReuse', 'checkExtraSupplierCompatibility', 'checkKotlinShapeRollingExtraAbi' }
+
+def railActionsWeavingClasses = layout.buildDirectory.dir('classes/railActionsWeaving')
+tasks.register('compileRailActionsWeaving', JavaCompile) {
+    source '../tests/rail-actions-weaving/RailActionsWeavingCheck.java', '../tests/camera-weaving/CameraWeavingCheck.java',
+            new File(rootProject.mtrRoot, 'tests/RailActionsCompatibilityCheck.java'), new File(rootProject.mtrRoot, 'tests/RailActionsScenario.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = railActionsWeavingClasses
+}
+tasks.register('checkRailActionsWeaving', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRailActionsWeaving'
+    classpath = files(railActionsWeavingClasses, rootProject.file('tests/rail-actions-weaving/resources'),
+            rootProject.file('tests/camera-weaving/resources')) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RailActionsWeavingCheck'
+    args new File(rootProject.mtrRoot, 'tests/fixtures/rail-actions-java-26.2-3.3.2.tsv').absolutePath
+}
+tasks.register('checkKotlinRailActionsMixinAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-rail-actions-mixin-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkRailActionsWeaving', 'checkKotlinRailActionsMixinAbi' }
+
+def rawGeometryClasses = layout.buildDirectory.dir('classes/rawGeometryCompatibility')
+tasks.register('compileRawGeometryCompatibility', JavaCompile) {
+    source '../tests/RawGeometryCompatibilityCheck.java', '../tests/VertexHashAllocationCheck.java', '../tests/RawModelCompatibilityCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = rawGeometryClasses
+}
+['', 'Assertions', 'AssertionsDisabled'].each { mode ->
+    tasks.register("checkRawGeometry${mode}Compatibility", JavaExec) {
+        group = 'verification'
+        dependsOn 'compileRawGeometryCompatibility'
+        classpath = files(rawGeometryClasses) + sourceSets.main.output + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawGeometryCompatibilityCheck'
+        if (mode == 'Assertions') jvmArgs '-ea:cn.zbx1425.sowcerext.model.Face'
+        if (mode == 'AssertionsDisabled') jvmArgs '-ea', '-da:cn.zbx1425.sowcerext.model.Face'
+        args rootProject.file('tests/fixtures/raw-geometry-java-1.1.1-26.2.tsv').absolutePath,
+                tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+    }
+}
+tasks.register('checkVertexHashAllocation', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRawGeometryCompatibility'
+    classpath = files(rawGeometryClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.VertexHashAllocationCheck'
+    jvmArgs '-Xint'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkRawModelCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRawGeometryCompatibility'
+    classpath = files(rawGeometryClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawModelCompatibilityCheck'
+    args rootProject.file('tests/fixtures/raw-model-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    ['RawGeometry', 'RawGeometryAssertions', 'VertexHashAllocation', 'RawModel'].each { area ->
+        tasks.register("checkJava${area}Baseline", JavaExec) {
+            group = 'verification'
+            dependsOn 'compileRawGeometryCompatibility'
+            classpath = files(rawGeometryClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+            mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.' + (area == 'VertexHashAllocation' ? 'VertexHashAllocationCheck' : area == 'RawModel' ? 'RawModelCompatibilityCheck' : 'RawGeometryCompatibilityCheck')
+            if (area == 'VertexHashAllocation') jvmArgs '-Xint'
+            else args rootProject.file(area == 'RawModel' ? 'tests/fixtures/raw-model-java-1.1.1-26.2.tsv' : 'tests/fixtures/raw-geometry-java-1.1.1-26.2.tsv').absolutePath
+            if (area == 'RawGeometryAssertions') jvmArgs '-ea:cn.zbx1425.sowcerext.model.Face'
+            args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+            if (area == 'VertexHashAllocation') args '--baseline'
+        }
+    }
+}
+tasks.register('checkKotlinRawGeometryAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-raw-geometry-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkKotlinRawModelAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-raw-model-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') {
+    dependsOn 'checkRawGeometryCompatibility', 'checkRawGeometryAssertionsCompatibility',
+            'checkRawGeometryAssertionsDisabledCompatibility', 'checkVertexHashAllocation', 'checkKotlinRawGeometryAbi',
+            'checkRawModelCompatibility', 'checkKotlinRawModelAbi'
+}
+
+def rawMeshClasses = layout.buildDirectory.dir('classes/rawMeshCompatibility')
+tasks.register('compileRawMeshCompatibility', JavaCompile) {
+    source '../tests/RawMeshCompatibilityCheck.java', '../tests/RawMeshPackingCheck.java'
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = rawMeshClasses
+}
+['', 'Assertions', 'AssertionsDisabled'].each { mode ->
+    tasks.register("checkRawMesh${mode}Compatibility", JavaExec) {
+        group = 'verification'
+        dependsOn 'compileRawMeshCompatibility'
+        classpath = files(rawMeshClasses) + sourceSets.main.output + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawMeshCompatibilityCheck'
+        if (mode == 'Assertions') jvmArgs '-ea:cn.zbx1425.sowcerext.model.RawMesh'
+        if (mode == 'AssertionsDisabled') jvmArgs '-ea', '-da:cn.zbx1425.sowcerext.model.RawMesh'
+        args rootProject.file('tests/fixtures/raw-mesh-java-1.1.1-26.2.tsv').absolutePath,
+                tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+    }
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaRawMeshBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileRawMeshCompatibility'
+        classpath = files(rawMeshClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawMeshCompatibilityCheck'
+        args rootProject.file('tests/fixtures/raw-mesh-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+    tasks.register('checkJavaRawMeshPackingBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileRawMeshCompatibility'
+        // Only the selected RawMesh family comes from Java; all other classes remain current.
+        classpath = files(rawMeshClasses) + sourceSets.main.output + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawMeshPackingCheck'
+        jvmArgs '-Xint'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath, '--baseline'
+    }
+}
+tasks.register('checkRawMeshPacking', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileRawMeshCompatibility'
+    classpath = files(rawMeshClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RawMeshPackingCheck'
+    jvmArgs '-Xint'
+    args tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.register('checkKotlinRawMeshAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-raw-mesh-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'checkRawMeshCompatibility', 'checkRawMeshAssertionsCompatibility', 'checkRawMeshAssertionsDisabledCompatibility', 'checkKotlinRawMeshAbi', 'checkRawMeshPacking' }
+
+tasks.register('checkKotlinFaceIntegrationAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-face-integration-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaFaceCaptureBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileFaceCaptureCompatibility'
+        classpath = files(faceClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.FaceCaptureCompatibilityCheck'
+        args rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+    }
+}
+tasks.named('check') { dependsOn 'checkKotlinFaceIntegrationAbi' }
+
+apply from: rootProject.file('gradle/model-helpers-checks.gradle')
+apply from: rootProject.file('gradle/model-loaders-checks.gradle')
+apply from: rootProject.file('gradle/model-variant-checks.gradle')
+
+tasks.withType(JavaCompile).configureEach { classpath += kotlinProductionClasses }
+tasks.withType(JavaExec).configureEach { classpath += coreRuntime + kotlinProductionClasses }

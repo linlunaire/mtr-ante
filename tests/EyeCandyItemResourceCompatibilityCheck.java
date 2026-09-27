@@ -40,6 +40,13 @@ import java.util.stream.Collectors;
 /** Exercises Minecraft's real client-item resource loader, without a Minecraft instance or GPU. */
 public final class EyeCandyItemResourceCompatibilityCheck {
     public static void main(String[] args) throws Exception {
+        if (args.length > 0) {
+            var expected = java.nio.file.Path.of(args[0]).toRealPath();
+            for (Class<?> type : List.of(DynamicResource.class, EyeCandyItemResources.class)) {
+                require(java.nio.file.Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath().equals(expected), "Wrong resource implementation " + type);
+                require(java.util.Arrays.stream(type.getDeclaredAnnotations()).anyMatch(annotation -> annotation.annotationType().getName().equals("kotlin.Metadata")) == java.nio.file.Files.isDirectory(expected), "Wrong resource language " + type);
+            }
+        }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         ItemModels.bootstrap();

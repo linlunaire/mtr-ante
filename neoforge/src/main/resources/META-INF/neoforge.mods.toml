@@ -21,6 +21,12 @@ versionRange = "[26.2]"
 ordering = "NONE"
 side = "BOTH"
 [[dependencies.mtrsteamloco]]
+modId = "transit_core"
+type = "required"
+versionRange = "[${transitCoreVersion},1)"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.mtrsteamloco]]
 modId = "architectury"
 type = "required"
 versionRange = "[21.0.7,22)"

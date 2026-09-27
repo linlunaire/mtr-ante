@@ -21,12 +21,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Path;
+import java.nio.file.Files;
+import java.util.Arrays;
 
 /** Uses ANTE's real face batches and MTR's real capture/submission bridge, without a GPU. */
 public final class FaceCaptureCompatibilityCheck {
     private static final int COLOR = 0x80123456, LIGHT = 0x00B00050, OVERLAY = 0x00090004;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        Path source = Path.of(args[0]).toRealPath();
+        for (Class<?> type : List.of(Vertex.class, FaceList.class, BufferSourceProxy.class)) {
+            require(Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath().equals(source), "Face capture must use selected production classes: " + type);
+            require(Arrays.stream(type.getDeclaredAnnotations()).anyMatch(a -> a.annotationType().getName().equals("kotlin.Metadata")) == Files.isDirectory(source), "Wrong selected source language: " + type);
+        }
         Identifier texture = Identifier.parse("mtrsteamloco:test/capture.png");
         RenderType opaque = BlazeRenderType.entityCutout(texture);
         RenderType transparent = BlazeRenderType.entityTranslucentCull(texture);
@@ -37,7 +45,7 @@ public final class FaceCaptureCompatibilityCheck {
             BufferSourceProxy proxy = new BufferSourceProxy(buffers);
             stale = proxy;
             FaceList sorted = proxy.getBuffer(transparent, true);
-            require(sorted == proxy.getBuffer(transparent, true), "Material batches no longer share their face list");
+            require(sorted == proxy.getBuffer(transparent, false), "Material batch identity or first sorting policy changed");
             add(sorted, 1, inputs);
             add(sorted, 9, inputs);
             add(sorted, 3, inputs);
@@ -46,6 +54,7 @@ public final class FaceCaptureCompatibilityCheck {
             add(unsorted, 7, inputs);
             proxy.commit();
             proxy.commit(); // An empty second commit must not replay the previous faces.
+            require(sorted != proxy.getBuffer(transparent, true), "Successful proxy commit did not clear builders");
             for (Vertex[] face : inputs) {
                 for (Vertex vertex : face) {
                     vertex.position.add(1000, 1000, 1000);
@@ -87,14 +96,66 @@ public final class FaceCaptureCompatibilityCheck {
         require(positions.size() == 2, "Expected two material batches");
         require(positions.get(transparent).equals(List.of(19F, 19.25F, 19F, 13F, 13.25F, 13F, 11F, 11.25F, 11F)), "Transparent faces lost back-to-front sorting or winding");
         require(positions.get(opaque).equals(List.of(12F, 12.25F, 12F, 17F, 17.25F, 17F)), "Opaque insertion order, winding or vertex count changed");
-        add(stale.getBuffer(opaque, false), 0, new ArrayList<>());
+        FaceList failed = stale.getBuffer(opaque, false);
+        add(failed, 0, new ArrayList<>());
         try {
             stale.commit();
             throw new AssertionError("A closed extraction source accepted another frame");
         } catch (IllegalStateException expected) {
             require(expected.getMessage().contains("finished"), "Unexpected closed-scope error");
         }
-        System.out.println("PASS: real ANTE face capture into 26.2 submit nodes, 15 triangle vertices, material batches, sorting, attributes, immutable delayed replay and closed-scope rejection (no GPU)");
+        require(failed == stale.getBuffer(opaque, true), "Failure unexpectedly discarded proxy queue");
+        mutableFaces(opaque, transparent);
+        new BufferSourceProxy(null).commit();
+        BufferSourceProxy nullable = new BufferSourceProxy(null);
+        require(nullable.getBuffer(null, false) == nullable.getBuffer(null, true), "Null material key rejected or no longer cached");
+        FaceList malformed = new FaceList(null, false);
+        try { malformed.addFace(null, 0, 0, 0); throw new AssertionError("Null face accepted"); } catch (NullPointerException expected) { }
+        try { malformed.addFace(new Vertex[] {null}, 0, 0, 0); throw new AssertionError("Null vertex accepted"); } catch (NullPointerException expected) { }
+        System.out.println("PASS: real ANTE face capture, 15 main triangle vertices plus mutable/sorting/replay cases; material batches, first sorting policy, attributes, frozen sort keys, live input, failure retention, immutable delayed replay and closed-scope rejection (no GPU)");
+    }
+
+    private static void mutableFaces(RenderType opaque, RenderType transparent) {
+        RenderSnapshot snapshot;
+        try (RenderBufferSource buffers = RenderBufferSource.begin(Vec3.ZERO)) {
+            FaceList faces = new FaceList(opaque, true); List<Vertex[]> inputs = new ArrayList<>();
+            add(faces, 4, inputs); add(faces, 1, inputs);
+            for (Vertex vertex : inputs.get(0)) vertex.position.add(-4, 0, 0);
+            for (Vertex vertex : inputs.get(1)) vertex.position.add(8, 0, 0);
+            inputs.get(0)[0] = new Vertex(new Vector3f(0, 0, 0), new Vector3f(0, 1, 0));
+            faces.commit(buffers); faces.commit(buffers); // Direct face-list commits deliberately retain faces.
+            snapshot = buffers.snapshot();
+        }
+        require(capturedX(snapshot).equals(List.of(0F, 0.25F, 0F, 9F, 9.25F, 9F, 0F, 0.25F, 0F, 9F, 9.25F, 9F)), "Face ownership, frozen sort vector or direct replay changed");
+        try (RenderBufferSource buffers = RenderBufferSource.begin(Vec3.ZERO)) {
+            // Equal summed positions: stable sorting retains insertion order, not mean-distance order.
+            FaceList faces = new FaceList(transparent, true);
+            faces.addFace(new Vertex[] {vertex(1), vertex(1), vertex(1), vertex(1), vertex(1), vertex(1)}, COLOR, LIGHT, OVERLAY);
+            faces.addFace(new Vertex[] {vertex(2), vertex(2), vertex(2)}, COLOR, LIGHT, OVERLAY);
+            faces.commit(buffers); snapshot = buffers.snapshot();
+        }
+        require(capturedX(snapshot).equals(List.of(1F, 1F, 1F, 1F, 1F, 1F, 2F, 2F, 2F)), "Summed-position sorting or stable equal-distance face order changed");
+    }
+
+    private static Vertex vertex(float x) { return new Vertex(new Vector3f(x, 0, 0), new Vector3f(0, 1, 0)); }
+
+    private static List<Float> capturedX(RenderSnapshot snapshot) {
+        SubmitNodeStorage storage = new SubmitNodeStorage(); snapshot.submit(new PoseStack(), storage, new CameraRenderState());
+        List<Float> result = new ArrayList<>();
+        storage.drainPhases(phase -> phase.sortInto((node, blending) -> {
+            CustomFeatureRenderer.Submit submit = (CustomFeatureRenderer.Submit) node;
+            submit.customGeometryRenderer().render(submit.pose(), new VertexConsumer() {
+                @Override public VertexConsumer addVertex(float x, float y, float z) { result.add(x); return this; }
+                @Override public VertexConsumer setColor(int r, int g, int b, int a) { return this; }
+                @Override public VertexConsumer setColor(int color) { return this; }
+                @Override public VertexConsumer setUv(float u, float v) { return this; }
+                @Override public VertexConsumer setUv1(int u, int v) { return this; }
+                @Override public VertexConsumer setUv2(int u, int v) { return this; }
+                @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
+                @Override public VertexConsumer setLineWidth(float width) { return this; }
+            });
+        }));
+        return result;
     }
 
     private static void add(FaceList faces, float x, List<Vertex[]> inputs) {

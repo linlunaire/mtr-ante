@@ -1,0 +1,8 @@
+C:cn/zbx1425/sowcerext/model/integration/FaceList	[PUBLIC] java/lang/Object []
+M:cn/zbx1425/sowcerext/model/integration/FaceList.<init>(Lnet/minecraft/client/renderer/rendertype/RenderType;Z)V	[PUBLIC]  []
+M:cn/zbx1425/sowcerext/model/integration/FaceList.addFace([Lcn/zbx1425/sowcerext/model/Vertex;III)V	[PUBLIC]  []
+M:cn/zbx1425/sowcerext/model/integration/FaceList.commit(Lmtr/mappings/RenderBufferSource;)V	[PUBLIC]  []
+C:cn/zbx1425/sowcerext/model/integration/BufferSourceProxy	[PUBLIC] java/lang/Object []
+M:cn/zbx1425/sowcerext/model/integration/BufferSourceProxy.<init>(Lmtr/mappings/RenderBufferSource;)V	[PUBLIC]  []
+M:cn/zbx1425/sowcerext/model/integration/BufferSourceProxy.commit()V	[PUBLIC]  []
+M:cn/zbx1425/sowcerext/model/integration/BufferSourceProxy.getBuffer(Lnet/minecraft/client/renderer/rendertype/RenderType;Z)Lcn/zbx1425/sowcerext/model/integration/FaceList;	[PUBLIC]  []

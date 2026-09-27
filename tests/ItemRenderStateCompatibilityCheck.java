@@ -177,9 +177,14 @@ public final class ItemRenderStateCompatibilityCheck {
         require(resolver.fields.stream().anyMatch(field -> field.name.equals("modelManager") && field.desc.equals("Lnet/minecraft/client/resources/model/ModelManager;")),
                 "Model-manager shadow field no longer matches Minecraft");
         require(hook.contains("@Mixin(ItemModelResolver.class)") && hook.contains("EyeCandyItemRenderer.update(modelManager"), "Extraction dispatch became disconnected");
-        final String properties = Files.readString(root.resolve("common/src/main/java/cn/zbx1425/mtrsteamloco/data/EyeCandyProperties.java"));
+        final ClassNode properties = new ClassNode();
+        try (var input = ItemRenderStateCompatibilityCheck.class.getClassLoader().getResourceAsStream("cn/zbx1425/mtrsteamloco/data/EyeCandyProperties.class")) {
+            require(input != null, "Missing compiled eye-candy properties");
+            new ClassReader(input).accept(properties, ClassReader.SKIP_CODE);
+        }
         final String registry = Files.readString(root.resolve("common/src/main/java/cn/zbx1425/mtrsteamloco/data/EyeCandyRegistry.java"));
-        require(properties.contains("public Identifier itemModelId;") && !properties.contains("BakedModel"), "Properties must store a reload-stable identifier");
+        require(properties.fields.stream().anyMatch(field -> field.name.equals("itemModelId") && field.desc.equals("Lnet/minecraft/resources/Identifier;") && (field.access & org.objectweb.asm.Opcodes.ACC_PUBLIC) != 0)
+                && properties.fields.stream().noneMatch(field -> field.desc.contains("BakedModel")), "Properties must store a public reload-stable identifier");
         require(!registry.contains("getModelManager()") && !registry.contains("mappingItem("), "Registry reverted to stale baked lookups or double PNG remapping");
         require(registry.split("EyeCandyItemResources.clientItemId\\(loc\\)", -1).length == 3, "Both PNG and ordinary model branches must use the prepared item definition id");
         final var mixins = com.google.gson.JsonParser.parseString(Files.readString(root.resolve("common/src/main/resources/mtrsteamloco.mixins.json"))).getAsJsonObject();

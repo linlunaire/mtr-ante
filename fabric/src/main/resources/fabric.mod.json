@@ -21,6 +21,7 @@
     "fabricloader": ">=0.19.3",
     "fabric-api": ">=0.159.0+26.2",
     "architectury": ">=21.0.7 <22",
+    "transit_core": ">=${transitCoreVersion} <1",
     "mtr": ">=${mtrVersion} <26.3"
   }
 }

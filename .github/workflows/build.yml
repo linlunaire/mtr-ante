@@ -2,10 +2,10 @@ name: Build
 
 on:
   push:
-    branches: [master]
+    branches: [master, 'codex/kotlin-26.2-preview']
     tags: ['*-26.2', '*-26.2-*']
   pull_request:
-    branches: [master]
+    branches: [master, 'codex/kotlin-26.2-preview']
   workflow_dispatch:
 
 permissions:
@@ -24,8 +24,14 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: master
+          ref: f6342b6f97cd90fa164f8adb29e7e2030fca0f1a # MTR 26.2-3.4.0-kotlin.1
           path: Minecraft-Transit-Railway-3.x.x
+      - name: Checkout Transit Core dependency
+        uses: actions/checkout@v5
+        with:
+          repository: linlunaire/Kotlin-LunaCore
+          ref: 8fe3fa3187ac4ac382806c1038798653bcfda4d2 # Kotlin LunaCore 0.2.0
+          path: Kotlin-LunaCore
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
@@ -33,6 +39,9 @@ jobs:
           java-version: '25'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      - name: Build Transit Core dependency
+        working-directory: Kotlin-LunaCore
+        run: chmod +x gradlew && ./gradlew build --stacktrace
       - name: Build MTR dependency
         working-directory: Minecraft-Transit-Railway-3.x.x
         run: chmod +x gradlew && ./gradlew build --stacktrace
@@ -43,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ANTE-26.2
-          path: mtr-ante/build/release/MTR-ANTE-*-26.2.jar
+          path: mtr-ante/build/release/MTR-ANTE-*-26.2*.jar
           if-no-files-found: error
