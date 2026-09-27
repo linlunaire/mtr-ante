@@ -37,12 +37,16 @@ On Windows, use `./gradlew.bat` in place of `./gradlew`. The wrapper downloads G
 
 The build runs the compatibility checks and writes both loader JARs to `build/release/`:
 
-- `MTR-ANTE-fabric-1.1.1-26.2.jar`
-- `MTR-ANTE-neoforge-1.1.1-26.2.jar`
+- `MTR-ANTE-fabric-1.1.2-26.2.jar`
+- `MTR-ANTE-neoforge-1.1.2-26.2.jar`
 
 ## Development
 
 `common/` contains shared code and assets; `fabric/` and `neoforge/` contain loader integrations. Regression and compatibility checks live in `tests/`. Dependency versions are defined in [gradle.properties](gradle.properties).
+
+Increment `mod_version` for each distributed maintenance update and rebuild both
+loaders. JAR names, mod metadata and the startup version are generated from it;
+the MTR dependency version comes from the selected MTR checkout.
 
 Report fork-specific problems in [this repository's issue tracker](https://github.com/linlunaire/mtr-ante/issues), including the MTR and ANTE versions, loader, logs and a minimal reproduction or resource pack.
 
