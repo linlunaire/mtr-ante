@@ -127,3 +127,4 @@ subprojects {
 }
 
 apply from: 'gradle/compatibility-checks.gradle'
+apply from: 'gradle/network-checks.gradle'

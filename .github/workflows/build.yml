@@ -19,11 +19,11 @@ jobs:
         uses: actions/checkout@v5
         with:
           path: mtr-ante
-      - name: Checkout pinned MTR baseline
+      - name: Checkout pinned MTR 3.3.4
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: 1.21.1-3.3.2
+          ref: 99fa5a35fef8e9aa2b7659cdca9cfc70841d037c
           path: Minecraft-Transit-Railway-1.21.1
       - name: Set up JDK 21
         uses: actions/setup-java@v5

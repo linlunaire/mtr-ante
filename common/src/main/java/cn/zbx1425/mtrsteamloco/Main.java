@@ -94,6 +94,8 @@ public class Main {
 	public static SimpleParticleType PARTICLE_STEAM_SMOKE;
 
 	public static void init(RegistriesWrapper registries) {
+		mtr.mappings.NetworkUtilities.registerServerS2CTypes(dev.architectury.platform.Platform.getEnvironment(),
+				PacketVersionCheck.PACKET_VERSION_CHECK, PacketScreen.PACKET_SHOW_SCREEN, PacketRoutePathCreator.ROUTE_S2C);
 		LOGGER.info("MTR-ANTE " + BuildConfig.MOD_VERSION + " built at "
 				+ DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.systemDefault()).format(BuildConfig.BUILD_TIME));
 		if (enableRegistry) {
