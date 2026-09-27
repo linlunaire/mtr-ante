@@ -6,8 +6,8 @@ baseline is the immutable [`1.1.1-26.2`](https://github.com/linlunaire/mtr-ante/
 tag; conversion does not itself establish an FPS/TPS improvement.
 
 ANTE remains an MTR add-on, not a standalone railway mod. This preview requires
-the matching MTR Kotlin line (`26.2-3.4.0-kotlin.1` or newer) and Kotlin LunaCore
-`0.2.0` on the same loader. The Java `26.2-3.3.x` maintenance line is not compatible
+the matching MTR Kotlin line (`26.2-3.4.0-kotlin.2` or newer) and Kotlin LunaCore
+`0.2.1` on the same loader. The Java `26.2-3.3.x` maintenance line is not compatible
 with ANTE's Kotlin-companion Mixin targets. Kotlin LunaCore's public branding and
 repository changed; its runtime mod ID remains `transit_core` for compatibility.
 

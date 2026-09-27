@@ -24,13 +24,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: f6342b6f97cd90fa164f8adb29e7e2030fca0f1a # MTR 26.2-3.4.0-kotlin.1
+          ref: 33737619dcccdfc6f3296ed5611e946638fd5a63 # MTR 26.2-3.4.0-kotlin.2 with dependency metadata checks
           path: Minecraft-Transit-Railway-3.x.x
       - name: Checkout Transit Core dependency
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Kotlin-LunaCore
-          ref: 8fe3fa3187ac4ac382806c1038798653bcfda4d2 # Kotlin LunaCore 0.2.0
+          ref: dabe86f70c01a8ffc2f55b7582abd5d7bb0d7077 # Kotlin LunaCore 0.2.1
           path: Kotlin-LunaCore
       - name: Set up JDK 25
         uses: actions/setup-java@v5

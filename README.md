@@ -6,7 +6,7 @@ Custom train and rail models, JavaScript-driven rendering, decorative objects an
 
 ## Install
 
-This is an incomplete **Kotlin preview**, not a production-validated release. Use Java 25 and install ANTE together with the **26.2 MTR Kotlin preview** and [Kotlin LunaCore 0.2.0+](https://github.com/linlunaire/Kotlin-LunaCore), using the same loader for all JARs.
+This is an incomplete **Kotlin preview**, not a production-validated release. Use Java 25 and install ANTE together with the **26.2 MTR Kotlin preview** and [Kotlin LunaCore 0.2.1+](https://github.com/linlunaire/Kotlin-LunaCore), using the same loader for all JARs.
 
 | Loader | Required mods |
 | --- | --- |
@@ -17,7 +17,7 @@ Place the JARs in `mods` on the server and clients. ANTE's scripting runtime and
 
 The Kotlin standard library is provided by Kotlin LunaCore through loader-managed nesting, not bundled again in ANTE. No separate FLK/KFF installation is needed for our mods; keep those dependencies if other mods require them.
 
-This preview requires **MTR 26.2-3.4.0-kotlin.1 or newer**; its Kotlin Mixin targets are not compatible with the Java maintenance build. **Kotlin LunaCore** supplies frame membership tracking and bounded background task scheduling; neither MTR nor ANTE bundles another copy. ANTE remains an MTR addon. Build matching sources in dependency order.
+This preview requires **MTR 26.2-3.4.0-kotlin.2 or newer**; its Kotlin Mixin targets are not compatible with the Java maintenance build. **Kotlin LunaCore** supplies frame membership tracking and bounded background task scheduling; neither MTR nor ANTE bundles another copy. ANTE remains an MTR addon. Build matching sources in dependency order.
 
 Back up worlds, configuration and resource packs before upgrading. Test your existing routes, custom trains and scripts on a copy of the world first.
 
@@ -42,8 +42,8 @@ On Windows, use `./gradlew.bat` in place of `./gradlew`. The wrapper downloads G
 
 The build runs the compatibility checks and writes both loader JARs to `build/release/`:
 
-- `MTR-ANTE-fabric-1.2.0-26.2-kotlin.1.jar`
-- `MTR-ANTE-neoforge-1.2.0-26.2-kotlin.1.jar`
+- `MTR-ANTE-fabric-1.2.0-26.2-kotlin.2.jar`
+- `MTR-ANTE-neoforge-1.2.0-26.2-kotlin.2.jar`
 
 ## Development
 
