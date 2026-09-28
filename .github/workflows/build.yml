@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: 33737619dcccdfc6f3296ed5611e946638fd5a63 # MTR 26.2-3.4.0-kotlin.2 with dependency metadata checks
+          ref: db8da9f88b9bdb612b1881f054e5ae7873502c38 # MTR 26.2-3.4.0-kotlin.3 with verified lift and map fixes
           path: Minecraft-Transit-Railway-3.x.x
       - name: Checkout Transit Core dependency
         uses: actions/checkout@v5
