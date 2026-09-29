@@ -37,7 +37,7 @@ public class CustomResourcesMixin {
     @Inject(at = @At("HEAD"), method = "reload(Lnet/minecraft/server/packs/resources/ResourceManager;)V")
     private static void reloadHead(ResourceManager manager, CallbackInfo ci) {
         ContextCapability.checkContextVersion();
-        Main.LOGGER.info("ANTE detected " + ContextCapability.backendDescription);
+        Main.LOGGER.info("YLM-ANTE detected " + ContextCapability.backendDescription);
 
 
         MtrModelRegistryUtil.loadingErrorList.clear();
@@ -45,7 +45,7 @@ public class CustomResourcesMixin {
 
         CustomResources.reset(manager);
 
-        Main.LOGGER.info("MTR has started loading custom resources. (including MTR-ANTE train models and optimizations)");
+        Main.LOGGER.info("YLM has started loading custom resources. (including YLM-ANTE train models and optimizations)");
     }
 
     @Inject(at = @At("TAIL"), method = "reload(Lnet/minecraft/server/packs/resources/ResourceManager;)V")
@@ -56,7 +56,7 @@ public class CustomResourcesMixin {
         }
 
 
-        Main.LOGGER.info("MTR-ANTE has finished loading custom resources.");
+        Main.LOGGER.info("YLM-ANTE has finished loading custom resources.");
     }
 
     @Inject(at = @At("HEAD"), method = "readResource", cancellable = true)
@@ -77,10 +77,10 @@ public class CustomResourcesMixin {
                         modelObject.add("dummyBbData", dummyBbData);
                     }
                     callback.accept(modelObject);
-                } catch (Exception e) { Main.LOGGER.error("On behalf of MTR: Parsing JSON " + path, e); }
+                } catch (Exception e) { Main.LOGGER.error("On behalf of YLM: Parsing JSON " + path, e); }
                 try {
                     Utilities.closeResource(resource);
-                } catch (IOException e) { Main.LOGGER.error("On behalf of MTR: Closing resource " + path, e); }
+                } catch (IOException e) { Main.LOGGER.error("On behalf of YLM: Closing resource " + path, e); }
             });
         } catch (Exception ignored) { }
         ci.cancel();

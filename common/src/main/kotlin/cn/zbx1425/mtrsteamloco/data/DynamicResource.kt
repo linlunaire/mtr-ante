@@ -53,14 +53,14 @@ open class DynamicResource {
     }
 
     private class DynamicPack : AbstractPackResources(
-        PackLocationInfo(NAME, Component.literal(NAME), PackSource.DEFAULT, Optional.empty())
+        PackLocationInfo(NAME, Component.literal(DISPLAY_NAME), PackSource.DEFAULT, Optional.empty())
     ) {
         private val metadata: ByteArray
         private val resources = HashMap<PackType?, MutableMap<Identifier?, IoSupplier<InputStream>?>>()
         private val namespaces = HashMap<PackType?, MutableSet<String>>()
 
         init {
-            val section = PackMetadataSection(Component.literal(NAME), InclusiveRange(SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES)))
+            val section = PackMetadataSection(Component.literal(DISPLAY_NAME), InclusiveRange(SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES)))
             val root = JsonObject()
             root.add(PackMetadataSection.CLIENT_TYPE.name(), PackMetadataSection.CLIENT_TYPE.codec().encodeStart(JsonOps.INSTANCE, section).orThrow)
             metadata = root.toString().toByteArray(StandardCharsets.UTF_8)
@@ -90,6 +90,7 @@ open class DynamicResource {
 
         companion object {
             private const val NAME = "ANTE Virtual Dynamic Pack"
+            private const val DISPLAY_NAME = "YLM-ANTE Virtual Dynamic Pack"
             // A legacy nullable supplier is forwarded unchanged despite ResourceOutput's annotation.
             @Suppress("UNCHECKED_CAST") private fun <T> forwardNullable(value: T?): T = value as T
         }

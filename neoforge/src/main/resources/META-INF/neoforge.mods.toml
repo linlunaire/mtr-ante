@@ -2,9 +2,9 @@ license = "MIT"
 [[mods]]
 modId = "mtrsteamloco"
 version = "${version}"
-displayName = "Aphrodite's Nemo's Transit Expansion"
-authors = "Zbx1425, Aphrodite281"
-description = "Experimental MTR-ANTE 26.2 port; gameplay validation is incomplete."
+displayName = "YLM-ANTE"
+authors = "linlunaire, Zbx1425, Aphrodite281"
+description = "Custom models, scripting and rail tools for Yanling Metro (YLM). Based on ANTE; this Kotlin preview is not yet production-validated."
 logoFile = "icon.png"
 [[mixins]]
 config = "mtrsteamloco.mixins.json"

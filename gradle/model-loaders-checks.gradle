@@ -49,7 +49,7 @@ def commonProject = project
         description = 'Executes NMB/OBJ behavior goldens from the final shaded loader JAR.'
         dependsOn ':common:compileModelLoadersCompatibility', loaderProject.tasks.named('shadowJar')
         def anteArtifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
-        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${platform}-${rootProject.mtrVersion}.jar")
         // Finished ANTE/MTR artifacts precede every development fallback. The corpus checks
         // the actual class source for both loaders, geometry dependencies and relocated parser.
         classpath = loaderProject.files(anteArtifact, mtrArtifact, modelLoaderClasses) +

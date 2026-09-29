@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 
 /** Runs with only the JDK and the finished artifact, not Gradle's compile dependencies. */
 public final class ReleaseArtifactCompatibilityCheck {
@@ -24,6 +25,11 @@ public final class ReleaseArtifactCompatibilityCheck {
             });
             String metadata = read(jar, platform.equals("fabric") ? "fabric.mod.json" : "META-INF/neoforge.mods.toml");
             require(metadata.contains(args[2]) && metadata.contains("26.2") && !metadata.contains("${"), "Unexpanded/incorrect loader metadata");
+            var identity = Pattern.compile(platform.equals("fabric") ? "\"id\"\\s*:\\s*\"([^\"]+)\"" : "(?m)^modId\\s*=\\s*\"([^\"]+)\"").matcher(metadata);
+            require(identity.find() && identity.group(1).equals("mtrsteamloco"), "Branding changed the compatibility mod ID");
+            var displayName = Pattern.compile(platform.equals("fabric") ? "\"name\"\\s*:\\s*\"([^\"]+)\"" : "(?m)^displayName\\s*=\\s*\"([^\"]+)\"").matcher(metadata);
+            require(displayName.find() && displayName.group(1).equals("YLM-ANTE"), "Wrong YLM-ANTE display name");
+            require(path.getFileName().toString().startsWith("YLM-ANTE-" + platform + "-"), "Wrong branded release filename");
             String mixins = read(jar, "mtrsteamloco.mixins.json");
             require(mixins.contains("JAVA_25") && mixins.contains("HudPreviewMixin"), "Shared resources replaced the 26.2 mixin overlay");
             require(!mixins.contains("refmap"), "26.2 must not use an old mapped refmap");
@@ -34,6 +40,12 @@ public final class ReleaseArtifactCompatibilityCheck {
             for (String language : new String[]{"de_de", "en_us", "is_is", "ja_jp", "ko_kr", "pt_pt", "ru_ru", "zh_cn", "zh_hk", "zh_tw"}) {
                 String text = read(jar, "assets/mtrsteamloco/lang/" + language + ".json");
                 require(text.contains("key.category.mtrsteamloco.keybinding"), "Missing new key category in " + language);
+                for (String key : new String[]{"gui.mtrsteamloco.config.client.title", "key.category.mtrsteamloco.keybinding", "itemGroup.mtrsteamloco.eye_candy"}) {
+                    require(Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"[^\"]*YLM-ANTE").matcher(text).find(), "Missing branded translation: " + language + "/" + key);
+                }
+                if (language.equals("en_us") || language.equals("zh_cn")) {
+                    require(Pattern.compile("\"gui\\.mtrsteamloco\\.mismatched_versions\"\\s*:\\s*\"[^\"]*YLM-ANTE").matcher(text).find(), "Missing independent version mismatch message in " + language);
+                }
             }
             read(jar, "assets/mtrsteamloco/items/eye_candy.json");
             for (String entry : new String[]{

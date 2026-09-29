@@ -83,7 +83,7 @@ public final class DynamicResourceCompatibilityCheck {
             final PackMetadataSection metadata = dynamic.getMetadataSection(PackMetadataSection.CLIENT_TYPE);
             require(metadata != null && metadata.supportedFormats().isValueInRange(SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES)),
                     "Metadata must accept the running 26.2 resource-pack format");
-            require(metadata.description().getString().equals("ANTE Virtual Dynamic Pack"), "Pack description changed");
+            require(metadata.description().getString().equals("YLM-ANTE Virtual Dynamic Pack"), "Pack display name must use YLM-ANTE branding");
             try (InputStream input = dynamic.getRootResource(PackResources.PACK_META).get()) {
                 require(ResourceMetadata.fromJsonStream(input).getSection(PackMetadataSection.CLIENT_TYPE).orElseThrow().equals(metadata),
                         "Root pack.mcmeta and typed metadata must decode identically");

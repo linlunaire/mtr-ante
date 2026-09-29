@@ -44,7 +44,7 @@ dependencies {
     runtimeOnly files(new File(rootProject.transitCoreRoot, "build/release/Kotlin-LunaCore-neoforge-26.2-${rootProject.transit_core_version}.jar"))
     neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
     api "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
-    implementation files(new File(rootProject.mtrRoot, "build/release/MTR-neoforge-${rootProject.mtrVersion}.jar"))
+    implementation files(new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-neoforge-${rootProject.mtrVersion}.jar"))
     common(project(':common')) { transitive = false }
     shadowCommon(project(path: ':common', configuration: 'transformProductionNeoForge')) { transitive = false }
     api("me.shedaniel.cloth:cloth-config-neoforge:${rootProject.cloth_config_version}") { transitive = false }

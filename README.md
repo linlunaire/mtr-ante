@@ -1,29 +1,31 @@
-# MTR-ANTE
+# YLM-ANTE
 
-Custom train and rail models, JavaScript-driven rendering, decorative objects and rail editing tools for Minecraft Transit Railway.
+Custom train and rail models, JavaScript-driven rendering, decorative objects and rail editing tools for **Yanling Metro (YLM)**.
 
-**Aphrodite's Nemo's Transit Expansion**, ported to **Minecraft 26.2** for **Fabric** and **NeoForge**. This community fork extends the [MTR 3 community port](https://github.com/linlunaire/Minecraft-Transit-Railway); it is not a standalone mod or an MTR 4 add-on.
+An independent fork of **Aphrodite's Nemo's Transit Expansion** for **Minecraft 26.2**, on **Fabric** and **NeoForge**. It extends [Yanling Metro](https://github.com/linlunaire/Minecraft-Transit-Railway); it is not a standalone mod or an MTR 4 add-on.
 
 ## Install
 
-This is an incomplete **Kotlin preview**, not a production-validated release. Use Java 25 and install ANTE together with the **26.2 MTR Kotlin preview** and [Kotlin LunaCore 0.2.1+](https://github.com/linlunaire/Kotlin-LunaCore), using the same loader for all JARs.
+This is an incomplete **Kotlin preview**, not a production-validated release. Use Java 25 and install YLM-ANTE together with the **26.2 YLM Kotlin preview** and [Kotlin LunaCore 0.2.1+](https://github.com/linlunaire/Kotlin-LunaCore), using the same loader for all JARs.
 
 | Loader | Required mods |
 | --- | --- |
-| Fabric | MTR, [Fabric API](https://modrinth.com/mod/fabric-api), [Architectury API](https://modrinth.com/mod/architectury-api) |
-| NeoForge | MTR, [Architectury API](https://modrinth.com/mod/architectury-api) |
+| Fabric | YLM, [Fabric API](https://modrinth.com/mod/fabric-api), [Architectury API](https://modrinth.com/mod/architectury-api) |
+| NeoForge | YLM, [Architectury API](https://modrinth.com/mod/architectury-api) |
 
-Place the JARs in `mods` on the server and clients. ANTE's scripting runtime and configuration library are bundled; no separate installation is needed. Players using custom models also need the corresponding resource packs.
+Place the JARs in `mods` on the server and clients. YLM-ANTE's scripting runtime and configuration library are bundled; no separate installation is needed. Players using custom models also need the corresponding resource packs.
 
-The Kotlin standard library is provided by Kotlin LunaCore through loader-managed nesting, not bundled again in ANTE. No separate FLK/KFF installation is needed for our mods; keep those dependencies if other mods require them.
+The Kotlin standard library is provided by Kotlin LunaCore through loader-managed nesting, not bundled again in YLM-ANTE. No separate FLK/KFF installation is needed for our mods; keep those dependencies if other mods require them.
 
-This preview requires **MTR 26.2-3.4.0-kotlin.3 or newer**; its Kotlin Mixin targets are not compatible with the Java maintenance build. **Kotlin LunaCore** supplies frame membership tracking and bounded background task scheduling; neither MTR nor ANTE bundles another copy. ANTE remains an MTR addon. Build matching sources in dependency order.
+This preview requires **YLM 26.2-3.4.0-kotlin.4 or newer**, including the train audio restart fix; its Kotlin Mixin targets are not compatible with the Java maintenance build. **Kotlin LunaCore** supplies frame membership tracking and bounded background task scheduling; neither YLM nor YLM-ANTE bundles another copy. Build matching sources in dependency order.
+
+The original `mtrsteamloco` mod ID, resource namespaces, script APIs and saved data keys are retained. Replace the previous ANTE JAR rather than installing both. YLM's dependency ID remains `mtr`; repository URLs and historical tags are unchanged.
 
 Back up worlds, configuration and resource packs before upgrading. Test your existing routes, custom trains and scripts on a copy of the world first.
 
 ## Build from source
 
-Install **JDK 25** and set `JAVA_HOME`. Clone [Kotlin LunaCore](https://github.com/linlunaire/Kotlin-LunaCore), the [MTR community port](https://github.com/linlunaire/Minecraft-Transit-Railway) and ANTE as siblings:
+Install **JDK 25** and set `JAVA_HOME`. Clone [Kotlin LunaCore](https://github.com/linlunaire/Kotlin-LunaCore), [Yanling Metro](https://github.com/linlunaire/Minecraft-Transit-Railway) and YLM-ANTE as siblings:
 
 ```text
 workspace/
@@ -32,7 +34,7 @@ workspace/
 └── mtr-ante/
 ```
 
-Build Kotlin LunaCore, then MTR, then ANTE. Run the same command from each repository root:
+Build Kotlin LunaCore, then YLM, then YLM-ANTE. Run the same command from each repository root:
 
 ```sh
 ./gradlew build
@@ -42,8 +44,8 @@ On Windows, use `./gradlew.bat` in place of `./gradlew`. The wrapper downloads G
 
 The build runs the compatibility checks and writes both loader JARs to `build/release/`:
 
-- `MTR-ANTE-fabric-1.2.0-26.2-kotlin.3.jar`
-- `MTR-ANTE-neoforge-1.2.0-26.2-kotlin.3.jar`
+- `YLM-ANTE-fabric-1.2.0-26.2-kotlin.4.jar`
+- `YLM-ANTE-neoforge-1.2.0-26.2-kotlin.4.jar`
 
 ## Development
 
@@ -51,7 +53,7 @@ Minecraft-independent Kotlin utilities live in the separate Kotlin LunaCore proj
 
 The [migration target](https://github.com/linlunaire/Minecraft-Transit-Railway/blob/master/docs/kotlin-migration.md) is all or the overwhelming majority of production code, not just a Kotlin utility layer. Frozen Java JVM contracts and behavioral checks guard Java/Mixin/script compatibility. See the [current checkpoint and compatibility choices](docs/kotlin-migration.md). The rewrite is in progress; language conversion alone is not evidence of higher FPS or TPS.
 
-Report fork-specific problems in [this repository's issue tracker](https://github.com/linlunaire/mtr-ante/issues), including the MTR and ANTE versions, loader, logs and a minimal reproduction or resource pack.
+Report fork-specific problems in [this repository's issue tracker](https://github.com/linlunaire/mtr-ante/issues), including the YLM and YLM-ANTE versions, loader, logs and a minimal reproduction or resource pack.
 
 ## Older versions
 

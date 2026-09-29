@@ -33,7 +33,7 @@ def variantCommonProject = project
         group = 'verification'
         dependsOn ':common:compileModelVariantPreparation', loaderProject.tasks.named('shadowJar')
         def anteArtifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
-        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${platform}-${rootProject.mtrVersion}.jar")
         classpath = loaderProject.files(anteArtifact, mtrArtifact, variantClasses) +
                 variantCommonProject.configurations.compileClasspath + loaderProject.configurations.kotlinArtifactRuntime
         mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelVariantPreparationCheck'

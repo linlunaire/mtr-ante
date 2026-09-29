@@ -90,10 +90,10 @@ public class ScriptedCustomTrains implements IResourcePackCreatorProperties, ICu
 			UtilitiesClient.getResources(manager, Identifier.parse(path)).forEach(resource -> {
                 try (final InputStream stream = Utilities.getInputStream(resource)) {
                     callback.accept(new JsonParser().parse(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject());
-                } catch (Exception e) { Main.LOGGER.error("On behalf of MTR: Parsing JSON " + path, e); }
+                } catch (Exception e) { Main.LOGGER.error("On behalf of YLM: Parsing JSON " + path, e); }
                 try {
                     Utilities.closeResource(resource);
-                } catch (IOException e) { Main.LOGGER.error("On behalf of MTR: Closing resource " + path, e); }
+                } catch (IOException e) { Main.LOGGER.error("On behalf of YLM: Closing resource " + path, e); }
             });
         } catch (Exception ignored) { }
     }

@@ -72,7 +72,7 @@ def commonProject = project
         group = 'verification'
         dependsOn ':common:compileCsvModelLoaderCompatibility', loaderProject.tasks.named('shadowJar')
         def artifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
-        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${platform}-${rootProject.mtrVersion}.jar")
         classpath = loaderProject.files(artifact, mtrArtifact, csvClasses) + commonProject.configurations.compileClasspath + loaderProject.configurations.kotlinArtifactRuntime
         mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.CsvModelLoaderCompatibilityCheck'
         workingDir = loaderProject.layout.buildDirectory.dir('csv-model-loader-compatibility-run').get().asFile

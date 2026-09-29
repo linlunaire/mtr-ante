@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 final class ReleaseArchive {
     static List<Path> archivePrevious(File directory, String loader, String currentName) {
         if (!(loader in ['fabric', 'neoforge'])) throw new IllegalArgumentException("Unknown loader: ${loader}")
-        def names = Pattern.compile('^MTR-ANTE-' + Pattern.quote(loader) + '-.+-26\\.2(?:[-+].+)?\\.jar$')
+        def names = Pattern.compile('^(?:MTR|YLM)-ANTE-' + Pattern.quote(loader) + '-.+-26\\.2(?:[-+].+)?\\.jar$')
         if (!names.matcher(currentName).matches()) throw new IllegalArgumentException("Not a ${loader} 26.2 release: ${currentName}")
         Path root = directory.toPath().toRealPath()
         Path current = root.resolve(currentName).normalize()

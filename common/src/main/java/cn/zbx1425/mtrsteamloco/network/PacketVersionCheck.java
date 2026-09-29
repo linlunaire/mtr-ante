@@ -63,10 +63,7 @@ public class PacketVersionCheck {
 
                     connection.getConnection().disconnect(
                         Text.literal(text.toString())
-                            .append(Text.literal(
-                                    Text.translatable("gui.mtr.mismatched_versions").getString()
-                                            .replace("Minecraft Transit Railway", "ANTE (Aphrodite's Nemo's Transit Expansion)")
-                            ))
+                            .append(Text.translatable("gui.mtrsteamloco.mismatched_versions"))
                     );
                 }
             }

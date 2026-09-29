@@ -25,7 +25,7 @@ def commonProject = project
         group = 'verification'
         dependsOn ':common:compileRidingStateWeaving', loaderProject.tasks.named('shadowJar')
         def artifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
-        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${platform}-${rootProject.mtrVersion}.jar")
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${platform}-${rootProject.mtrVersion}.jar")
         // Only the nullable Minecraft.player fixture comes first. Production target
         // and mixin bytecode must come from the finished artifacts, checked below.
         classpath = loaderProject.files(ridingStateClasses, artifact, mtrArtifact,

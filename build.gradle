@@ -17,6 +17,8 @@ new File(mtrRoot, 'gradle.properties').withInputStream { mtrProperties.load(it) 
 ext.anteVersion = providers.gradleProperty('mod_version').get()
 if (!(anteVersion ==~ /.+-26\.2(?:[-+].+)?/)) throw new GradleException('ANTE mod_version must target Minecraft 26.2.')
 ext.mtrVersion = "26.2-${mtrProperties.getProperty('mod_version')}"
+// Older pinned Java/Kotlin checkpoints still publish under the MTR name.
+ext.mtrArchiveBaseName = mtrProperties.getProperty('archives_base_name', 'MTR')
 ext.mtrCommonJar = new File(mtrRoot, "common/build/libs/common-${mtrVersion}-dev.jar")
 architectury { minecraft = minecraft_version }
 
@@ -38,7 +40,7 @@ allprojects {
 def verifyMtrArtifacts = tasks.register('verifyMtrArtifacts') {
     doLast {
         def artifacts = [rootProject.mtrCommonJar]
-        ['fabric', 'neoforge'].each { artifacts.add(new File(rootProject.mtrRoot, "build/release/MTR-${it}-${rootProject.mtrVersion}.jar")) }
+        ['fabric', 'neoforge'].each { artifacts.add(new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${it}-${rootProject.mtrVersion}.jar")) }
         artifacts.each {
             if (!it.isFile()) throw new GradleException("Build the sibling MTR 26.2 project first; missing ${it}")
         }
@@ -156,7 +158,7 @@ subprojects {
     shadowJar {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         configurations = [project.configurations.shadowCommon]
-        archiveBaseName = "MTR-ANTE-${project.name}"
+        archiveBaseName = "YLM-ANTE-${project.name}"
         archiveClassifier = ''
         mergeServiceFiles()
         filesMatching('META-INF/services/**') { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
@@ -193,7 +195,7 @@ subprojects {
                 if (runtime == null) throw new GradleException('Missing shared Kotlin runtime for artifact check')
                 args tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath, 'ante', runtime.absolutePath,
                         new File(rootProject.transitCoreRoot, "build/release/Kotlin-LunaCore-${project.name}-26.2-${rootProject.transit_core_version}.jar").absolutePath,
-                        new File(rootProject.mtrRoot, "build/release/MTR-${project.name}-${rootProject.mtrVersion}.jar").absolutePath
+                        new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${project.name}-${rootProject.mtrVersion}.jar").absolutePath
             }
         }
         tasks.register('checkPackagedKotlinMigration', JavaExec) {
@@ -209,7 +211,7 @@ subprojects {
             group = 'verification'
             description = 'Executes the actual Kotlin route mixin from the finished loader JAR against the matching MTR release.'
             dependsOn ':common:compileRouteWeaving', tasks.named('shadowJar')
-            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${project.name}-${rootProject.mtrVersion}.jar")
+            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${project.name}-${rootProject.mtrVersion}.jar")
             def anteArtifact = tasks.named('shadowJar').get().archiveFile
             classpath = files(project(':common').layout.buildDirectory.dir('classes/routeWeaving'),
                     rootProject.file('tests/route-weaving/resources'), rootProject.file('tests/camera-weaving/resources'),
@@ -222,7 +224,7 @@ subprojects {
             group = 'verification'
             description = 'Runs depot path-generation goldens through actual DepotMixin injection in the finished loader JARs.'
             dependsOn ':common:compileDepotPathCompatibility', tasks.named('shadowJar')
-            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${project.name}-${rootProject.mtrVersion}.jar")
+            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${project.name}-${rootProject.mtrVersion}.jar")
             def anteArtifact = tasks.named('shadowJar').get().archiveFile
             classpath = files(project(':common').layout.buildDirectory.dir('classes/depotPathCompatibility'),
                     rootProject.file('tests/depot-path/resources'), rootProject.file('tests/camera-weaving/resources'),
@@ -235,7 +237,7 @@ subprojects {
             group = 'verification'
             description = 'Checks extended Kotlin enum entries and rail/angle constructors from finished loader artifacts.'
             dependsOn ':common:compileRailConstructorWeaving', tasks.named('shadowJar')
-            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${project.name}-${rootProject.mtrVersion}.jar")
+            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${project.name}-${rootProject.mtrVersion}.jar")
             def anteArtifact = tasks.named('shadowJar').get().archiveFile
             classpath = files(project(':common').layout.buildDirectory.dir('classes/railConstructorWeaving'),
                     rootProject.file('tests/rail-weaving/resources'), rootProject.file('tests/camera-weaving/resources'),
@@ -246,7 +248,7 @@ subprojects {
         tasks.register('checkPackagedRailActionsWeaving', JavaExec) {
             group = 'verification'
             dependsOn ':common:compileRailActionsWeaving', tasks.named('shadowJar')
-            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/MTR-${project.name}-${rootProject.mtrVersion}.jar")
+            def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${project.name}-${rootProject.mtrVersion}.jar")
             def anteArtifact = tasks.named('shadowJar').get().archiveFile
             classpath = files(project(':common').layout.buildDirectory.dir('classes/railActionsWeaving'),
                     rootProject.file('tests/rail-actions-weaving/resources'), rootProject.file('tests/camera-weaving/resources'),

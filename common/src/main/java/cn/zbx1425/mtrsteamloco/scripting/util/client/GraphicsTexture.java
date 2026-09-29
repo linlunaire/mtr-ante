@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
 public class GraphicsTexture implements Closeable {
-    private static final Logger LOGGER = LoggerFactory.getLogger("MTR-ANTE");
+    private static final Logger LOGGER = LoggerFactory.getLogger("YLM-ANTE");
 
     public final Identifier identifier;
     public final BufferedImage bufferedImage;

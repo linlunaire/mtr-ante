@@ -8,19 +8,23 @@ Files.createDirectories(fixtureParent)
 def fixture = Files.createTempDirectory(fixtureParent, 'fixture-')
 def release = Files.createDirectory(fixture.resolve('release'))
 def oldName = 'MTR-ANTE-neoforge-1.1.1-26.2-beta.2.jar'
-def currentName = 'MTR-ANTE-neoforge-1.1.1-26.2.jar'
+def previousBrandedName = 'YLM-ANTE-neoforge-1.2.0-26.2-kotlin.2.jar'
+def currentName = 'YLM-ANTE-neoforge-1.2.0-26.2-kotlin.3.jar'
 def retained = [
         currentName,
         'MTR-ANTE-fabric-1.1.1-26.2-beta.2.jar',
+        'YLM-ANTE-fabric-1.2.0-26.2-kotlin.2.jar',
         'MTR-ANTE-neoforge-1.1.1-1.21.1-beta.2.jar',
         'MTR-ANTE-neoforge-1.1.1-26.20-beta.2.jar',
         'MTR-neoforge-26.2-3.3.2.jar',
+        'YLM-neoforge-26.2-3.4.0-kotlin.3.jar',
         'notes.txt'
 ]
-([oldName] + retained).each { Files.writeString(release.resolve(it), it) }
+([oldName, previousBrandedName] + retained).each { Files.writeString(release.resolve(it), it) }
 def archived = archiveClass.archivePrevious(release.toFile(), 'neoforge', currentName)
 assert !Files.exists(release.resolve(oldName)) : 'A successful release must remove the obsolete same-loader 26.2 JAR from the top level'
-assert archived.size() == 1
+assert !Files.exists(release.resolve(previousBrandedName))
+assert archived.size() == 2
 assert archived[0].startsWith(release.resolve('archive'))
 assert Files.readString(archived[0]) == oldName : 'The obsolete JAR must remain recoverable'
 retained.each { assert Files.readString(release.resolve(it)) == it : "Unexpectedly changed ${it}" }
