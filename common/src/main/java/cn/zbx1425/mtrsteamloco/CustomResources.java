@@ -43,7 +43,7 @@ public class CustomResources {
     }
 
     public static void init(ResourceManager resourceManager) {
-        Main.LOGGER.info("MTR-ANTE has started loading custom resources.");
+        Main.LOGGER.info("YLTE has started loading custom resources.");
 
         ClientConfig.clearCustomResponders();
 
@@ -59,7 +59,7 @@ public class CustomResources {
         RenderTrainDK3Mini.initGLModel(resourceManager);
         BlockEntityDirectNodeRenderer.initGLModel(resourceManager);
 
-        Main.LOGGER.info("MTR-ANTE: "
+        Main.LOGGER.info("YLTE: "
                 + "Uploaded Models: " + MainClient.modelManager.uploadedVertArrays.size()
                 + " (" + MainClient.modelManager.vaoCount + " VAOs, "
                 + MainClient.modelManager.vboCount + " VBOs)"

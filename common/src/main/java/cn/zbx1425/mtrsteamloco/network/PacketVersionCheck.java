@@ -65,7 +65,8 @@ public class PacketVersionCheck {
                         Text.literal(text.toString())
                             .append(Text.literal(
                                     Text.translatable("gui.mtr.mismatched_versions").getString()
-                                            .replace("Minecraft Transit Railway", "ANTE (Aphrodite's Nemo's Transit Expansion)")
+                                            .replace("Minecraft Transit Railway", "YLTE (Yanling Transit Expansion)")
+                                            .replace("YanlingMTR", "YLTE (Yanling Transit Expansion)")
                             ))
                     );
                 }

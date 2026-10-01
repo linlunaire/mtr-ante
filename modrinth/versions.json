@@ -1,0 +1,76 @@
+[
+  {
+    "file": "YLTE-fabric-1.1.1-1.21.1-beta.6.jar",
+    "loader_version": "1.1.1-1.21.1-beta.6",
+    "upload": {
+      "name": "YLTE 1.1.1-beta.6 — Minecraft 1.21.1 / Fabric",
+      "version_number": "1.1.1-beta.6+1.21.1.fabric",
+      "version_type": "beta",
+      "game_versions": [
+        "1.21.1"
+      ],
+      "loaders": [
+        "fabric"
+      ],
+      "dependencies": [
+        {
+          "project_id": "P7dR8mSH",
+          "dependency_type": "required"
+        },
+        {
+          "project_id": "lhGA9TYQ",
+          "dependency_type": "required"
+        }
+      ],
+      "changelog": "Renamed the independent 1.21.1 ANTE maintenance line to YLTE (Yanling Transit Expansion). Updated loader/UI/diagnostic branding and release filenames; preserved mod ID, script APIs, save keys and protocol 11. Retains beta.5 NeoForge RenderType access transformers and earlier rail/network fixes. The 26.2 ANTE continuation is integrated into YanlingMTR's source/build and remains a different build."
+    },
+    "manual_required_dependencies": [
+      {
+        "name": "YanlingMTR",
+        "game_version": "1.21.1",
+        "tested_version": "1.0.0",
+        "note": "Add the actual YanlingMTR project as required in the upload form; project ID is not configured here."
+      }
+    ],
+    "requirements": {
+      "java": 21,
+      "architectury": "13.0.11",
+      "mtr_loader_compatibility_floor": "1.21.1-3.3.4"
+    }
+  },
+  {
+    "file": "YLTE-neoforge-1.1.1-1.21.1-beta.6.jar",
+    "loader_version": "1.1.1-1.21.1-beta.6",
+    "upload": {
+      "name": "YLTE 1.1.1-beta.6 — Minecraft 1.21.1 / NeoForge",
+      "version_number": "1.1.1-beta.6+1.21.1.neoforge",
+      "version_type": "beta",
+      "game_versions": [
+        "1.21.1"
+      ],
+      "loaders": [
+        "neoforge"
+      ],
+      "dependencies": [
+        {
+          "project_id": "lhGA9TYQ",
+          "dependency_type": "required"
+        }
+      ],
+      "changelog": "Renamed the independent 1.21.1 ANTE maintenance line to YLTE (Yanling Transit Expansion). Updated loader/UI/diagnostic branding and release filenames; preserved mod ID, script APIs, save keys and protocol 11. Retains beta.5 NeoForge RenderType access transformers and earlier rail/network fixes. The 26.2 ANTE continuation is integrated into YanlingMTR's source/build and remains a different build."
+    },
+    "manual_required_dependencies": [
+      {
+        "name": "YanlingMTR",
+        "game_version": "1.21.1",
+        "tested_version": "1.0.0",
+        "note": "Add the actual YanlingMTR project as required in the upload form; project ID is not configured here."
+      }
+    ],
+    "requirements": {
+      "java": 21,
+      "architectury": "13.0.11",
+      "mtr_loader_compatibility_floor": "1.21.1-3.3.4"
+    }
+  }
+]

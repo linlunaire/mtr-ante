@@ -50,7 +50,7 @@ public class DynamicResource {
             if (DYNAMIC_PACK != null && MPRM.packs.contains(DYNAMIC_PACK)) {
                 MPRM.packs.remove(DYNAMIC_PACK);
             }
-            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"ANTE Virtual Dynamic Pack\"}}");
+            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"YLTE Virtual Dynamic Pack\"}}");
 
             MPRM.packs = new ArrayList<>(MPRM.packs);
             MPRM.packs.add(DYNAMIC_PACK);
@@ -83,7 +83,7 @@ public class DynamicResource {
             if (DYNAMIC_PACK != null && SRRM.packs.contains(DYNAMIC_PACK)) {
                 SRRM.packs.remove(DYNAMIC_PACK);
             }
-            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"ANTE Virtual Dynamic Pack\"}}");
+            DYNAMIC_PACK = new DynamicPack("ANTE Virtual Dynamic Pack", "{\"pack\":{\"pack_format\":8,\"description\":\"YLTE Virtual Dynamic Pack\"}}");
 
             SRRM.packs.add(DYNAMIC_PACK);
             ADDED_NAMESPACES = new HashSet<>();

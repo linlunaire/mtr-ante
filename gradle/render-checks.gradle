@@ -1,0 +1,40 @@
+def commonProject = project(':common')
+def platform = project(':neoforge')
+def renderClasses = commonProject.layout.buildDirectory.dir('classes/renderCompatibility')
+def accessTransformers = commonProject.configurations.detachedConfiguration(
+	commonProject.dependencies.create('net.neoforged:accesstransformers:10.0.1'))
+def compileRender = commonProject.tasks.register('compileRenderCompatibility', JavaCompile) {
+	source rootProject.fileTree('tests/render') { include '*.java' }
+	classpath = commonProject.configurations.compileClasspath + accessTransformers
+	destinationDirectory = renderClasses
+	options.compilerArgs = ['-proc:none']
+}
+def renderAgent = commonProject.tasks.register('renderAccessAgent', Jar) {
+	dependsOn compileRender
+	from renderClasses
+	archiveBaseName.set('render-access-check')
+	destinationDirectory.set(commonProject.layout.buildDirectory.dir('diagnostics'))
+	manifest { attributes 'Premain-Class': 'cn.zbx1425.mtrsteamloco.compatibility.RenderTypeAccessCheck' }
+}
+def renderCheck = platform.tasks.register('checkRenderTypeAccess', JavaExec) {
+	group = 'verification'
+	description = 'Executes released ANTE RenderType factories using the packaged NeoForge access transformers.'
+	dependsOn renderAgent
+	classpath = files(renderClasses) + platform.configurations.runtimeClasspath + accessTransformers
+	mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RenderTypeAccessCheck'
+	if (!rootProject.hasProperty('renderTestJar')) {
+		dependsOn platform.tasks.named('remapJar')
+	}
+	doFirst {
+		def testJar = rootProject.hasProperty('renderTestJar')
+			? rootProject.file(rootProject.property('renderTestJar'))
+			: platform.tasks.named('remapJar').get().archiveFile.get().asFile
+		def agent = "-javaagent:${renderAgent.get().archiveFile.get().asFile.absolutePath}=${testJar.absolutePath}"
+		args testJar.absolutePath
+		jvmArgs agent
+		def javaArgs = rootProject.layout.buildDirectory.file('diagnostics/render-access-java.args').get().asFile
+		javaArgs.parentFile.mkdirs()
+		javaArgs.text = "\"${agent.replace('\\', '/')}\"\n-cp\n\"${classpath.asPath.replace('\\', '/')}\"\n${mainClass.get()}\n\"${testJar.absolutePath.replace('\\', '/')}\"\n"
+	}
+}
+platform.tasks.named('check') { dependsOn renderCheck }

@@ -14,5 +14,5 @@ project(":neoforge").projectDir = file("forge")
 
 // include("rhino")
 
-rootProject.name = "MtrSteamLoco"
+rootProject.name = "YLTE"
 

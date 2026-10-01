@@ -39,7 +39,7 @@ public class CustomResourcesMixin {
         ContextCapability.checkContextVersion();
         String glVersionStr = "OpenGL " + ContextCapability.contextVersion / 10 + "."
                 + ContextCapability.contextVersion % 10;
-        Main.LOGGER.info("ANTE detected " + glVersionStr + (ContextCapability.isGL4ES ? " (GL4ES)." : "."));
+        Main.LOGGER.info("YLTE detected " + glVersionStr + (ContextCapability.isGL4ES ? " (GL4ES)." : "."));
 
         GlStateTracker.capture();
         MtrModelRegistryUtil.loadingErrorList.clear();
@@ -47,7 +47,7 @@ public class CustomResourcesMixin {
 
         CustomResources.reset(manager);
 
-        Main.LOGGER.info("MTR has started loading custom resources. (including MTR-ANTE train models and optimizations)");
+        Main.LOGGER.info("MTR has started loading custom resources. (including YLTE train models and optimizations)");
     }
 
     @Inject(at = @At("TAIL"), method = "reload(Lnet/minecraft/server/packs/resources/ResourceManager;)V")
@@ -58,7 +58,7 @@ public class CustomResourcesMixin {
         }
         GlStateTracker.restore();
 
-        Main.LOGGER.info("MTR-ANTE has finished loading custom resources.");
+        Main.LOGGER.info("YLTE has finished loading custom resources.");
     }
 
     @Inject(at = @At("HEAD"), method = "readResource", cancellable = true)

@@ -20,7 +20,7 @@ if (!mtrPropertiesFile.isFile()) {
 }
 mtrPropertiesFile.withInputStream { mtrProperties.load(it) }
 if (mtrProperties.getProperty("minecraft_version", "1.21.1") != minecraft_version) {
-	throw new GradleException("ANTE ${minecraft_version} cannot use MTR for ${mtrProperties.getProperty('minecraft_version')} at ${mtrProjectDir}.")
+	throw new GradleException("YLTE ${minecraft_version} cannot use MTR for ${mtrProperties.getProperty('minecraft_version')} at ${mtrProjectDir}.")
 }
 def mtrVersion = "${minecraft_version}-${mtrProperties.getProperty("mod_version")}"
 def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
@@ -59,6 +59,10 @@ allprojects {
 subprojects {
 	apply plugin: "dev.architectury.loom"
 	apply plugin: "com.gradleup.shadow"
+
+	tasks.withType(Jar).configureEach {
+		from(rootProject.file('LICENSE')) { rename { 'LICENSE-YLTE' } }
+	}
 
 	loom {
 		silentMojangMappingsLicense()
@@ -128,3 +132,5 @@ subprojects {
 
 apply from: 'gradle/compatibility-checks.gradle'
 apply from: 'gradle/network-checks.gradle'
+apply from: 'gradle/render-checks.gradle'
+apply from: 'gradle/release-checks.gradle'

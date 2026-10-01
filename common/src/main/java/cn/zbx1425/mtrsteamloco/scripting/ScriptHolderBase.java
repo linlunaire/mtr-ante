@@ -409,7 +409,7 @@ public abstract class ScriptHolderBase {
                 failException = null;
                 failTime = 0;
             } catch (Exception ex) {
-                Main.LOGGER.error("Error in ANTE Resource Pack JavaScript", ex);
+                Main.LOGGER.error("Error in YLTE Resource Pack JavaScript", ex);
                 failTime = System.currentTimeMillis();
                 failException = ex;
             }

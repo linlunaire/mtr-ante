@@ -1,0 +1,28 @@
+{
+  "project": {
+    "slug": "ylte",
+    "title": "YLTE — Yanling Transit Expansion",
+    "description": "The maintained Minecraft 1.21.1 ANTE fork: custom train models, JavaScript rendering, decorative objects and rail tools for YanlingMTR / MTR.",
+    "project_type": "mod",
+    "license_id": "MIT",
+    "client_side": "required",
+    "server_side": "required",
+    "source_url": "https://github.com/linlunaire/mtr-ante",
+    "issues_url": "https://github.com/linlunaire/mtr-ante/issues",
+    "body": "# YLTE — Yanling Transit Expansion\n\nYLTE is the renamed, independently maintained **Minecraft 1.21.1** continuation of Aphrodite's Nemo's Transit Expansion (ANTE). It adds custom train and rail models, JavaScript-driven rendering, decorative objects and rail editing tools to YanlingMTR / MTR.\n\n## Install\n\nUse **Java 21** and choose **Fabric or NeoForge**, with all dependencies for Minecraft 1.21.1. Install **YanlingMTR 1.0.0**, **Architectury API**, and, on Fabric, **Fabric API**. YanlingMTR and the matching YLTE JAR must be installed on the server and clients. This beta was built and checked against the YanlingMTR 1.0.0 maintenance release. The loader also accepts MTR compatibility versions starting at `1.21.1-3.3.4`; that minimum is not a guarantee for every third-party MTR fork.\n\nReplace the previous ANTE JAR with YLTE. Do not install both: the `mtrsteamloco` mod ID, resource namespaces, Java/script interfaces, `ANTE_FLAG`, saved-data keys and network protocol are preserved. Existing custom models still need their resource packs. Back up your world and test your scripts and trains on a copy first.\n\n## Relationship to the new ANTE\n\nThe **26.2 ANTE** continuation has been merged into **YanlingMTR's source repository and unified build**. Its current core and optional ANTE module are still separate JARs. YLTE is the old **1.21.1 standalone line**, not the 26.2 module; the two builds are not interchangeable.\n\n## This release\n\n`1.1.1-1.21.1-beta.6` introduces the YLTE name in loader metadata, interfaces, diagnostics and release filenames while retaining the prior addon version series. It includes the existing rail serialization, dedicated-server network registration and NeoForge render-access fixes. Real Mixin/codec tests, packaged RenderType access checks and release identity checks run during the build; these do not replace gameplay, multiplayer or shader-pack testing.\n\n## Credits and license\n\nBased on [Aphrodite's Nemo's Transit Expansion](https://github.com/aphrodite281/mtr-ante) by Aphrodite281 and [Nemo's Transit Expansion](https://github.com/zbx1425/mtr-nte) by Zbx1425 and contributors. YLTE is an independent community continuation maintained by linlunaire, not an official upstream release. Original attribution and the MIT license are retained. Bundled Noto fonts retain their Google/Adobe attribution and SIL Open Font License 1.1. Repository URLs and historical tags are unchanged."
+  },
+  "manual_publication": {
+    "state": "prepared_not_uploaded",
+    "layout": "Independent YLTE project with separate Fabric and NeoForge version entries; one primary JAR per version.",
+    "derivative_content": {
+      "source": "Aphrodite's Nemo's Transit Expansion / Nemo's Transit Expansion",
+      "urls": [
+        "https://github.com/aphrodite281/mtr-ante",
+        "https://github.com/zbx1425/mtr-nte"
+      ]
+    },
+    "required_dependency": "Select the actual YanlingMTR project as required after creating it; do not invent a project ID. The tested maintenance release is YanlingMTR 1.0.0 for Minecraft 1.21.1.",
+    "ai_content_disclosure": "Complete the applicable disclosure for AI-assisted maintenance code and draft release text.",
+    "icon": "Retain applicable rights and attribution when selecting an existing project image; no new image was generated."
+  }
+}

@@ -2,14 +2,15 @@
 	"schemaVersion": 1,
 	"id": "mtrsteamloco",
 	"version": "${version}",
-	"name": "Aphrodite's Nemo's Transit Expansion",
-	"description": "Various experimental add-on functionalities for the Minecraft Transit Railway mod, made by Zbx1425 and Aphrodite281",
+	"name": "YLTE — Yanling Transit Expansion",
+	"description": "Yanling Transit Expansion: the maintained Minecraft 1.21.1 ANTE fork for YanlingMTR / MTR, based on work by Zbx1425 and Aphrodite281.",
 	"authors": [
 		"Zbx1425", "Aphrodite281"
 	],
 	"contact": {
-		"homepage": "https://aphrodite281.github.io/mtr-ante/",
-		"sources": "https://github.com/zbx1425/mtr-steamloco"
+		"homepage": "https://github.com/linlunaire/mtr-ante",
+		"sources": "https://github.com/linlunaire/mtr-ante",
+		"issues": "https://github.com/linlunaire/mtr-ante/issues"
 	},
 	"license": "MIT",
 	"icon": "icon.png",

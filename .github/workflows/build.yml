@@ -15,15 +15,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout ANTE
+      - name: Checkout YLTE
         uses: actions/checkout@v5
         with:
           path: mtr-ante
-      - name: Checkout pinned MTR 3.3.4
+      - name: Checkout pinned YanlingMTR 1.0.0
         uses: actions/checkout@v5
         with:
           repository: linlunaire/Minecraft-Transit-Railway
-          ref: 99fa5a35fef8e9aa2b7659cdca9cfc70841d037c
+          ref: ed05fd46864d5c2ac399b22cbb1dd5e92b833f82
           path: Minecraft-Transit-Railway-1.21.1
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -35,12 +35,12 @@ jobs:
       - name: Build MTR dependency
         working-directory: Minecraft-Transit-Railway-1.21.1
         run: chmod +x gradlew && ./gradlew build --stacktrace
-      - name: Build ANTE Fabric and NeoForge
+      - name: Build YLTE Fabric and NeoForge
         working-directory: mtr-ante
         run: chmod +x gradlew && ./gradlew build --stacktrace
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ANTE-1.21.1
-          path: mtr-ante/build/release/MTR-ANTE-*-1.21.1-*.jar
+          name: YLTE-1.21.1
+          path: mtr-ante/build/release/YLTE-*-1.21.1-*.jar
           if-no-files-found: error

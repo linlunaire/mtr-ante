@@ -36,7 +36,7 @@ public class Main {
 
 	public static final String MOD_ID = "mtrsteamloco";
 
-	public static final Logger LOGGER = LoggerFactory.getLogger("MTR-ANTE");
+	public static final Logger LOGGER = LoggerFactory.getLogger("YLTE");
 	public static final JsonParser JSON_PARSER = new JsonParser();
 
 	public static final boolean enableRegistry;
@@ -96,7 +96,7 @@ public class Main {
 	public static void init(RegistriesWrapper registries) {
 		mtr.mappings.NetworkUtilities.registerServerS2CTypes(dev.architectury.platform.Platform.getEnvironment(),
 				PacketVersionCheck.PACKET_VERSION_CHECK, PacketScreen.PACKET_SHOW_SCREEN, PacketRoutePathCreator.ROUTE_S2C);
-		LOGGER.info("MTR-ANTE " + BuildConfig.MOD_VERSION + " built at "
+		LOGGER.info("YLTE " + BuildConfig.MOD_VERSION + " built at "
 				+ DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.systemDefault()).format(BuildConfig.BUILD_TIME));
 		if (enableRegistry) {
 			REGISTERIES = registries;
