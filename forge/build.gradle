@@ -1,0 +1,115 @@
+plugins {
+	id "com.gradleup.shadow"
+}
+
+loom {
+	accessWidenerPath = project(":common").loom.accessWidenerPath
+}
+
+architectury {
+	platformSetupLoomIde()
+	neoForge()
+}
+
+configurations {
+	common
+	shadowCommon
+	clothConfigJar
+	compileClasspath.extendsFrom common
+	runtimeClasspath.extendsFrom common
+	developmentNeoForge.extendsFrom common
+}
+
+dependencies {
+	neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
+	modApi "${rootProject.architectury_id}:architectury-neoforge:${rootProject.architectury_version}"
+	modImplementation files(rootProject.ext.mtrNeoForgeDevJarFile)
+
+	common(project(path: ":common", configuration: "namedElements")) { transitive false }
+	shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }
+
+	// forgeRuntimeLibrary project(":rhino")
+
+	modApi("me.shedaniel.cloth:cloth-config-neoforge:${rootProject.cloth_config_version}") { transitive false }
+	clothConfigJar("me.shedaniel.cloth:cloth-config-neoforge:${rootProject.cloth_config_version}") { transitive = false }
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand (
+			"version": project.version,
+			"minecraft_version_range": rootProject.supports_minecraft_version_range,
+			"mtr_min_version": rootProject.mtr_min_version
+		)
+	}
+}
+
+shadowJar {
+	mergeServiceFiles()
+
+	exclude "fabric.mod.json"
+	exclude "*.bmp"
+	exclude '**/*.kotlin_metadata'
+    exclude '**/*.kotlin_module'
+    exclude '**/*.kotlin_builtins'
+
+	if (rootProject.ext.assetExcludeFont) {
+		exclude "assets/mtr/font/**"
+	}
+
+	relocate 'de.javagl', 'vendor.cn.zbx1425.sowcerext.de.javagl'
+	relocate 'com.github.stuxuhai', 'vendor.cn.zbx1425.mtrsteamloco.com.github.stuxuhai'
+
+	from project.configurations.clothConfigJar.files.collect {
+		return zipTree(it).matching { filter ->
+			filter.include { e ->
+				matchInnerClass e.path as String,
+						"me/shedaniel/clothconfig2",
+						"me/shedaniel/math",
+						"assets/cloth-config2"
+			}
+		}
+	}
+
+	relocate "me.shedaniel", "cn.zbx1425.mtrsteamloco.vendor.me.shedaniel"
+
+	configurations = [project.configurations.shadowCommon]
+	archiveClassifier.set("dev-shadow")
+}
+
+static boolean matchInnerClass(String path, String... names) {
+	names.any { name -> path.startsWith(name) }
+}
+
+remapJar {
+	input.set shadowJar.archiveFile
+	dependsOn shadowJar
+	archiveBaseName.set("MTR-ANTE-neoforge")
+	archiveClassifier.set("")
+}
+
+components.java {
+	withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+		skip()
+	}
+}
+
+tasks.register("moveForgeBuilds") {
+	doLast {
+		delete fileTree("../build").matching {
+			include "**/MTR-ANTE-neoforge*"
+		}
+		copy {
+			from "build/libs"
+			into "../build"
+			include "MTR-ANTE-neoforge-${project.version}.jar"
+		}
+	}
+}
+
+
+tasks.named("build") {
+	finalizedBy(tasks.named("moveForgeBuilds"))
+}
