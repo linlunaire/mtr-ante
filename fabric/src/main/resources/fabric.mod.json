@@ -1,0 +1,39 @@
+{
+	"schemaVersion": 1,
+	"id": "mtrsteamloco",
+	"version": "${version}",
+	"name": "YLTE — Yanling Transit Expansion",
+	"description": "Yanling Transit Expansion: the maintained Minecraft 1.21.1 ANTE fork for YanlingMTR / MTR, based on work by Zbx1425 and Aphrodite281.",
+	"authors": [
+		"Zbx1425", "Aphrodite281"
+	],
+	"contact": {
+		"homepage": "https://github.com/linlunaire/mtr-ante",
+		"sources": "https://github.com/linlunaire/mtr-ante",
+		"issues": "https://github.com/linlunaire/mtr-ante/issues"
+	},
+	"license": "MIT",
+	"icon": "icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"cn.zbx1425.mtrsteamloco.fabric.MainFabric"
+		],
+		"client": [
+			"cn.zbx1425.mtrsteamloco.fabric.MainFabricClient"
+		],
+		"modmenu": [
+			"cn.zbx1425.mtrsteamloco.fabric.ModMenuApiImpl"
+		]
+	},
+	"mixins": [
+		"mtrsteamloco.mixins.json",
+		"mtrsteamloco_fabric.mixins.json"
+	],
+	"depends": {
+		"fabric": "*",
+		"minecraft": "${minecraft_version}",
+		"mtr": ">=${mtr_min_version}"
+	},
+	"accessWidener" : "mtrsteamloco_filtered.accesswidener"
+}

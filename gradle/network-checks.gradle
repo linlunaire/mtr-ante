@@ -1,0 +1,18 @@
+def commonProject = project(':common')
+def networkClasses = commonProject.layout.buildDirectory.dir('classes/networkCompatibility')
+def networkGroovy = commonProject.configurations.detachedConfiguration(commonProject.dependencies.localGroovy())
+def compileNetwork = commonProject.tasks.register('compileNetworkCompatibility', JavaCompile) {
+	source rootProject.fileTree('tests/network') { include '*.java' }
+	classpath = commonProject.configurations.compileClasspath + networkGroovy
+	destinationDirectory = networkClasses
+	options.compilerArgs = ['-proc:none']
+}
+commonProject.tasks.register('checkNetworkCompatibility', JavaExec) {
+	group = 'verification'
+	description = 'Checks ANTE dedicated-server packet registration and actual Architectury codec round trips.'
+	dependsOn compileNetwork
+	classpath = files(networkClasses) + commonProject.configurations.compileClasspath + networkGroovy
+	mainClass = 'mtr.mappings.NetworkCompatibilityCheck'
+	args rootProject.projectDir.absolutePath
+}
+commonProject.tasks.named('check') { dependsOn 'checkNetworkCompatibility' }

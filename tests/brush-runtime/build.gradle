@@ -1,0 +1,62 @@
+plugins {
+    id 'architectury-plugin' version '3.4.164'
+    id 'dev.architectury.loom' version '1.11.458'
+}
+version = '1'
+loom { silentMojangMappingsLicense() }
+architectury {
+    minecraft = '1.21.1'
+    platformSetupLoomIde()
+    neoForge()
+}
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.architectury.dev/' }
+    maven { url = 'https://maven.parchmentmc.org/' }
+    maven { url = 'https://neoforged.forgecdn.net/releases' }
+    maven { url = 'https://maven.neoforged.net/releases' }
+}
+def properties = new Properties()
+file('../../gradle.properties').withInputStream { properties.load(it) }
+def candidate = file(findProperty('probeJar') ?: "../../build/release/YLTE-neoforge-${properties.mod_version}.jar")
+def mtr = file(findProperty('mtrTestJar') ?: '../../../Minecraft-Transit-Railway-1.21.1/build/release/YanlingMTR-neoforge-1.21.1-1.0.3.jar')
+def probeName = (findProperty('probeName') ?: 'candidate').toString()
+if (!(probeName ==~ /[a-zA-Z0-9-]+/)) throw new GradleException('probeName must be a short alphanumeric name')
+def diagnostics = file('../../build/diagnostics/brush-runtime')
+def clientDir = new File(diagnostics, "client-${probeName}")
+def evidenceDir = new File(diagnostics, "evidence-${probeName}")
+if (!candidate.isFile() || !mtr.isFile()) throw new GradleException('Build the release JARs first, or specify probeJar and mtrTestJar.')
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.1'
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment 'org.parchmentmc.data:parchment-1.21.1:2024.11.17@zip'
+    }
+    neoForge "net.neoforged:neoforge:${findProperty('probeNeoForgeVersion') ?: '21.1.248'}"
+    modImplementation 'dev.architectury:architectury-neoforge:13.0.11'
+    modImplementation files(mtr, candidate)
+}
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-proc:none']
+}
+loom.runs {
+    client {
+        client()
+        runDir = projectDir.toPath().relativize(clientDir.toPath()).toString()
+        vmArg "-Dylte.brush.evidence=${evidenceDir.absolutePath}"
+        vmArg "-Dylte.brush.skipRenderCheck=${findProperty('probeMode') == 'brush'}"
+        vmArg "-Dylte.brush.checkCtsPacks=${findProperty('probeCtsPacks') in ['true', 'track']}"
+        vmArg "-Dylte.brush.expectedCtsTrains=${findProperty('probeCtsPacks') == 'track' ? 0 : 57}"
+    }
+}
+tasks.named('runClient') {
+    doLast {
+        def log = new File(clientDir, 'logs/latest.log').getText('UTF-8')
+        if (!log.contains('BRUSH_RUNTIME_PASS:') || log.contains('BRUSH_RUNTIME_FAIL') || log.contains('Error executing task on Server'))
+            throw new GradleException('Native brush regression did not pass; see the client log and evidence PNG.')
+        if (findProperty('probeCtsPacks') in ['true', 'track'] && !log.contains('CTS_RESOURCE_RUNTIME_PASS:'))
+            throw new GradleException('CTS resource registry/model checks did not pass; see the client log.')
+    }
+}

@@ -1,0 +1,28 @@
+def output = rootProject.layout.buildDirectory.dir('classes/stringMapSerializationCheck')
+def compile = tasks.register('compileStringMapSerializationCheck', JavaCompile) {
+    source rootProject.file('tests/serialization/StringMapSerializationCheck.java')
+    classpath = files()
+    destinationDirectory = output
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs = ['-proc:none']
+}
+['fabric', 'neoforge'].each { loader ->
+    def target = project(":${loader}")
+    def check = target.tasks.register('checkStringMapSerialization', JavaExec) {
+        group = 'verification'
+        description = 'Checks string-map binary and legacy text compatibility using an isolated final JAR.'
+        dependsOn compile
+        if (!rootProject.hasProperty('serializationTestJar')) dependsOn target.tasks.named('remapJar')
+        classpath = files(output)
+        mainClass = 'StringMapSerializationCheck'
+        doFirst {
+            setArgs([(rootProject.hasProperty('serializationTestJar')
+                    ? rootProject.file(rootProject.property('serializationTestJar'))
+                    : target.tasks.named('remapJar').get().archiveFile.get().asFile).absolutePath])
+        }
+    }
+    target.tasks.named('check') { dependsOn check }
+}

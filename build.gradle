@@ -1,0 +1,167 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+import java.time.Instant
+
+plugins {
+	id "architectury-plugin" version "3.4.164"
+	id "dev.architectury.loom" version "1.11.458" apply false
+	id "com.gradleup.shadow" version "8.3.0" apply false
+	id "base"
+}
+
+apply from: "build_dep_ver.gradle"
+
+rootProject.ext.assetExcludeFont = rootProject.hasProperty("assetExcludeFont")
+
+def mtrProjectDir = file(findProperty("mtrProjectDir") ?: "../Minecraft-Transit-Railway-1.21.1")
+def mtrProperties = new Properties()
+def mtrPropertiesFile = new File(mtrProjectDir, "gradle.properties")
+if (!mtrPropertiesFile.isFile()) {
+	throw new GradleException("MTR source not found at ${mtrProjectDir}. Set -PmtrProjectDir to the Minecraft 1.21.1 checkout.")
+}
+mtrPropertiesFile.withInputStream { mtrProperties.load(it) }
+if (mtrProperties.getProperty("minecraft_version", "1.21.1") != minecraft_version) {
+	throw new GradleException("YLTE ${minecraft_version} cannot use MTR for ${mtrProperties.getProperty('minecraft_version')} at ${mtrProjectDir}.")
+}
+def mtrVersion = "${minecraft_version}-${mtrProperties.getProperty("mod_version")}"
+def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
+def mtrFabricDevJar = file("${mtrProjectDir}/fabric/build/devlibs/fabric-${mtrVersion}-dev.jar")
+def mtrNeoForgeDevJar = file("${mtrProjectDir}/forge/build/devlibs/neoforge-${mtrVersion}-dev.jar")
+for (def jar : [mtrCommonDevJar, mtrFabricDevJar, mtrNeoForgeDevJar]) {
+	if (!jar.isFile()) {
+		throw new GradleException("Missing MTR development JAR: ${jar}. Build the Minecraft 1.21.1 MTR checkout first (gradlew build).")
+	}
+}
+
+ext {
+	graaljsVersion = "24.2.2"
+	mtrCommonDevJarFile = mtrCommonDevJar
+	mtrFabricDevJarFile = mtrFabricDevJar
+	mtrNeoForgeDevJarFile = mtrNeoForgeDevJar
+}
+
+architectury {
+	minecraft = minecraft_version
+}
+
+allprojects {
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+	repositories {
+		mavenCentral()
+		maven { url = "https://maven.terraformersmc.com/" }
+		maven { url = "https://maven.parchmentmc.org/" }
+		maven { url = "https://maven.shedaniel.me/" }
+		maven { url = "https://neoforged.forgecdn.net/releases" }
+		maven { url = "https://maven.neoforged.net/releases" }
+	}
+}
+
+subprojects {
+	apply plugin: "dev.architectury.loom"
+	apply plugin: "com.gradleup.shadow"
+
+	tasks.withType(Jar).configureEach {
+		from(rootProject.file('LICENSE')) { rename { 'LICENSE-YLTE' } }
+	}
+
+	loom {
+		silentMojangMappingsLicense()
+		mixin {
+			useLegacyMixinAp = true
+		}
+	}
+
+	configurations {
+		shadowCommon
+		scriptRuntimeLibraries
+		compileOnly.extendsFrom scriptRuntimeLibraries
+		runtimeOnly.extendsFrom scriptRuntimeLibraries
+		if (project.name != "common") shadowCommon.extendsFrom scriptRuntimeLibraries
+	}
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${minecraft_version}"
+		mappings loom.layered() {
+			officialMojangMappings()
+			parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_version}@zip")
+		}
+		compileOnly files(rootProject.ext.mtrCommonDevJarFile)
+		implementation "org.joml:joml:1.10.8"
+		implementation "org.msgpack:msgpack-core:${rootProject.messagepack_version}"
+		implementation "com.github.houbb:pinyin:0.4.0"
+		if (project.name != "common") shadowCommon "com.github.houbb:pinyin:0.4.0"
+		implementation "com.github.houbb:opencc4j:1.8.1"
+		if (project.name != "common") shadowCommon "com.github.houbb:opencc4j:1.8.1"
+		compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+		annotationProcessor "systems.manifold:manifold-preprocessor:+"
+		scriptRuntimeLibraries "org.graalvm.polyglot:polyglot:${graaljsVersion}"
+		// Use concrete JARs: the aggregate org.graalvm.polyglot:js artifact is a POM.
+		scriptRuntimeLibraries "org.graalvm.js:js-language:${graaljsVersion}"
+		scriptRuntimeLibraries "org.graalvm.truffle:truffle-runtime:${graaljsVersion}"
+	}
+
+	tasks.named("shadowJar") {
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+		mergeServiceFiles()
+		filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+		manifest.attributes("Multi-Release": "true")
+		exclude "module-info.class", "META-INF/versions/**/module-info.class"
+		exclude "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA"
+		// Do not duplicate SDK packages exported by GraalVM's system modules.
+		// Keep Polyglot and Truffle names intact for script APIs and runtime mixins.
+		["org.graalvm.word", "org.graalvm.collections", "org.graalvm.nativeimage",
+		 "com.oracle.svm.core.annotate", "com.oracle.truffle.compiler"].each { sdkPackage ->
+			relocate(sdkPackage, "cn.zbx1425.mtrsteamloco.vendor.graal.${sdkPackage}") { relocator ->
+				// Shadow 8.3 also rewrites matching string constants. Public system
+				// property keys are not class names and must keep their original names.
+				relocator.exclude "org.graalvm.nativeimage.imagecode"
+				relocator.exclude "org.graalvm.nativeimage.kind"
+			}
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		options.encoding = "UTF-8"
+		options.release.set(21)
+		options.compilerArgs += ["-Xplugin:Manifold", "-AMC_VERSION=${minecraft_version_int}"]
+	}
+}
+
+// Match MTR's initialization order: Loom is applied to every platform first,
+// then Architectury configures Fabric/NeoForge-specific dependency buckets.
+allprojects {
+	apply plugin: "architectury-plugin"
+}
+
+tasks.register("setupFiles") {
+	inputs.file("common/src/main/BuildConfigTemplate.java")
+	inputs.properties(version: rootProject.mod_version, protocol: rootProject.mod_protocol_version)
+	outputs.file("common/src/main/java/cn/zbx1425/mtrsteamloco/BuildConfig.java")
+	doLast {
+		copy {
+			from "common/src/main/BuildConfigTemplate.java"
+			into "common/src/main/java/cn/zbx1425/mtrsteamloco"
+			filter(ReplaceTokens, tokens: [
+				"version": rootProject.mod_version,
+				"protocol_version": rootProject.mod_protocol_version,
+				"build_time": Instant.now().epochSecond.toString()
+			])
+			rename "(.+)Template.java", '$1.java'
+		}
+	}
+}
+
+subprojects {
+	tasks.configureEach {
+		dependsOn rootProject.tasks.named("setupFiles")
+	}
+}
+
+apply from: 'gradle/compatibility-checks.gradle'
+apply from: 'gradle/network-checks.gradle'
+apply from: 'gradle/render-checks.gradle'
+apply from: 'gradle/brush-checks.gradle'
+apply from: 'gradle/scripting-checks.gradle'
+apply from: 'gradle/pinyin-checks.gradle'
+apply from: 'gradle/serialization-checks.gradle'
+apply from: 'gradle/release-checks.gradle'

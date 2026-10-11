@@ -1,0 +1,58 @@
+def commonProject = project(':common')
+def platform = project(':neoforge')
+def output = commonProject.layout.buildDirectory.dir('classes/scriptCompatibility')
+def compile = commonProject.tasks.register('compileScriptCompatibility', JavaCompile) {
+    dependsOn commonProject.tasks.named('classes')
+    source rootProject.file('tests/scripting/ScriptLoaderStartupCheck.java')
+    classpath = commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+    destinationDirectory = output
+    options.compilerArgs = ['-proc:none']
+}
+def startup = platform.tasks.register('checkScriptLoaderStartup', JavaExec) {
+    group = 'verification'
+    description = 'Starts the released script loader with no external Graal dependencies.'
+    dependsOn compile
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ScriptLoaderStartupCheck'
+    if (!rootProject.hasProperty('scriptTestJar')) dependsOn platform.tasks.named('remapJar')
+    workingDir rootProject.layout.buildDirectory.dir('diagnostics/script-startup').get().asFile
+    doFirst {
+        workingDir.mkdirs()
+        def artifact = rootProject.hasProperty('scriptTestJar')
+                ? rootProject.file(rootProject.property('scriptTestJar'))
+                : platform.tasks.named('remapJar').get().archiveFile.get().asFile
+        // MC types and Gson occur in load's signature. Never let Gradle's Graal
+        // compile dependencies conceal missing libraries in the release artifact.
+        def signatureLibraries = commonProject.configurations.compileClasspath.files.findAll {
+            it.name.startsWith('minecraft-merged-') || it.name == 'gson-2.10.1.jar'
+        }
+        classpath = files(artifact, output, signatureLibraries)
+        args artifact.absolutePath
+    }
+}
+platform.tasks.named('check') { dependsOn startup }
+
+def runtimeOutput = rootProject.layout.buildDirectory.dir('classes/scriptArtifactCheck')
+def compileRuntime = tasks.register('compileScriptRuntimeArtifactCheck', JavaCompile) {
+    source rootProject.file('tests/scripting/ScriptRuntimeArtifactCheck.java')
+    classpath = files()
+    destinationDirectory = runtimeOutput
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs = ['-proc:none']
+}
+['fabric', 'neoforge'].each { loader ->
+    def target = project(":${loader}")
+    def runtime = target.tasks.register('checkScriptRuntimeArtifact', JavaExec) {
+        group = 'verification'
+        dependsOn compileRuntime, target.tasks.named('remapJar')
+        classpath = files(runtimeOutput)
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ScriptRuntimeArtifactCheck'
+        doFirst {
+            args target.tasks.named('remapJar').get().archiveFile.get().asFile.absolutePath
+            if (rootProject.hasProperty('scriptPacks')) args rootProject.property('scriptPacks').split(';')
+        }
+    }
+    target.tasks.named('check') { dependsOn runtime }
+}

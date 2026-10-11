@@ -1,0 +1,44 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/linlunaire/mtr-ante/issues"
+
+[[mods]]
+modId = "mtrsteamloco"
+version = "${version}"
+displayName = "YLTE — Yanling Transit Expansion"
+displayURL = "https://github.com/linlunaire/mtr-ante"
+authors = "Zbx1425, Aphrodite281"
+description = "Yanling Transit Expansion: the maintained Minecraft 1.21.1 ANTE fork for YanlingMTR / MTR, based on work by Zbx1425 and Aphrodite281."
+logoFile = "icon.png"
+
+[[mixins]]
+config = "mtrsteamloco.mixins.json"
+
+[[dependencies.mtrsteamloco]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mtrsteamloco]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mtrsteamloco]]
+modId = "architectury"
+mandatory = true
+versionRange = "[13,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.mtrsteamloco]]
+modId = "mtr"
+mandatory = true
+versionRange = "[${mtr_min_version},)"
+ordering = "AFTER"
+side = "BOTH"

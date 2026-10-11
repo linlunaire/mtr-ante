@@ -1,0 +1,21 @@
+Bundled GraalJS / Polyglot / Truffle runtime 24.2.2
+
+GraalJS: Copyright (c) 2019, Oracle and/or its affiliates.
+Polyglot Context: Copyright (c) 2017, 2024, Oracle and/or its affiliates.
+Truffle HotSpot runtime: Copyright (c) 2015, 2025, Oracle and/or its affiliates.
+All rights reserved. Licensed under the Universal Permissive License (UPL),
+Version 1.0: https://opensource.org/license/upl
+
+Upstream sources and notices for this exact release:
+https://github.com/oracle/graaljs/tree/graal-24.2.2
+https://github.com/oracle/graal/tree/graal-24.2.2/sdk
+https://github.com/oracle/graal/tree/graal-24.2.2/truffle
+
+GraalJS upstream third-party notices accompany this file in
+GraalJS-24.2.2-third-party.txt. That upstream inventory also describes optional
+components, including Node.js, that this mod does not bundle.
+
+YLTE repackages these Maven libraries into its loader JAR, merges service
+registrations, removes dependency module descriptors and signatures, and
+relocates SDK packages to avoid collisions with GraalVM system modules.
+The upstream source files and their copyright headers are not modified.

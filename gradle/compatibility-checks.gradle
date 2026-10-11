@@ -1,0 +1,20 @@
+def commonProject = project(':common')
+def output = commonProject.layout.buildDirectory.dir('classes/railCompatibility')
+def compile = commonProject.tasks.register('compileRailCompatibility', JavaCompile) {
+	dependsOn commonProject.tasks.named('classes')
+	source rootProject.fileTree('tests') { include '*.java' }
+	classpath = commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	destinationDirectory = output
+	options.compilerArgs = ['-proc:none']
+}
+['fabric', 'neoforge'].each { loader ->
+	def platform = project(":${loader}")
+	def check = platform.tasks.register('checkRailCompatibility', JavaExec) {
+		group = 'verification'
+		dependsOn compile
+		classpath = files(output, rootProject.file('tests/resources'), commonProject.sourceSets.main.output.classesDirs) + platform.configurations.compileClasspath
+		mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RailConstructorWeavingCheck'
+		if (rootProject.hasProperty('railSave')) args rootProject.property('railSave')
+	}
+	platform.tasks.named('check') { dependsOn check }
+}

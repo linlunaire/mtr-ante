@@ -1,0 +1,26 @@
+def commonProject = project(':common')
+def platform = project(':neoforge')
+def output = commonProject.layout.buildDirectory.dir('classes/brushCompatibility')
+def compile = commonProject.tasks.register('compileBrushCompatibility', JavaCompile) {
+    source rootProject.fileTree('tests/brush') { include '*.java' }
+    classpath = commonProject.configurations.compileClasspath
+    destinationDirectory = output
+    options.compilerArgs = ['-proc:none']
+}
+def check = platform.tasks.register('checkBrushPacketCompatibility', JavaExec) {
+    group = 'verification'
+    description = 'Replays released brush-update and holding-item send/receive methods with real component codecs.'
+    dependsOn compile
+    classpath = files(output, commonProject.sourceSets.main.output.classesDirs) + platform.configurations.compileClasspath + platform.configurations.runtimeClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.BrushPacketCompatibilityCheck'
+    if (!rootProject.hasProperty('brushTestJar')) dependsOn platform.tasks.named('remapJar')
+    workingDir rootProject.layout.buildDirectory.dir('diagnostics/brush-check').get().asFile
+    doFirst {
+        workingDir.mkdirs()
+        def jar = rootProject.hasProperty('brushTestJar')
+            ? rootProject.file(rootProject.property('brushTestJar'))
+            : platform.tasks.named('remapJar').get().archiveFile.get().asFile
+        args jar.absolutePath, rootProject.findProperty('brushTestMode') ?: 'all'
+    }
+}
+platform.tasks.named('check') { dependsOn check }

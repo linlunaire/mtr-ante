@@ -1,0 +1,57 @@
+import groovy.json.JsonSlurper
+import java.util.zip.ZipFile
+
+def releaseArchiveClass = new GroovyClassLoader(getClass().classLoader)
+        .parseClass(rootProject.file('gradle/ReleaseArchive.groovy'))
+
+def checkReleaseArchive = tasks.register('checkReleaseArchive') {
+    group = 'verification'
+    inputs.files('gradle/ReleaseArchive.groovy', 'tests/ReleaseArchiveCheck.groovy')
+    doLast {
+        new GroovyShell(getClass().classLoader, new Binding([args: [rootProject.projectDir.absolutePath] as String[]]))
+                .evaluate(rootProject.file('tests/ReleaseArchiveCheck.groovy'))
+    }
+}
+
+rootProject.ext.publishReleaseJar = { File artifact, String loader ->
+    releaseArchiveClass.publish(artifact, rootProject.layout.buildDirectory.dir('release').get().asFile,
+            loader, rootProject.mod_version.toString()).each { logger.lifecycle("Archived previous ${loader} ANTE/YLTE release: ${it}") }
+}
+
+['fabric', 'neoforge'].each { loader ->
+    def platform = project(":${loader}")
+    def checkBranding = platform.tasks.register('checkReleaseBranding') {
+        group = 'verification'
+        dependsOn platform.tasks.named('remapJar'), checkReleaseArchive
+        doLast {
+            File artifact = platform.tasks.named('remapJar').get().archiveFile.get().asFile
+            releaseArchiveClass.validateArtifact(artifact, loader, rootProject.mod_version.toString())
+            new ZipFile(artifact).withCloseable { jar ->
+                def read = { String path ->
+                    def entry = jar.getEntry(path)
+                    if (entry == null) throw new GradleException("Missing ${path} in ${artifact}")
+                    jar.getInputStream(entry).withCloseable { it.getText('UTF-8') }
+                }
+                assert read('LICENSE-YLTE').contains('Copyright (c) 2022-present Zbx1425')
+                assert read('licenses/Noto-OFL-1.1.txt').contains('SIL OPEN FONT LICENSE Version 1.1')
+                def languages = jar.entries().findAll { it.name ==~ /assets\/mtrsteamloco\/lang\/[^\/]+\.json/ }
+                assert languages.size() >= 10
+                languages.each { entry ->
+                    def messages = new JsonSlurper().parseText(read(entry.name))
+                    assert messages['gui.mtrsteamloco.config.client.title'].contains('YLTE')
+                    assert !messages.values().any { it.toString().contains('ANTE') }
+                }
+                assert read('mtrsteamloco.mixins.json').contains('cn.zbx1425.mtrsteamloco')
+                assert read('cn/zbx1425/mtrsteamloco/scripting/ScriptResourceUtil.class').contains('ANTE_FLAG')
+                assert read('cn/zbx1425/mtrsteamloco/item/RoutePathCreator.class').contains('ANTE-Data')
+                assert read('cn/zbx1425/mtrsteamloco/network/PacketVersionCheck.class').contains('YLTE (Yanling Transit Expansion)')
+                assert read('cn/zbx1425/mtrsteamloco/data/DynamicResource.class').contains('ANTE Virtual Dynamic Pack')
+                if (loader == 'neoforge') {
+                    assert jar.getEntry('META-INF/accesstransformer.cfg') != null
+                }
+                logger.lifecycle("PASS: YLTE ${loader} release metadata, ${languages.size()} locales, MIT/OFL and legacy script/save identities")
+            }
+        }
+    }
+    platform.tasks.named('check') { dependsOn checkBranding }
+}

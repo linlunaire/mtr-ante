@@ -1,0 +1,23 @@
+def output = rootProject.layout.buildDirectory.dir('classes/pinyinPackagingCheck')
+def compile = tasks.register('compilePinyinPackagingCheck', JavaCompile) {
+    source rootProject.file('tests/PinyinPackagingCheck.java')
+    classpath = files()
+    destinationDirectory = output
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs = ['-proc:none']
+}
+['fabric', 'neoforge'].each { loader ->
+    def target = project(":${loader}")
+    def check = target.tasks.register('checkPinyinPackaging', JavaExec) {
+        group = 'verification'
+        description = 'Checks search pinyin against the final JAR without external dependencies.'
+        dependsOn compile, target.tasks.named('remapJar')
+        classpath = files(output)
+        mainClass = 'PinyinPackagingCheck'
+        doFirst { setArgs([target.tasks.named('remapJar').get().archiveFile.get().asFile.absolutePath]) }
+    }
+    target.tasks.named('check') { dependsOn check }
+}
