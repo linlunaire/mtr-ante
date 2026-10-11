@@ -1,0 +1,24 @@
+plugins {
+	id "com.gradleup.shadow"
+}
+
+apply from: "../process_access_widener.gradle"
+
+dependencies {
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+	modApi "${rootProject.architectury_id}:architectury:${rootProject.architectury_version}"
+
+	modApi("me.shedaniel.cloth:cloth-config:${rootProject.cloth_config_version}") { transitive = false }
+}
+
+architectury {
+	injectInjectables = false
+	common("fabric", "neoforge")
+}
+
+loom {
+	mixin {
+		defaultRefmapName = "mixins.mtrsteamloco.refmap.json"
+	}
+	accessWidenerPath = processAccessWidener(file("./src/main/resources/mtrsteamloco.accesswidener"), file("./src/main/resources/mtrsteamloco_filtered.accesswidener"))
+}

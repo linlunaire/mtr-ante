@@ -1,0 +1,112 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+import java.time.Instant
+
+plugins {
+	id "architectury-plugin" version "3.4.164"
+	id "dev.architectury.loom" version "1.11.458" apply false
+	id "com.gradleup.shadow" version "8.3.0" apply false
+	id "base"
+}
+
+apply from: "build_dep_ver.gradle"
+
+rootProject.ext.assetExcludeFont = rootProject.hasProperty("assetExcludeFont")
+
+def mtrProjectDir = file("../Minecraft-Transit-Railway-3.x.x")
+def mtrProperties = new Properties()
+mtrProjectDir.toPath().resolve("gradle.properties").toFile().withInputStream { mtrProperties.load(it) }
+def mtrVersion = "${minecraft_version}-${mtrProperties.getProperty("mod_version")}"
+def mtrCommonDevJar = file("${mtrProjectDir}/common/build/devlibs/common-${mtrVersion}-dev.jar")
+def mtrFabricDevJar = file("${mtrProjectDir}/fabric/build/devlibs/fabric-${mtrVersion}-dev.jar")
+def mtrNeoForgeDevJar = file("${mtrProjectDir}/forge/build/devlibs/neoforge-${mtrVersion}-dev.jar")
+
+ext {
+	graaljsVersion = "24.2.2"
+	mtrCommonDevJarFile = mtrCommonDevJar
+	mtrFabricDevJarFile = mtrFabricDevJar
+	mtrNeoForgeDevJarFile = mtrNeoForgeDevJar
+}
+
+architectury {
+	minecraft = minecraft_version
+}
+
+allprojects {
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+	repositories {
+		mavenCentral()
+		maven { url = "https://maven.terraformersmc.com/" }
+		maven { url = "https://maven.parchmentmc.org/" }
+		maven { url = "https://maven.shedaniel.me/" }
+		maven { url = "https://neoforged.forgecdn.net/releases" }
+		maven { url = "https://maven.neoforged.net/releases" }
+	}
+}
+
+subprojects {
+	apply plugin: "dev.architectury.loom"
+	apply plugin: "com.gradleup.shadow"
+
+	loom {
+		silentMojangMappingsLicense()
+		mixin {
+			useLegacyMixinAp = true
+		}
+	}
+
+	configurations {
+		shadowCommon
+	}
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${minecraft_version}"
+		mappings loom.layered() {
+			officialMojangMappings()
+			parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_version}@zip")
+		}
+		compileOnly files(rootProject.ext.mtrCommonDevJarFile)
+		implementation "org.joml:joml:1.10.8"
+		implementation "org.msgpack:msgpack-core:${rootProject.messagepack_version}"
+		compileOnly "com.github.stuxuhai:jpinyin:1.1.7"
+		compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+		annotationProcessor "systems.manifold:manifold-preprocessor:+"
+		compileOnly "org.graalvm.polyglot:polyglot:${graaljsVersion}"
+		compileOnly "org.graalvm.polyglot:js:${graaljsVersion}"
+		compileOnly "org.graalvm.truffle:truffle-api:${graaljsVersion}"
+		compileOnly "org.graalvm.truffle:truffle-runtime:${graaljsVersion}"
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		options.encoding = "UTF-8"
+		options.release.set(21)
+		options.compilerArgs += ["-Xplugin:Manifold", "-AMC_VERSION=${minecraft_version_int}"]
+	}
+}
+
+// Match MTR's initialization order: Loom is applied to every platform first,
+// then Architectury configures Fabric/NeoForge-specific dependency buckets.
+allprojects {
+	apply plugin: "architectury-plugin"
+}
+
+tasks.register("setupFiles") {
+	doLast {
+		copy {
+			from "common/src/main/BuildConfigTemplate.java"
+			into "common/src/main/java/cn/zbx1425/mtrsteamloco"
+			filter(ReplaceTokens, tokens: [
+				"version": rootProject.mod_version,
+				"protocol_version": rootProject.mod_protocol_version,
+				"build_time": Instant.now().epochSecond.toString()
+			])
+			rename "(.+)Template.java", '$1.java'
+		}
+	}
+}
+
+subprojects {
+	tasks.configureEach {
+		dependsOn rootProject.tasks.named("setupFiles")
+	}
+}
