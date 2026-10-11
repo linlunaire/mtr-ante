@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches: ['26.2']
+    tags: ['*-26.2', '*-26.2-*']
+  pull_request:
+    branches: ['26.2']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Minecraft 26.2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ANTE
+        uses: actions/checkout@v5
+        with:
+          path: mtr-ante
+      - name: Checkout MTR dependency
+        uses: actions/checkout@v5
+        with:
+          repository: linlunaire/Minecraft-Transit-Railway
+          ref: 37931d782d8c7384e51311f5e18402adb19a6507 # MTR Java 26.2 compatibility snapshot
+          path: Minecraft-Transit-Railway-3.x.x
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: '25'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      - name: Build MTR dependency
+        working-directory: Minecraft-Transit-Railway-3.x.x
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - name: Build ANTE Fabric and NeoForge
+        working-directory: mtr-ante
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ANTE-26.2
+          path: mtr-ante/build/release/MTR-ANTE-*-26.2.jar
+          if-no-files-found: error
