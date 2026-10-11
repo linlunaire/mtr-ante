@@ -1,0 +1,8 @@
+# Source: MTR-ANTE-neoforge-1.1.1-26.2.jar, SHA-256 db3662a772ad746bcdbfe81b2e44fed09ea084d73f11b29022be9b11e9f4d79c
+C:cn/zbx1425/mtrsteamloco/path/BetterPathFinder	[PUBLIC] java/lang/Object []
+M:cn/zbx1425/mtrsteamloco/path/BetterPathFinder.<init>()V	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/path/BetterPathFinder.appendPath(Ljava/util/List;Ljava/util/List;)V	[PUBLIC, STATIC] (Ljava/util/List<Lmtr/path/PathData;>;Ljava/util/List<Lmtr/path/PathData;>;)V []
+M:cn/zbx1425/mtrsteamloco/path/BetterPathFinder.findPath(Ljava/util/List;Ljava/util/Map;Ljava/util/List;IIZ)I	[PUBLIC, STATIC] (Ljava/util/List<Lmtr/path/PathData;>;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Lmtr/data/Rail;>;>;Ljava/util/List<Lmtr/data/SavedRailBase;>;IIZ)I []
+C:cn/zbx1425/mtrsteamloco/path/DepotPathGen	[PUBLIC] java/lang/Object []
+M:cn/zbx1425/mtrsteamloco/path/DepotPathGen.<init>()V	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/path/DepotPathGen.generateMainRoute(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/world/level/Level;Lmtr/data/DataCache;Ljava/util/Map;Ljava/util/Set;Ljava/util/function/Consumer;Lmtr/data/Depot;)V	[PUBLIC, STATIC] (Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/world/level/Level;Lmtr/data/DataCache;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Lmtr/data/Rail;>;>;Ljava/util/Set<Lmtr/data/Siding;>;Ljava/util/function/Consumer<Ljava/lang/Thread;>;Lmtr/data/Depot;)V []

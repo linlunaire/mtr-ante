@@ -1,0 +1,54 @@
+# Frozen Java ANTE 1.1.1-26.2; SHA-256 db3662a772ad746bcdbfe81b2e44fed09ea084d73f11b29022be9b11e9f4d79c
+C:cn/zbx1425/mtrsteamloco/data/RelativePosition	[PUBLIC] java/lang/Object []
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition.ZERO:Lcn/zbx1425/mtrsteamloco/data/RelativePosition;	[FINAL, PUBLIC, STATIC]
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition.x:B	[FINAL, PUBLIC]
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition.y:B	[FINAL, PUBLIC]
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition.z:B	[FINAL, PUBLIC]
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition.<init>(III)V	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition.equals(Ljava/lang/Object;)Z	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition.hashCode()I	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition.toString()Ljava/lang/String;	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition.transform(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Lnet/minecraft/core/BlockPos;	[PUBLIC]  []
+C:cn/zbx1425/mtrsteamloco/data/RelativePosition$Suit	[PUBLIC] java/lang/Object []
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition$Suit.bp:Lnet/minecraft/core/BlockPos;	[FINAL, PUBLIC]
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition$Suit.rp:Lcn/zbx1425/mtrsteamloco/data/RelativePosition;	[FINAL, PUBLIC]
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition$Suit.<init>(Lcn/zbx1425/mtrsteamloco/data/RelativePosition;Lnet/minecraft/core/BlockPos;)V	[PUBLIC]  []
+C:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination	[PUBLIC] java/lang/Object []
+F:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination.positions:Ljava/util/Set;	[FINAL, PUBLIC] Ljava/util/Set<Lcn/zbx1425/mtrsteamloco/data/RelativePosition;>;
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination.<init>(Ljava/util/Set;)V	[PUBLIC] (Ljava/util/Set<Lcn/zbx1425/mtrsteamloco/data/RelativePosition;>;)V []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination.decode(Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/RelativePosition$Combination;	[PUBLIC, STATIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination.encode(Lcn/zbx1425/mtrsteamloco/data/RelativePosition$Combination;)Ljava/lang/String;	[PUBLIC, STATIC]  []
+M:cn/zbx1425/mtrsteamloco/data/RelativePosition$Combination.transform(Lnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;)Ljava/util/Set;	[PUBLIC] (Lnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;)Ljava/util/Set<Lcn/zbx1425/mtrsteamloco/data/RelativePosition$Suit;>; []
+C:cn/zbx1425/mtrsteamloco/data/Tree	[PUBLIC] java/lang/Object [] <T:Ljava/lang/Object;>Ljava/lang/Object;
+M:cn/zbx1425/mtrsteamloco/data/Tree.<init>()V	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree.loadTree(Ljava/lang/String;Ljava/util/Map;Ljava/util/function/Function;)Lcn/zbx1425/mtrsteamloco/data/Tree$Root;	[PUBLIC, STATIC] <T:Ljava/lang/Object;>(Ljava/lang/String;Ljava/util/Map<Ljava/lang/String;TT;>;Ljava/util/function/Function<TT;Ljava/lang/String;>;)Lcn/zbx1425/mtrsteamloco/data/Tree$Root<TT;>; []
+C:cn/zbx1425/mtrsteamloco/data/Tree$Node	[ABSTRACT, PUBLIC] cn/zbx1425/mtrsteamloco/data/Tree [] <T:Ljava/lang/Object;>Lcn/zbx1425/mtrsteamloco/data/Tree<TT;>;
+F:cn/zbx1425/mtrsteamloco/data/Tree$Node.key:Ljava/lang/String;	[FINAL, PUBLIC]
+F:cn/zbx1425/mtrsteamloco/data/Tree$Node.name:Lnet/minecraft/network/chat/MutableComponent;	[PUBLIC]
+F:cn/zbx1425/mtrsteamloco/data/Tree$Node.parent:Lcn/zbx1425/mtrsteamloco/data/Tree$Node;	[FINAL, PUBLIC] Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.<init>(Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node;)V	[PUBLIC] (Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;)V []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.copy()Lcn/zbx1425/mtrsteamloco/data/Tree$Node;	[ABSTRACT, PUBLIC] ()Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.dealWithDuplicateNames()V	[PROTECTED]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.getDepth()I	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.getPathKey()Ljava/lang/String;	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.getPathName()Lnet/minecraft/network/chat/MutableComponent;	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Node.toString()Ljava/lang/String;	[PUBLIC]  []
+C:cn/zbx1425/mtrsteamloco/data/Tree$Branch	[PUBLIC] cn/zbx1425/mtrsteamloco/data/Tree$Node [] <T:Ljava/lang/Object;>Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;
+F:cn/zbx1425/mtrsteamloco/data/Tree$Branch.branches:Ljava/util/Map;	[PUBLIC] Ljava/util/Map<Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Branch<TT;>;>;
+F:cn/zbx1425/mtrsteamloco/data/Tree$Branch.leaves:Ljava/util/Map;	[PUBLIC] Ljava/util/Map<Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Data<TT;>;>;
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.<init>(Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node;)V	[PUBLIC] (Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;)V []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.addBranch(Ljava/lang/String;Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Branch;	[PUBLIC] (Ljava/lang/String;Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Branch<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.addLeaf(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lcn/zbx1425/mtrsteamloco/data/Tree$Data;	[PUBLIC] (Ljava/lang/String;Ljava/lang/String;TT;)Lcn/zbx1425/mtrsteamloco/data/Tree$Data<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.copy()Lcn/zbx1425/mtrsteamloco/data/Tree$Branch;	[PUBLIC] ()Lcn/zbx1425/mtrsteamloco/data/Tree$Branch<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.dealWithDuplicateNames()V	[PROTECTED]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.getBranch(Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Branch;	[PUBLIC] (Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Branch<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.getLeaf(Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Data;	[PUBLIC] (Ljava/lang/String;)Lcn/zbx1425/mtrsteamloco/data/Tree$Data<TT;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.getNodes()Ljava/util/Map;	[PUBLIC] ()Ljava/util/Map<Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;>; []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.hasSubBranches()Z	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Branch.mergeLevel()Ljava/util/Map;	[PUBLIC] ()Ljava/util/Map<Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Data<TT;>;>; []
+C:cn/zbx1425/mtrsteamloco/data/Tree$Root	[PUBLIC] cn/zbx1425/mtrsteamloco/data/Tree$Branch [] <T:Ljava/lang/Object;>Lcn/zbx1425/mtrsteamloco/data/Tree$Branch<TT;>;
+M:cn/zbx1425/mtrsteamloco/data/Tree$Root.<init>(Ljava/lang/String;)V	[PUBLIC]  []
+C:cn/zbx1425/mtrsteamloco/data/Tree$Data	[PUBLIC] cn/zbx1425/mtrsteamloco/data/Tree$Node [] <T:Ljava/lang/Object;>Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;
+F:cn/zbx1425/mtrsteamloco/data/Tree$Data.data:Ljava/lang/Object;	[PUBLIC] TT;
+M:cn/zbx1425/mtrsteamloco/data/Tree$Data.<init>(Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node;Ljava/lang/Object;)V	[PUBLIC] (Ljava/lang/String;Ljava/lang/String;Lcn/zbx1425/mtrsteamloco/data/Tree$Node<TT;>;TT;)V []
+M:cn/zbx1425/mtrsteamloco/data/Tree$Data.copy()Lcn/zbx1425/mtrsteamloco/data/Tree$Data;	[PUBLIC] ()Lcn/zbx1425/mtrsteamloco/data/Tree$Data<TT;>; []

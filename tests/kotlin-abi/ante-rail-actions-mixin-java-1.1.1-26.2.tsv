@@ -1,0 +1,7 @@
+# Original Java SHA256: db3662a772ad746bcdbfe81b2e44fed09ea084d73f11b29022be9b11e9f4d79c
+C:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin	[PUBLIC] mtr/data/RailwayDataModuleBase [cn/zbx1425/mtrsteamloco/data/RailActionsModuleExtraSupplier]
+M:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin.<init>(Lmtr/data/RailwayData;Lnet/minecraft/world/level/Level;Ljava/util/Map;)V	[PUBLIC] (Lmtr/data/RailwayData;Lnet/minecraft/world/level/Level;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Lmtr/data/Rail;>;>;)V []
+M:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin.getRailActions()Ljava/util/List;	[PUBLIC] ()Ljava/util/List<Lmtr/data/Rail$RailActions;>; []
+M:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin.getRails()Ljava/util/Map;	[PUBLIC] ()Ljava/util/Map<Lnet/minecraft/core/BlockPos;Ljava/util/Map<Lnet/minecraft/core/BlockPos;Lmtr/data/Rail;>;>; []
+M:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin.getWorld()Lnet/minecraft/world/level/Level;	[PUBLIC]  []
+M:cn/zbx1425/mtrsteamloco/mixin/RailwayDataRailActionsModuleMixin.sendUpdateS2C()V	[PUBLIC]  []

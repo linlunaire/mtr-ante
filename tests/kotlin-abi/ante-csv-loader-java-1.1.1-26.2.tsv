@@ -1,0 +1,4 @@
+# Java source blob 86ef037dfb87ea6bf57e8cc5bd17f926db264d0b from tag 1.1.1-26.2.
+C:cn/zbx1425/sowcerext/model/loader/CsvModelLoader	[PUBLIC] java/lang/Object []
+M:cn/zbx1425/sowcerext/model/loader/CsvModelLoader.<init>()V	[PUBLIC]  []
+M:cn/zbx1425/sowcerext/model/loader/CsvModelLoader.loadModel(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/resources/Identifier;Lcn/zbx1425/sowcerext/reuse/AtlasManager;)Lcn/zbx1425/sowcerext/model/RawModel;	[PUBLIC, STATIC]  [java/io/IOException]

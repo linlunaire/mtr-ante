@@ -1,0 +1,39 @@
+def modelHelperClasses = layout.buildDirectory.dir('classes/modelHelpersCompatibility')
+
+tasks.register('compileModelHelpersCompatibility', JavaCompile) {
+    source rootProject.file('tests/ModelHelpersCompatibilityCheck.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = modelHelperClasses
+}
+
+tasks.register('checkModelHelpersCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileModelHelpersCompatibility'
+    classpath = files(modelHelperClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelHelpersCompatibilityCheck'
+    args rootProject.file('tests/fixtures/model-helpers-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaModelHelpersBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileModelHelpersCompatibility'
+        classpath = files(modelHelperClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelHelpersCompatibilityCheck'
+        args rootProject.file('tests/fixtures/model-helpers-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+        if (rootProject.hasProperty('recordModelHelpersBaseline')) args '--record'
+    }
+}
+
+tasks.register('checkKotlinModelHelpersAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-model-helpers-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+tasks.named('check') { dependsOn 'checkModelHelpersCompatibility', 'checkKotlinModelHelpersAbi' }

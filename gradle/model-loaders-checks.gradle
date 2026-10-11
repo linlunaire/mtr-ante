@@ -1,0 +1,64 @@
+apply from: rootProject.file('gradle/csv-model-loader-checks.gradle')
+
+def modelLoaderClasses = layout.buildDirectory.dir('classes/modelLoadersCompatibility')
+
+tasks.register('compileModelLoadersCompatibility', JavaCompile) {
+    source rootProject.file('tests/ModelLoadersCompatibilityCheck.java')
+    classpath = sourceSets.main.output + configurations.compileClasspath
+    destinationDirectory = modelLoaderClasses
+}
+
+tasks.register('checkModelLoadersCompatibility', JavaExec) {
+    group = 'verification'
+    dependsOn 'compileModelLoadersCompatibility'
+    classpath = files(modelLoaderClasses) + sourceSets.main.output + configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelLoadersCompatibilityCheck'
+    args rootProject.file('tests/fixtures/model-loaders-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+if (rootProject.hasProperty('javaBaselineJar')) {
+    tasks.register('checkJavaModelLoadersBaseline', JavaExec) {
+        group = 'verification'
+        dependsOn 'compileModelLoadersCompatibility'
+        classpath = files(modelLoaderClasses, rootProject.file(rootProject.property('javaBaselineJar'))) + configurations.compileClasspath
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelLoadersCompatibilityCheck'
+        args rootProject.file('tests/fixtures/model-loaders-java-1.1.1-26.2.tsv').absolutePath,
+                rootProject.file(rootProject.property('javaBaselineJar')).absolutePath
+        if (rootProject.hasProperty('recordModelLoadersBaseline')) args '--record'
+    }
+}
+
+tasks.register('checkKotlinModelLoadersAbi', JavaExec) {
+    group = 'verification'
+    dependsOn ':compileKotlinMigrationAbiCheck', 'compileKotlin'
+    classpath = files(rootProject.layout.buildDirectory.dir('classes/kotlinMigrationAbiCheck'))
+    mainClass = 'KotlinMigrationAbiCheck'
+    args 'check', rootProject.file('tests/kotlin-abi/ante-model-loaders-java-1.1.1-26.2.tsv').absolutePath,
+            tasks.named('compileKotlin').get().destinationDirectory.get().asFile.absolutePath
+}
+
+tasks.named('check') { dependsOn 'checkModelLoadersCompatibility', 'checkKotlinModelLoadersAbi' }
+
+// Run the same CPU corpus on each final shaded artifact, including its relocated OBJ parser.
+def commonProject = project
+['fabric', 'neoforge'].each { platform ->
+    def loaderProject = rootProject.project(":${platform}")
+    loaderProject.tasks.register('checkPackagedModelLoadersCompatibility', JavaExec) {
+        group = 'verification'
+        description = 'Executes NMB/OBJ behavior goldens from the final shaded loader JAR.'
+        dependsOn ':common:compileModelLoadersCompatibility', loaderProject.tasks.named('shadowJar')
+        def anteArtifact = loaderProject.tasks.named('shadowJar').flatMap { it.archiveFile }
+        def mtrArtifact = new File(rootProject.mtrRoot, "build/release/${rootProject.mtrArchiveBaseName}-${platform}-${rootProject.mtrVersion}.jar")
+        // Finished ANTE/MTR artifacts precede every development fallback. The corpus checks
+        // the actual class source for both loaders, geometry dependencies and relocated parser.
+        classpath = loaderProject.files(anteArtifact, mtrArtifact, modelLoaderClasses) +
+                commonProject.configurations.compileClasspath + loaderProject.configurations.kotlinArtifactRuntime
+        mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ModelLoadersCompatibilityCheck'
+        workingDir = loaderProject.layout.buildDirectory.dir('model-loaders-compatibility-run').get().asFile
+        doFirst { workingDir.mkdirs() }
+        args rootProject.file('tests/fixtures/model-loaders-java-1.1.1-26.2.tsv').absolutePath,
+                anteArtifact.get().asFile.absolutePath, '--packaged'
+    }
+    loaderProject.tasks.named('check') { dependsOn 'checkPackagedModelLoadersCompatibility' }
+}

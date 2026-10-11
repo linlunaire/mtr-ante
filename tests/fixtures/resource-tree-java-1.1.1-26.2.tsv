@@ -1,0 +1,164 @@
+position-seeded	aac7d9a1362ceacd79adb41105df6ba9ccddcc37615fad26968b29a223841776
+bounds	IllegalArgumentException:Coordinates out of bounds: (-2147483648, 0, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, -2147483648, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 0, -2147483648)
+bounds	IllegalArgumentException:Coordinates out of bounds: (-129, 0, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, -129, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 0, -129)
+bounds	IllegalArgumentException:Coordinates out of bounds: (128, 0, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 128, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 0, 128)
+bounds	IllegalArgumentException:Coordinates out of bounds: (2147483647, 0, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 2147483647, 0)
+bounds	IllegalArgumentException:Coordinates out of bounds: (0, 0, 2147483647)
+combination:	0,0,0
+combination:;	0,0,0
+combination:;;	0,0,0
+combination:0,0,0	0,0,0
+combination:1,2,3;1,2,3;bad;4,5;	1,2,3;0,0,0
+combination:-128,127,0;0,-1,2	0,-1,2;-128,127,0;0,0,0
+combination:,1,2,3	0,0,0
+combination:1,2,3,	1,2,3;0,0,0
+combination:1,2,3;;4,5,6	1,2,3;4,5,6;0,0,0
+invalid-combination	NumberFormatException:Value out of range. Value:"128" Radix:10
+invalid-combination	NumberFormatException:Value out of range. Value:"-129" Radix:10
+invalid-combination	NumberFormatException:For input string: " 1"
+invalid-combination	NumberFormatException:For input string: ""
+invalid-combination	NumberFormatException:For input string: "x"
+combination-live	0,0,0;1,2,3
+tree-duplicate	root:Root{branch=root/branch:Same(branch){};leaf=root/leaf:Same(leaf):1;}
+tree-duplicate-repeat	root:Root{branch=root/branch:Same(branch){};leaf=root/leaf:Same(leaf):1;}
+tree-copy	root:Root{branch=root/branch:Same(branch){child=root/branch/child:Child:2;};leaf=root/leaf:Same(leaf):1;}
+tree-alias	root:Root{a=root/a:Alias(a):1;b=root/a:Alias(a):1;}
+tree-component-alias	root:Root{a=root/a:Alias(a)(a):1;b=root/a:Alias(a)(a):1;c=root/c:Alias(a)(a):1;}
+tree-paths	root:Root{=root/:Same():1;a=root/a:Same(a):1;other=root/other:other{c=root/other/c:Same:2;};trailing=root/trailing:trailing{=root/trailing/:Same:2;};深层=root/深层:深层{列车=root/深层/列车:Same:2;};}
+tree-merged	:root/trailing/:Same();a:root/a:Same(a);b:root/a/b:Same(b);c:root/other/c:Same(c);列车:root/深层/列车:Same(列车);
+tree-after-merge	root:Root{=root/:Same():1;a=root/a:Same(a):1;other=root/other:other{c=root/other/c:Same(c):2;};trailing=root/trailing:trailing{=root/trailing/:Same():2;};深层=root/深层:深层{列车=root/深层/列车:Same(列车):2;};}
+tree-seeded:0	df81da46d419ab9c87d4ae249fa07ce0d5439d14aeb16f729ec7ff1d39009cda
+tree-seeded:1	78e835ad563b46f82ef8541364a1fdd5d30c35d57547cace2256e6c0162fe181
+tree-seeded:2	becd2c8e806723fe65fe5e8a56d72c6de872e416977cb4b49c5c31bc9d9968af
+tree-seeded:3	0561fe1c8afd28b9bce1d69326e6c24f30f9ef3a9112580ae4c374a3aec600bb
+tree-seeded:4	a80fb306f0e51428eb3a8b6772e86e855c1e93533e9d5e1c94ee44efe26ddc7c
+tree-seeded:5	edf26f2834f1c5872e96505295e150e9cf5ccd1da25e4419ed9dbcf57b1e833c
+tree-seeded:6	da20455d11b031aedbc370231ca23548ca783c157ba30ac9333b35fc7615ac16
+tree-seeded:7	450e4180738c6dc00eed703510cf52a792acde3d52cccd688d4d5f95ff8236c6
+tree-seeded:8	4d2595eb40d3dc19b92162a7ba6339ca11f2e69e5b8436bdc28dd5192424ba93
+tree-seeded:9	80bca542e01f58e2f948f3f81bd77f855eeb3b219741bc4a0702e06614f4f838
+tree-seeded:10	c626fd161108cff47d8f6dc11fffd1465b396e21d260c4dff1846436ce9ae328
+tree-seeded:11	f96a50d3be2f7be97ebb29b607f1aa654a40e69d48eea6b3f3ee5491ddc7c723
+tree-seeded:12	7de8becb24a4df195eb1fd03d8151d97a70c9f5e5cb5e70020ce149554ae17c2
+tree-seeded:13	24119d00d51c2383dc4b985eb52a30189ec9b2e2071f3ca18614fc22d1a055c3
+tree-seeded:14	be8271367150a480958ba4e18ed0030a089ef71a2829acdcbe053c67b6d01313
+tree-seeded:15	f85774e39f9efb6edd9b61f5b8753f6eb0ac0a9ec44cd543850eb3bf9d24b9d7
+tree-seeded:16	493ecef20d8ab577f907336fb671376284523851d0c300e4e7a7e40b65751dfa
+tree-seeded:17	44cf5eab5e5120b0e76750f33bea07949ae2fafcfe33608e2440e9b020e6b576
+tree-seeded:18	eca914201c578236e5ba7da9f71b3cd418dddb6afcf620244e218f15a2cb8a85
+tree-seeded:19	89d141f03377bd87dd6ec18d83b2e3713892968c1fe7d2c52cf3363fd494d492
+tree-seeded:20	30bbe3535063842682e2d45bc43508784ef7ae7ff5785ec8f0808ce929b18b85
+tree-seeded:21	477f82f51042615ebeea128f82bd1f908bfbd61b44f99ba225e37a9765011623
+tree-seeded:22	9b9add854f52c25a097dd7136e4e65a4fbea1bb2062d9a50bae9b9e5ad7f2074
+tree-seeded:23	aaaa532c547ce5405241097196f3cc085cbb825f2e8bb3d6f6188d91c798bdf3
+tree-seeded:24	8763a46aa128d86b88c76c7a763d915e57cccc4ed47f664995ac9718a3f06ada
+tree-seeded:25	61e9b59b9f303f594e2485f1f8c13cbeee8d8d415ca0ac432289335f4b1060a6
+tree-seeded:26	0acfff5e240081d72a90c50b227768556c7ecf5d00a9be0913adfbaead5d0e53
+tree-seeded:27	876fcf55b2964cd685f14d9fe62563d6f85d409c441d427a18fce98f4cdb04cb
+tree-seeded:28	9e157dc95a919a4c0b3c048d354b019ac0e284277e9407c929f1cc8b54cfef6c
+tree-seeded:29	4e9e9442e2d9c147c2473c09705d19392d3ef143bea89bfe3bd3e418d65369eb
+tree-seeded:30	284d0b8475b20678119f73c5b3f75cbc243b4b7d24e0e1b29fe5d60aa91c269c
+tree-seeded:31	0448f8eb21eff6179e52e01e82c27dc98bed794de238394a93ff9a16a24be5ef
+tree-seeded:32	34efc5d09a7d2c90e1d032f1b3bfaf93b279fa1db1b0e97a34355bb2d5086652
+tree-seeded:33	7433f7028629102c80d0269825e238c429c8b9e0acc5c8b46ea5395d11d4aba0
+tree-seeded:34	7c14196fc5130a471cabcf8ef7cbcb56d2e82f983359a33abd6bc027ab21b1fe
+tree-seeded:35	823593620323db1bbc321d4887ec685bbe37f67e7e8e8b68ab3b6b71065aa0a2
+tree-seeded:36	943fa7e7077ba8ee3a3402a1e7589744ed383d9c2d571c060561d0b35ac7bf81
+tree-seeded:37	2e8bb86afcf973cdb9de95df4aeceb2df8c0f8d30f50a69dee107b8d9745dc6d
+tree-seeded:38	ce783f5181b06d90c1a8baef7b81c3bf8ae31aee7675c1b413b624213ec6e830
+tree-seeded:39	8acb29d469d2154f02322494bf2785791685d3fdfa2c3eaeb5738aed19319067
+tree-seeded:40	c6a38b3ae36c491f10cf717e6e15a3efb2380751c9a711324d28ba6c83cf945c
+tree-seeded:41	154efefc4abf7b796310764e27043ce3e6ba33944d98a6bd62f1590af59967b0
+tree-seeded:42	d050dd7a4e203028d82a967a9c3dfe1b2d9e3a8ffbdc2f326c605e8aeccda667
+tree-seeded:43	5e080ccb53495e0e990fb13375a142b90d22a69abc6e0509d7a8f6548720dc7f
+tree-seeded:44	865b28a20bc1a703939f325572241282891965edd8537d7a6ea9fe60528d527a
+tree-seeded:45	c99044f13f979506fb2526d520af8ad49db68ba0131ccce06446d000bf6c03e1
+tree-seeded:46	efb2f6ffee3d8aa31cf09ea260f6decd7517d703c8456f778812dc03242fe836
+tree-seeded:47	d2dead4be4700295d3982e9676418452aed54756c3f4ea184973c3253e32d3a9
+tree-seeded:48	816a6f3b9f3680087fc3335e13571240200bc222499e3d6510e733a761febc4c
+tree-seeded:49	f1ca06556a445fe1aed593c62b2dbb6e8ba7861bc4031bb78e7d117efca7f027
+tree-seeded:50	22af9029b1157c9b4a577363728ce664c7ff7847bad923dd463aa107d5b20be9
+tree-seeded:51	b70fef5781e086e88f82185a8ff4b94b7f5f63c072b49d513a9bfd5a44eb84d8
+tree-seeded:52	5bdcab6928caf455edfb9b40b68a4132151043431d68fd7a5b1125cd6931a686
+tree-seeded:53	346b0495e8860b47a9ffbcac71ee2b126f5d677b9effb16d633498fb08b06825
+tree-seeded:54	aae9a1c829b4ffcbadf9e7d1a6a275c90f1666202a9d0267134ead028f48ed3d
+tree-seeded:55	d09e097f0ea6ee53e41e3bda1a5e56bc150f002504f8b0bcf1ac0578fe123c36
+tree-seeded:56	7d388ab414566dfc7d6b1c7a9aaec4602ffaaa19c9c4a95481bfc08b9f3e6b4f
+tree-seeded:57	94b2462deb6f872157211848c6b9f0b30af3cc4d1d09bf9adca1bedb2e0ecdee
+tree-seeded:58	02926cff987267fc891002236734c28c41efdfc47a9d7569472a520477212fb9
+tree-seeded:59	253d791274ed2ede8d0b3609cedb99bf975309a41584a3c540ba3afcdb465b63
+tree-seeded:60	23ea0acf31352ebed18d65aafbbde941f346fa7ca1ca7ad158406b8715a43238
+tree-seeded:61	433caf13b4d3aae822a7b4ec6852f0c78c95bbe09f6e1c3df50e8bda2400a70c
+tree-seeded:62	079b3839eaa6d53938b311afcd94b0a8a677de18f41ef16d3f7e6cffdbddbaf0
+tree-seeded:63	77db8e3fd98a51d9bdc053ba7426f7d544c7f20313a34e3c6e3c6c3458d792df
+tree-seeded:64	c95f61ec32486e3a910d0226fb445c031004dfded9967735ca7fb1a7e82ffb95
+tree-seeded:65	9552b5f7df6bb02439d49edb9d4c294624ea53e4ade8e936c147d459c5987735
+tree-seeded:66	7dee32dcb1af51dc711ee422863da3d4c755c786c63bbf39b5d06034c81f30f3
+tree-seeded:67	557abccbc95a6e77aa5f1b1fbf3e4b30dc63d4dc6310df778a24899f03ce53aa
+tree-seeded:68	e6013a62864cfe7acd2fa65096c639175f30bb052b0b113ecaf27d5da82a1321
+tree-seeded:69	35a947d0f645e06b27fd581fbf899a06a43498fb3125e6547d5c9fc5a4733344
+tree-seeded:70	72ad89dd1a1d419e48b2c7f5adc30901c539f1e466ae7278874c488a1475f478
+tree-seeded:71	7e21f80aa9048031a5ece36a20edbf27fa351a1a08767dfd516b9d2f09c3c148
+tree-seeded:72	988661ca3548b381b07d4c7764112ab9506726fee9e3841d9c5b92b25da8434d
+tree-seeded:73	bce3f18acab5acb777c0bc1472c4c5bfaf28c14ebe2e5257297bf18dd8937bd7
+tree-seeded:74	8107a52f6d16628d76be744d418e5bcf4b7070aa80bb5952e795c1c92081c6fb
+tree-seeded:75	63e2725b1c9d2df255f00ea87b7b5baa26cf67eca76d7be0b9b6cfe8f445db44
+tree-seeded:76	e775913c305a39435d8208b95a75c50291f7622cb6a02ee12164cfff6a5fcf07
+tree-seeded:77	ee4dfcf2d624a608b1352e6dc08853fff9ef0872bee0e403760e69b441e3f72e
+tree-seeded:78	e2ea622c42bd98fa38d9c9832510319c6e46f5d95fe9f8120cef499b6a7cbf85
+tree-seeded:79	6624160875c8ac28556f7ec6a1d5f03a8dd7166b58fbc427243b3350a75b969d
+tree-seeded:80	a5fd834054cecb09f0005e533828f2ef2229e31a6ba546dded4c76a6b4683832
+tree-seeded:81	ed9f12f03c13251d1aff6102a7c41922af5a337490264cf488564f460e364508
+tree-seeded:82	c4db47e68b859eb728a50cd9f869ced73fffb25b0e93d5e9a6450886cf0f2834
+tree-seeded:83	3dbae7c3f29239b768d2976aec15565a2882ad16e383f83dd35f59240c380e62
+tree-seeded:84	6334ae86d8236b1c9295f1752cc1703fa2f50c4793eaebef3fc91472d39efb40
+tree-seeded:85	e546126146853c559f088c51897a0319fee80fbadad1375fbfaad2e93a27b8c6
+tree-seeded:86	eb6710c4a7e9cc5a3a03b2589db2f0c36561dde537cbc565ab15aa6562f69f79
+tree-seeded:87	5df15a44f9199f21a2558289719f4f52f386ae4856351c6a6ccb558f33cf55a2
+tree-seeded:88	df351be7e27653c9d7a11cb3b5c87b935aeff926fdf05a296e28e5c1eebd2719
+tree-seeded:89	4174861e1c41b3fb569aa79438c6c680babd9d01133393e79f41843b8350f4ca
+tree-seeded:90	8fd452daaae4a3a4bb5fb58c4aaa8755425afd47719d071799daf7827c3517ed
+tree-seeded:91	cbc2b9be48bf8dfc24ea3686d443fe44a76f5bef5b0d0ee1fbcacfc3132819ce
+tree-seeded:92	4a7551e4d0a9c2808d6b79d33a33e0bf7074ce4189b4763569bc27427c013c3e
+tree-seeded:93	86c3982b8b509827ba3efc95cbe3fb3f643d2ea37ea4da6a3707f1cfe1cc4ad8
+tree-seeded:94	bcf54a3c984aadd0b3541180105ec93d2fdd6cbaffdde2e0e5ab418d37fe1839
+tree-seeded:95	306dd589dd5471f100f3520295542974ae8ec79b6911339cd7f677911adec8a0
+tree-seeded:96	d7c02c7e4cdd4b5514b2eb309a5e270cf1bad3086b9f3ed2efe5f5538e67f8d7
+tree-seeded:97	019e8a341deeb943aed791b9171673b8fb8085f6f42d8d9a99460e88f18bbe6e
+tree-seeded:98	e98d75e8cb461bc0d5fbd32c715e6c6da4c40e3adcdb814edb1c57b3f483b019
+tree-seeded:99	e3e83ccbccabc922fb8ada67a4ad655e4d9e0290ac3d3fb184bd5d2216d1d17c
+tree-seeded:100	3326141c6d99d8aeb9736eceb614bcb13f29bbafa74a51464aeefddf4df3bc65
+tree-seeded:101	b65595113d23a7b41c8ba4f957276cb46f1e9c60b2f764fc05298d1fc518609b
+tree-seeded:102	94c1e0fb244d47716ccc61f2eaa2d5e20994aa3e1fcf36d7ccbdbd991842498d
+tree-seeded:103	81d0bfc9b82d2fd21a220bacff1cb6cba40a35d6200841535daa5f3564f597ea
+tree-seeded:104	935b70f312979cdd9b631eb90cf6b0ff59356a0abe5c82e0eda7df91ac48abba
+tree-seeded:105	fe9012d6fe1ac313bc960e5fb93006f68a2d43ea1c7e8eb484d7089344bf6be9
+tree-seeded:106	9a5242996858e28c48a548ce513b9d1ae5f8e149234af7092599b236b587e412
+tree-seeded:107	25179451a4a5f9aa8dbd84b460db58c76d416a947d27cd7b64bb52e663dd61ae
+tree-seeded:108	286c70ac607fc600761e05d55e29a95f122c7463e5f656c2516cdcd2abb15a71
+tree-seeded:109	9d2ac2cda67249aa04b8a26105ca21e0af547bae2ecf94fd3dd91027ab2ab434
+tree-seeded:110	dc3474a5fc081bb4a7cb6a36f9a552491dfdd5b28b56b8a7aae1229dbacf3f71
+tree-seeded:111	0f0a5d58c749cc088e8a263a4f76ba1180ffd8f1cbbcb6f5b24ebce0554f9c35
+tree-seeded:112	ed22d72459f19996d299377ffbbc5cf7d5197532459c7bf6e2c089011d93d093
+tree-seeded:113	12ee443bfae605434e64a12a25032a5044d3140b7ccb46414d380e767fece4b6
+tree-seeded:114	c6661bce0956ac305f4e00e4526de8f4e892b85b6742795947d2d6adcd7116f1
+tree-seeded:115	53680e120a8c182d5becd01e16880d72664a6d115347026508c82465f7177ee6
+tree-seeded:116	a4c4d303c63e6b3b24beeabe57d5ad8c299cabd72b05acf7236746f195155333
+tree-seeded:117	b60bba98f380b8bbee99cc7e0e48b74cb15a94dee8f92c775af43f307d4c174f
+tree-seeded:118	80774f64a7ea2832ba092497743ecbb4546605e6740de02a9fe2f782c181a2a3
+tree-seeded:119	bb87fc523b2e10f8c2b1a73e6aff587348ddb8787a4d4c9c339d65ad0b9454e2
+tree-seeded:120	78045a7a954f0b28f2073edfa6a5ae4661d69bb12667781a843f0ea0714563c3
+tree-seeded:121	5914222421178f5e6794b25bbe99bb264d08808060a0ded31f82fb6e5653d1c6
+tree-seeded:122	df05e7c5c065b84644b96e149bd0c48de6f9990afd39efe5336293e8fb9429fc
+tree-seeded:123	b10899e019c12805606847035eb429ffca564b71436cf2c07bd434d404028fd0
+tree-seeded:124	caafe6da5e1be3e2d97f79a5b217118a0b469094342decda55be64ea5c6ffaa4
+tree-seeded:125	286b1c642975b3cbe18385e897c1384b7947e0a44608e2b15cdc1e6a09881a9b
+tree-seeded:126	1fb906aef134b7b608315172013b234d11394d31f8435573b9a6b4fd61dcc699
+tree-seeded:127	91ad7b97d39637869c375db31546e3875e5fd12869926cb0983b96d8b5a8dfa4

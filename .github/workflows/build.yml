@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['*-26.2', '*-26.2-*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Minecraft 26.2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout YLM-ANTE
+        uses: actions/checkout@v5
+        with:
+          path: mtr-ante
+      - name: Checkout YLM dependency
+        uses: actions/checkout@v5
+        with:
+          repository: linlunaire/Minecraft-Transit-Railway
+          ref: c3325767e8a34c64e52d2893c48215643ad911b9 # YLM 26.2-3.4.0-kotlin.4 with train audio restart fix
+          path: Minecraft-Transit-Railway-3.x.x
+      - name: Checkout Transit Core dependency
+        uses: actions/checkout@v5
+        with:
+          repository: linlunaire/Kotlin-LunaCore
+          ref: dabe86f70c01a8ffc2f55b7582abd5d7bb0d7077 # Kotlin LunaCore 0.2.1
+          path: Kotlin-LunaCore
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: '25'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      - name: Build Transit Core dependency
+        working-directory: Kotlin-LunaCore
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - name: Build YLM dependency
+        working-directory: Minecraft-Transit-Railway-3.x.x
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - name: Build YLM-ANTE Fabric and NeoForge
+        working-directory: mtr-ante
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: YLM-ANTE-26.2
+          path: mtr-ante/build/release/YLM-ANTE-*-26.2*.jar
+          if-no-files-found: error

@@ -1,0 +1,10 @@
+path	null/null:2:0
+path	/null:5:0
+path	Group/null:8:0
+path	null/:11:0
+path	/:14:0
+path	Group/:17:0
+path	null/key/part:20:0
+path	/key/part:23:0
+path	Group/key/part:26:0
+default	default_key::ANTE/default_key:0, 0, 0, 16, 16, 16:0, 0, 0, 0, 0, 0:true:0:false:false:false:0,0,0
