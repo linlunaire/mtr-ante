@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.function.Consumer;
 
 public class RawMesh {
 
@@ -179,80 +178,146 @@ public class RawMesh {
     }
 
     public void upload(Mesh mesh, VertAttrMapping mapping) {
-        _uploadAsync(mapping).accept(mesh);
+        try (UploadBuffers buffers = prepareBuffers(mapping)) {
+            buffers.uploadTo(mesh);
+        }
     }
 
     public Mesh upload(VertAttrMapping mapping) {
-        validateVertIndex();
-        VertBuf vertBufObj = new VertBuf();
-        IndexBuf indexBufObj = new IndexBuf(faces.size(), GL11.GL_UNSIGNED_INT);
-        Mesh target = new Mesh(vertBufObj, indexBufObj, materialProp);
-        upload(target, mapping);
-        return target;
+        try (PreparedUpload<Mesh> upload = prepareUpload(mapping)) {
+            return upload.get();
+        }
     }
 
     public Supplier<Mesh> uploadAsync(VertAttrMapping mapping) {
-        validateVertIndex();
-        Consumer<Mesh> consumer = _uploadAsync(mapping);
-        return () -> {
-            VertBuf vertBufObj = new VertBuf();
-            IndexBuf indexBufObj = new IndexBuf(faces.size(), GL11.GL_UNSIGNED_INT);
-            Mesh target = new Mesh(vertBufObj, indexBufObj, materialProp);
-            consumer.accept(target);
-            return target;
-        };
+        return prepareUpload(mapping);
     }
 
-    private Consumer<Mesh> _uploadAsync(VertAttrMapping mapping) {
+    /** Upper bound before distinct(), so callers can reserve a native-memory budget before allocation. */
+    public long estimatedUploadBytes(VertAttrMapping mapping) {
+        return Math.addExact(Math.multiplyExact((long) vertices.size(), mapping.strideVertex),
+                Math.multiplyExact((long) faces.size(), 3L * Integer.BYTES));
+    }
+
+    public PreparedUpload<Mesh> prepareUpload(VertAttrMapping mapping) {
+        validateVertIndex();
+        UploadBuffers buffers = prepareBuffers(mapping);
+        MaterialProp material = materialProp;
+        try {
+            return PreparedUpload.of(buffers.byteSize(), () -> {
+                VertBuf vertex = null;
+                IndexBuf index = null;
+                try {
+                    vertex = new VertBuf();
+                    index = new IndexBuf(buffers.faceCount, GL11.GL_UNSIGNED_INT);
+                    Mesh target = new Mesh(vertex, index, material);
+                    buffers.uploadTo(target);
+                    return target;
+                } catch (RuntimeException | Error ex) {
+                    closeOnFailure(vertex, ex);
+                    closeOnFailure(index, ex);
+                    throw ex;
+                }
+            }, buffers::close);
+        } catch (RuntimeException | Error ex) {
+            buffers.close();
+            throw ex;
+        }
+    }
+
+    private UploadBuffers prepareBuffers(VertAttrMapping mapping) {
         distinct();
 
-        ByteBuffer vertBuf = OffHeapAllocator.allocate(vertices.size() * mapping.strideVertex);
-        for (int i = 0; i < vertices.size(); ++i) {
-            if (mapping.sources.get(VertAttrType.POSITION).inVertBuf()) {
-                Vector3f pos = vertices.get(i).position;
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.POSITION));
-                vertBuf.putFloat(pos.x()).putFloat(pos.y()).putFloat(pos.z());
+        int vertexBytes = Math.multiplyExact(vertices.size(), mapping.strideVertex);
+        int indexBytes = Math.multiplyExact(faces.size(), 3 * Integer.BYTES);
+        ByteBuffer vertBuf = OffHeapAllocator.allocate(vertexBytes);
+        ByteBuffer indexBuf = null;
+        try {
+            for (int i = 0; i < vertices.size(); ++i) {
+                if (mapping.sources.get(VertAttrType.POSITION).inVertBuf()) {
+                    Vector3f pos = vertices.get(i).position;
+                    // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.POSITION));
+                    vertBuf.putFloat(pos.x()).putFloat(pos.y()).putFloat(pos.z());
+                }
+                if (mapping.sources.get(VertAttrType.COLOR).inVertBuf()) {
+                    // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.COLOR));
+                    vertBuf.putInt(vertices.get(i).color);
+                }
+                if (mapping.sources.get(VertAttrType.UV_TEXTURE).inVertBuf()) {
+                    float u = vertices.get(i).u;
+                    float v = vertices.get(i).v;
+                    // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_TEXTURE));
+                    vertBuf.putFloat(u).putFloat(v);
+                }
+                if (mapping.sources.get(VertAttrType.UV_LIGHTMAP).inVertBuf()) {
+                    // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_LIGHTMAP));
+                    vertBuf.putInt(vertices.get(i).light);
+                }
+                if (mapping.sources.get(VertAttrType.NORMAL).inVertBuf()) {
+                    Vector3f mojNormal = vertices.get(i).normal.copy();
+                    mojNormal.normalize();
+                    // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.NORMAL));
+                    vertBuf.put((byte) (mojNormal.x() * 0x7F)).put((byte) (mojNormal.y() * 0x7F)).put((byte) (mojNormal.z() * 0x7F));
+                }
+                for (int k = 0; k < mapping.paddingVertex; k++) vertBuf.put((byte)0);
             }
-            if (mapping.sources.get(VertAttrType.COLOR).inVertBuf()) {
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.COLOR));
-                vertBuf.putInt(vertices.get(i).color);
+
+            indexBuf = OffHeapAllocator.allocate(indexBytes);
+            for (Face face : faces) {
+                for (int j = 0; j < face.vertices.length; ++j) {
+                    indexBuf.putInt(face.vertices[j]);
+                }
             }
-            if (mapping.sources.get(VertAttrType.UV_TEXTURE).inVertBuf()) {
-                float u = vertices.get(i).u;
-                float v = vertices.get(i).v;
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_TEXTURE));
-                vertBuf.putFloat(u).putFloat(v);
+
+            return new UploadBuffers(vertBuf, indexBuf, faces.size());
+        } catch (RuntimeException | Error ex) {
+            try { OffHeapAllocator.free(vertBuf); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
+            if (indexBuf != null) {
+                try { OffHeapAllocator.free(indexBuf); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
             }
-            if (mapping.sources.get(VertAttrType.UV_LIGHTMAP).inVertBuf()) {
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.UV_LIGHTMAP));
-                vertBuf.putInt(vertices.get(i).light);
-            }
-            if (mapping.sources.get(VertAttrType.NORMAL).inVertBuf()) {
-                Vector3f mojNormal = vertices.get(i).normal.copy();
-                mojNormal.normalize();
-                // vertBuf.position(getVertBufPos(mapping, i, VertAttrType.NORMAL));
-                vertBuf.put((byte) (mojNormal.x() * 0x7F)).put((byte) (mojNormal.y() * 0x7F)).put((byte) (mojNormal.z() * 0x7F));
-            }
-            for (int k = 0; k < mapping.paddingVertex; k++) vertBuf.put((byte)0);
+            throw ex;
+        }
+    }
+
+    private static void closeOnFailure(VertBuf buffer, Throwable failure) {
+        if (buffer != null) {
+            try { buffer.close(); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+        }
+    }
+
+    private static final class UploadBuffers implements AutoCloseable {
+        private ByteBuffer vertex;
+        private ByteBuffer index;
+        private final int faceCount;
+        private final long byteSize;
+
+        UploadBuffers(ByteBuffer vertex, ByteBuffer index, int faceCount) {
+            this.vertex = vertex;
+            this.index = index;
+            this.faceCount = faceCount;
+            this.byteSize = (long) vertex.capacity() + index.capacity();
         }
 
-        ByteBuffer indexBuf = OffHeapAllocator.allocate(faces.size() * 3 * 4);
-        for (Face face : faces) {
-            for (int j = 0; j < face.vertices.length; ++j) {
-                indexBuf.putInt(face.vertices[j]);
-            }
+        long byteSize() { return byteSize; }
+
+        void uploadTo(Mesh mesh) {
+            mesh.vertBuf.upload(vertex, VertBuf.USAGE_STATIC_DRAW);
+            mesh.indexBuf.upload(index, VertBuf.USAGE_STATIC_DRAW);
+            mesh.indexBuf.setFaceCount(faceCount);
         }
 
-        boolean[] executed = new boolean[] {false};
-        return mesh -> {
-            if (executed[0]) return;
-            executed[0] = true;
-            mesh.vertBuf.upload(vertBuf, VertBuf.USAGE_STATIC_DRAW);
-            OffHeapAllocator.free(vertBuf);
-            mesh.indexBuf.upload(indexBuf, VertBuf.USAGE_STATIC_DRAW);
-            mesh.indexBuf.setFaceCount(faces.size());
-            OffHeapAllocator.free(indexBuf);
-        };
+        @Override
+        public void close() {
+            ByteBuffer oldVertex = vertex;
+            ByteBuffer oldIndex = index;
+            vertex = null;
+            index = null;
+            try {
+                if (oldVertex != null) OffHeapAllocator.free(oldVertex);
+            } finally {
+                if (oldIndex != null) OffHeapAllocator.free(oldIndex);
+            }
+        }
     }
 
     private static int getVertBufPos(VertAttrMapping mapping, int vertId, VertAttrType type) {

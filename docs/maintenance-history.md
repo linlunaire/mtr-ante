@@ -1,5 +1,7 @@
 # YLTE 1.21.1 维护记录
 
+1.1.2 修复轨道异步构建/上传积压、原生缓冲区异常清理、已卸载区块的旧任务及 VAO 所有权。新增故障注入和取消/预算检查接入 `:common:check`，协议及存档格式不变。证据与实际游戏验收边界见 [轨道内存修复](rail-memory-2026-10-14.md)。
+
 定向验证：`gradlew :fabric:checkRailCompatibility :neoforge:checkRailCompatibility`。此检查覆盖新建轨道、MessagePack、旧 NBT 和网络往返，不替代多人联机和渲染实测。
 
 beta.4 补齐专用服务器的版本检查、编辑界面和路径创建三个 S2C 通道注册，防止 Architectury 在发送数据时因缺少编码器崩溃；不改变包 ID 和数据格式。`gradlew :common:checkNetworkCompatibility` 覆盖专服/客户端注册、真实编码器字节往返和缺少编码器的失败对照，不启动实际联机服务器。

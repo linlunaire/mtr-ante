@@ -1,0 +1,61 @@
+def commonProject = project(':common')
+def uploadClasses = commonProject.layout.buildDirectory.dir('classes/nativeUploadOwnership')
+def compileUpload = commonProject.tasks.register('compileNativeUploadOwnership', JavaCompile) {
+	source rootProject.file('tests/native-upload/NativeUploadOwnershipCheck.java'), rootProject.file('tests/native-upload/NativeAllocatorAccountingCheck.java')
+	classpath = commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	destinationDirectory = uploadClasses
+	options.compilerArgs = ['-proc:none']
+}
+def uploadAgent = commonProject.tasks.register('nativeUploadOwnershipAgent', Jar) {
+	dependsOn compileUpload
+	from uploadClasses
+	archiveBaseName.set('native-upload-ownership-check')
+	destinationDirectory.set(commonProject.layout.buildDirectory.dir('diagnostics'))
+	manifest { attributes 'Premain-Class': 'cn.zbx1425.mtrsteamloco.compatibility.NativeUploadOwnershipCheck' }
+}
+commonProject.tasks.register('checkNativeUploadOwnership', JavaExec) {
+	group = 'verification'
+	description = 'Fault-injects malloc and GPU endpoints while exercising actual RawMesh/RawModel ownership.'
+	dependsOn uploadAgent, commonProject.tasks.named('classes')
+	classpath = files(uploadClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.NativeUploadOwnershipCheck'
+	if (rootProject.hasProperty('nativeUploadBaseline')) args 'baseline'
+	doFirst { jvmArgs "-javaagent:${uploadAgent.get().archiveFile.get().asFile.absolutePath}" }
+}
+commonProject.tasks.named('check') { dependsOn 'checkNativeUploadOwnership' }
+commonProject.tasks.register('checkVertexArrayOwnership', JavaExec) {
+	group = 'verification'
+	description = 'Fault-injects VAO endpoints while exercising actual VertArrays creation and VertArray close.'
+	dependsOn uploadAgent, commonProject.tasks.named('classes')
+	classpath = files(uploadClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.NativeUploadOwnershipCheck'
+	args 'vao'
+	doFirst { jvmArgs "-javaagent:${uploadAgent.get().archiveFile.get().asFile.absolutePath}" }
+}
+commonProject.tasks.named('check') { dependsOn 'checkVertexArrayOwnership' }
+def allocatorAgent = commonProject.tasks.register('nativeAllocatorAccountingAgent', Jar) {
+	dependsOn compileUpload
+	from uploadClasses
+	archiveBaseName.set('native-allocator-accounting-check')
+	destinationDirectory.set(commonProject.layout.buildDirectory.dir('diagnostics'))
+	manifest { attributes 'Premain-Class': 'cn.zbx1425.mtrsteamloco.compatibility.NativeAllocatorAccountingCheck' }
+}
+commonProject.tasks.register('checkNativeAllocatorAccounting', JavaExec) {
+	group = 'verification'
+	description = 'Verifies native-byte counters and allocator ownership at the actual malloc/copy/free boundary.'
+	dependsOn allocatorAgent, commonProject.tasks.named('classes')
+	classpath = files(uploadClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.NativeAllocatorAccountingCheck'
+	doFirst { jvmArgs "-javaagent:${allocatorAgent.get().archiveFile.get().asFile.absolutePath}" }
+}
+commonProject.tasks.named('check') { dependsOn 'checkNativeAllocatorAccounting' }
+commonProject.tasks.register('checkCompositeGpuClose', JavaExec) {
+	group = 'verification'
+	description = 'Verifies later mesh/VAO members are still closed after one injected deletion or submission failure.'
+	dependsOn uploadAgent, commonProject.tasks.named('classes')
+	classpath = files(uploadClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+	mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.NativeUploadOwnershipCheck'
+	args 'close'
+	doFirst { jvmArgs "-javaagent:${uploadAgent.get().archiveFile.get().asFile.absolutePath}" }
+}
+commonProject.tasks.named('check') { dependsOn 'checkCompositeGpuClose' }

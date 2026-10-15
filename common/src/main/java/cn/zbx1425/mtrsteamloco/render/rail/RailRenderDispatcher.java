@@ -97,19 +97,16 @@ public class RailRenderDispatcher {
 
     public void clearRail() {
         currentFrameRails.clear();
-        Collection<BakedRail> bakedRails = railRefMap.values();
-        for (BakedRail rail : bakedRails) {
-            rail.dispose();
-        }
-        railRefMap.clear();
         for (HashMap<Long, RailChunkBase> chunkMap : railChunkMap.values()) {
             for (RailChunkBase chunk : chunkMap.values()) {
-                chunk.close();
+                closeChunk(chunk);
             }
             chunkMap.clear();
         }
         railChunkMap.clear();
         railChunkList.clear();
+        for (BakedRail rail : railRefMap.values()) rail.dispose();
+        railRefMap.clear();
         for (String key : RailModelRegistry.ELEMENTS.keySet()) {
             railChunkMap.put(key, new HashMap<>());
         }
@@ -180,7 +177,7 @@ public class RailRenderDispatcher {
         for (Iterator<RailChunkBase> it = railChunkList.iterator(); it.hasNext(); ) {
             RailChunkBase chunk = it.next();
             if (chunk.containingRails.isEmpty() && chunk.containingRailsWriting.isEmpty()) {
-                chunk.close();
+                closeChunk(chunk);
                 it.remove();
                 railChunkMap.get(chunk.modelKey).remove(chunk.chunkId);
                 continue;
@@ -198,6 +195,13 @@ public class RailRenderDispatcher {
                 chunk.enqueue(batchManager, shaderProp);
             }
         }        
+    }
+
+    private static void closeChunk(RailChunkBase chunk) {
+        try { chunk.close(); }
+        catch (RuntimeException | Error ex) {
+            Main.LOGGER.warn("Failed closing rail chunk {} model {}", chunk.chunkId, chunk.modelKey, ex);
+        }
     }
 
     public void drawRailNodes(Level level, DrawScheduler drawScheduler, Matrix4f viewMatrix) {

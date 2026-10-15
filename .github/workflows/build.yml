@@ -22,7 +22,7 @@ jobs:
       - name: Checkout pinned YanlingMTR 1.0.3
         uses: actions/checkout@v5
         with:
-          repository: linlunaire/Minecraft-Transit-Railway
+          repository: linlunaire/YanlingMTR
           ref: 1978dc5ed6d67d798dfb6a39c8defc2de38bc850
           path: Minecraft-Transit-Railway-1.21.1
       - name: Set up JDK 21

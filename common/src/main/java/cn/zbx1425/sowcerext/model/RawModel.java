@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 import cn.zbx1425.sowcer.model.Mesh;
 import java.util.function.Function;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RawModel {
 
@@ -45,27 +45,97 @@ public class RawModel {
 
     public Model upload(VertAttrMapping mapping) {
         Model model = new Model();
-        for (RawMesh mesh : meshList.values()) {
-            if (mesh.faces.isEmpty()) continue;
-            model.meshList.add(mesh.upload(mapping));
+        try {
+            for (RawMesh raw : meshList.values()) {
+                if (raw.faces.isEmpty()) continue;
+                Mesh mesh = raw.upload(mapping);
+                try {
+                    model.meshList.add(mesh);
+                } catch (RuntimeException | Error ex) {
+                    closeMesh(mesh, ex);
+                    throw ex;
+                }
+            }
+            return model;
+        } catch (RuntimeException | Error ex) {
+            for (Mesh mesh : model.meshList) closeMesh(mesh, ex);
+            throw ex;
         }
-        return model;
     }
 
-    public Supplier<Model> uploadAsync(VertAttrMapping mapping) { 
-        Model model = new Model();
-        Set<Runnable> uploadTasks = new HashSet<>();
+    public Supplier<Model> uploadAsync(VertAttrMapping mapping) {
+        return prepareUpload(mapping);
+    }
+
+    /** Upper bound before mesh de-duplication, suitable for pre-allocation budget reservation. */
+    public long estimatedUploadBytes(VertAttrMapping mapping) {
+        long bytes = 0;
         for (RawMesh mesh : meshList.values()) {
-            if (mesh.faces.isEmpty()) continue;
-            Supplier<Mesh> meshSupplier = mesh.uploadAsync(mapping);
-            uploadTasks.add(() -> {
-                model.meshList.add(meshSupplier.get());
-            });
+            if (!mesh.faces.isEmpty()) bytes = Math.addExact(bytes, mesh.estimatedUploadBytes(mapping));
         }
-        return () -> {
-            for (Runnable task : uploadTasks) task.run();
+        return bytes;
+    }
+
+    public PreparedUpload<Model> prepareUpload(VertAttrMapping mapping) {
+        List<PreparedUpload<Mesh>> tasks = new ArrayList<>();
+        long bytes = 0;
+        try {
+            for (RawMesh mesh : meshList.values()) {
+                if (mesh.faces.isEmpty()) continue;
+                PreparedUpload<Mesh> task = mesh.prepareUpload(mapping);
+                try {
+                    tasks.add(task);
+                } catch (RuntimeException | Error ex) {
+                    task.close();
+                    throw ex;
+                }
+                bytes = Math.addExact(bytes, task.byteSize());
+            }
+            return PreparedUpload.of(bytes, () -> uploadPrepared(tasks), () -> closePrepared(tasks, null));
+        } catch (RuntimeException | Error ex) {
+            closePrepared(tasks, ex);
+            throw ex;
+        }
+    }
+
+    private static Model uploadPrepared(List<PreparedUpload<Mesh>> tasks) {
+        Model model = new Model();
+        try {
+            for (PreparedUpload<Mesh> task : tasks) {
+                Mesh mesh = task.get();
+                try {
+                    model.meshList.add(mesh);
+                } catch (RuntimeException | Error ex) {
+                    closeMesh(mesh, ex);
+                    throw ex;
+                }
+            }
             return model;
-        };
+        } catch (RuntimeException | Error ex) {
+            for (Mesh mesh : model.meshList) closeMesh(mesh, ex);
+            throw ex;
+        }
+    }
+
+    private static void closeMesh(Mesh mesh, Throwable failure) {
+        // Mesh.close() stops after its first failure; attempt both GPU buffers independently.
+        try { mesh.vertBuf.close(); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+        try { mesh.indexBuf.close(); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+    }
+
+    private static void closePrepared(List<PreparedUpload<Mesh>> tasks, Throwable failure) {
+        Throwable first = failure;
+        for (PreparedUpload<Mesh> task : tasks) {
+            try { task.close(); } catch (RuntimeException | Error cleanup) {
+                if (first == null) first = cleanup;
+                else first.addSuppressed(cleanup);
+            }
+        }
+        tasks.clear();
+        if (failure == null && first != null) {
+            if (first instanceof RuntimeException) throw (RuntimeException) first;
+            throw (Error) first;
+        }
     }
 
     public void append(RawMesh nextMesh) {

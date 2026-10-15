@@ -41,9 +41,10 @@ public class BakedRail {
             final float interval = prop.repeatInterval;
             final float yOffset = prop.yOffset;
             final double length = rail.getLength() - ACCEPT_THRESHOLD;
-            final double ins = length / Math.max(1, Math.round(length / interval));
+            final double ins = RailRepeatGeometry.step(length, interval);
+            if (ins == 0) return;
             Vec3 pre = rail.getPosition(HALF_ACCEPT_THRESHOLD);
-            for (double i = ins; i <= length + ACCEPT_THRESHOLD; i += ins) {
+            for (double i = ins; i <= length + ACCEPT_THRESHOLD; i = RailRepeatGeometry.advance(i, ins)) {
                 Vec3 thi = rail.getPosition(i);
                 Vec3 mid = pre.add(thi).scale(0.5F);
                 float roll = RailExtraSupplier.getRollAngle(rail, i - interval / 2);

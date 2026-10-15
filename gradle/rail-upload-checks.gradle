@@ -1,0 +1,27 @@
+def commonProject = project(':common')
+def railClasses = commonProject.layout.buildDirectory.dir('classes/railUploadLifecycle')
+def compileRail = commonProject.tasks.register('compileRailUploadLifecycle', JavaCompile) {
+    dependsOn commonProject.tasks.named('classes')
+    source rootProject.file('tests/rail-upload/RailUploadLifecycleCheck.java')
+    source rootProject.file('tests/rail-upload/RailBuildBudgetCheck.java')
+    source rootProject.file('tests/rail-upload/RailUploadLifecycleAgent.java')
+    classpath = commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+    destinationDirectory = railClasses
+    options.compilerArgs = ['-proc:none']
+}
+def railAgent = commonProject.tasks.register('railUploadLifecycleAgent', Jar) {
+    dependsOn compileRail
+    from railClasses
+    archiveBaseName.set('rail-upload-lifecycle-check')
+    destinationDirectory.set(commonProject.layout.buildDirectory.dir('diagnostics'))
+    manifest { attributes 'Premain-Class': 'cn.zbx1425.mtrsteamloco.compatibility.RailUploadLifecycleAgent' }
+}
+commonProject.tasks.register('checkRailUploadLifecycle', JavaExec) {
+    group = 'verification'
+    description = 'Exercises real rail construction, worker/upload bounds and close-before-upload cancellation.'
+    dependsOn railAgent, commonProject.tasks.named('classes')
+    classpath = files(railClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.RailUploadLifecycleCheck'
+    doFirst { jvmArgs "-javaagent:${railAgent.get().archiveFile.get().asFile.absolutePath}" }
+}
+commonProject.tasks.named('check') { dependsOn 'checkRailUploadLifecycle' }

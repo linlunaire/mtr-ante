@@ -32,11 +32,15 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
+import java.io.UncheckedIOException;
+import cn.zbx1425.sowcerext.model.PreparedUpload;
 
 public class InstancedRailChunk extends RailChunkBase {
 
-    private final InstanceBuf instanceBuf;
-    private final VertArrays vertArrays;
+    private final Model railModel;
+    private InstanceBuf instanceBuf;
+    private VertArrays vertArrays;
 
     private static final VertAttrMapping RAIL_MAPPING = new VertAttrMapping.Builder()
             .set(VertAttrType.POSITION, VertAttrSrc.VERTEX_BUF)
@@ -50,32 +54,30 @@ public class InstancedRailChunk extends RailChunkBase {
 
     public InstancedRailChunk(Long chunkId, String modelKey) {
         super(chunkId, modelKey);
-        Model railModel = RailModelRegistry.getProperty(modelKey).uploadedModel;
-        if (railModel != null) {
-            instanceBuf = new InstanceBuf(0);
-            vertArrays = VertArrays.createAll(railModel, RAIL_MAPPING, instanceBuf);
-        } else {
-            instanceBuf = null;
-            vertArrays = null;
-        }
+        railModel = RailModelRegistry.getProperty(modelKey).uploadedModel;
     }
 
     @Override
     public void rebuildBuffer(Level world) {
-        super.rebuildBuffer(world);
-        if (vertArrays == null) return;
-
-        EXECUTOR.execute(() -> {
-            int instanceCount = containingRails.values().stream().mapToInt(ArrayList::size).sum();
+        if (railModel == null) return;
+        scheduleBuild(rails -> Math.multiplyExact((long) instanceCount(rails), RAIL_MAPPING.strideInstance), snapshot -> {
+            int instanceCount = instanceCount(snapshot.rails);
+            int byteSize = Math.toIntExact(Math.multiplyExact((long) instanceCount, RAIL_MAPPING.strideInstance));
             float yMin = 256, yMax = -64;
-
-            ByteBuffer byteBuf = OffHeapAllocator.allocate(instanceCount * RAIL_MAPPING.strideInstance);
+            if (instanceCount == 0) return PreparedUpload.of(0,
+                    () -> new UploadedInstances(null, null, -64, -64), () -> {});
+            ByteBuffer byteBuf = OffHeapAllocator.allocate(byteSize);
+            boolean transferred = false;
+            try {
             ByteBufferOutputStream byteArrayOutputStream = new ByteBufferOutputStream(byteBuf, false);
             LittleEndianDataOutputStream oStream = new LittleEndianDataOutputStream(byteArrayOutputStream);
+            byte[] lookAtBytes = new byte[4 * 16];
+            FloatBuffer matFloatBuf = ByteBuffer.wrap(lookAtBytes).order(ByteOrder.nativeOrder()).asFloatBuffer();
 
-            for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
+            for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : snapshot.rails.entrySet()) {
                 ArrayList<Matrix4f> railSpan = entry.getValue();
                 for (Matrix4f pieceMat : railSpan) {
+                    snapshot.checkCancelled();
                     try {
                         oStream.writeInt(entry.getKey().color);
 
@@ -86,29 +88,48 @@ public class InstancedRailChunk extends RailChunkBase {
                         final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
                         oStream.writeInt(light);
 
-                        byte[] lookAtBytes = new byte[4 * 16];
-                        ByteBuffer matByteBuf = ByteBuffer.wrap(lookAtBytes).order(ByteOrder.nativeOrder());
-                        FloatBuffer matFloatBuf = matByteBuf.asFloatBuffer();
                         pieceMat.store(matFloatBuf);
                         oStream.write(lookAtBytes);
 
                         for (int k = 0; k < RAIL_MAPPING.paddingInstance; k++) oStream.writeByte(0);
-                    } catch (IOException ignored) {
-
-                    }
+                    } catch (IOException ex) { throw new UncheckedIOException(ex); }
                 }
             }
 
-            UPLOAD_QUEUE.offer(() -> {
-                instanceBuf.size = instanceCount;
-                instanceBuf.upload(byteBuf, VertBuf.USAGE_DYNAMIC_DRAW);
-                OffHeapAllocator.free(byteBuf);
-                bufferBuilding = false;
-            });
-
             if (yMin > yMax) yMin = yMax;
-            setBoundingBox(yMin, yMax);
+            final float minimum = yMin, maximum = yMax;
+            PreparedUpload<UploadedInstances> prepared = PreparedUpload.of(byteSize, () -> {
+                InstanceBuf buffer = new InstanceBuf(0);
+                VertArrays arrays = null;
+                try {
+                    buffer.upload(byteBuf, VertBuf.USAGE_DYNAMIC_DRAW);
+                    buffer.size = instanceCount;
+                    arrays = VertArrays.createAll(railModel, RAIL_MAPPING, buffer);
+                    return new UploadedInstances(buffer, arrays, minimum, maximum);
+                } catch (RuntimeException | Error ex) {
+                    if (arrays != null) try { arrays.close(); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
+                    try { buffer.close(); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
+                    throw ex;
+                }
+            }, () -> OffHeapAllocator.free(byteBuf));
+            transferred = true;
+            return prepared;
+            } finally { if (!transferred) OffHeapAllocator.free(byteBuf); }
+        }, (prepared, snapshot) -> {
+            UploadedInstances next = prepared.get();
+            try { setBoundingBox(next.yMin, next.yMax); }
+            catch (RuntimeException | Error ex) { next.close(); throw ex; }
+            InstanceBuf previousBuffer = instanceBuf; VertArrays previousArrays = vertArrays;
+            instanceBuf = next.buffer; vertArrays = next.arrays;
+            try { if (previousArrays != null) previousArrays.close(); }
+            finally { if (previousBuffer != null) previousBuffer.close(); }
         });
+    }
+
+    private static int instanceCount(HashMap<BakedRail, ArrayList<Matrix4f>> rails) {
+        int count = 0;
+        for (ArrayList<Matrix4f> transforms : rails.values()) count = Math.addExact(count, transforms.size());
+        return count;
     }
 
     @Override
@@ -123,9 +144,25 @@ public class InstancedRailChunk extends RailChunkBase {
 
     @Override
     public void close() {
-        if (vertArrays == null) return;
+        synchronized (lifecycleLock) {
+            cancelBuild();
+            InstanceBuf buffer = instanceBuf; VertArrays arrays = vertArrays;
+            instanceBuf = null; vertArrays = null;
+            try { if (arrays != null) arrays.close(); }
+            finally { if (buffer != null) buffer.close(); }
+        }
+    }
 
-        vertArrays.close();
-        instanceBuf.close();
+    private static final class UploadedInstances {
+        final InstanceBuf buffer;
+        final VertArrays arrays;
+        final float yMin, yMax;
+        UploadedInstances(InstanceBuf buffer, VertArrays arrays, float yMin, float yMax) {
+            this.buffer = buffer; this.arrays = arrays; this.yMin = yMin; this.yMax = yMax;
+        }
+        void close() {
+            try { if (arrays != null) arrays.close(); }
+            finally { if (buffer != null) buffer.close(); }
+        }
     }
 }

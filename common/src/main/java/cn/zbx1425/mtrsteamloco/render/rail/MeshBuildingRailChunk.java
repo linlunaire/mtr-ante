@@ -32,6 +32,7 @@ import cn.zbx1425.mtrsteamloco.ClientConfig;
 import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 public class MeshBuildingRailChunk extends RailChunkBase {
 
@@ -62,31 +63,70 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void rebuildBuffer(Level world) {
-        super.rebuildBuffer(world);
         if (railModel == null) return;
-
-        EXECUTOR.execute(() -> {
-            RawModel combinedModel = ClientConfig.enableRailDeform ? transformModelDeform(world) : transformModel(world);
-            checkBoundingBox();
-            
-            Supplier<Model> supplier = combinedModel.uploadAsync(RAIL_MAPPING);
-            UPLOAD_QUEUE.offer(() -> {
-                if (uploadedCombinedModel != null) uploadedCombinedModel.close();
-                if (vertArrays != null) vertArrays.close();
-                uploadedCombinedModel = supplier.get();
-                vertArrays = VertArrays.createAll(uploadedCombinedModel, RAIL_MAPPING, null);
-                bufferBuilding = false;
-            });
+        final boolean deforming = ClientConfig.enableRailDeform;
+        final HashMap<BakedRail, DeformInput> deformation = new HashMap<>();
+        scheduleBuild(rails -> estimateBytes(rails, deforming, deformation), snapshot -> {
+            RawModel combinedModel = deforming ? transformModelDeform(world, snapshot, deformation)
+                    : transformModel(world, snapshot);
+            snapshot.checkCancelled();
+            float[] bounds = bounds(snapshot);
+            PreparedUpload<Model> modelUpload = combinedModel.prepareUpload(RAIL_MAPPING);
+            try { return PreparedUpload.of(modelUpload.byteSize(), () -> {
+                Model model = modelUpload.get();
+                VertArrays arrays = null;
+                try {
+                    arrays = VertArrays.createAll(model, RAIL_MAPPING, null);
+                    return new UploadedMesh(model, arrays, bounds[0], bounds[1]);
+                } catch (RuntimeException | Error ex) {
+                    if (arrays != null) try { arrays.close(); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
+                    try { model.close(); } catch (RuntimeException | Error cleanup) { ex.addSuppressed(cleanup); }
+                    throw ex;
+                }
+            }, modelUpload::close); }
+            catch (RuntimeException | Error ex) { modelUpload.close(); throw ex; }
+        }, (prepared, snapshot) -> {
+            UploadedMesh next = prepared.get();
+            try { setBoundingBox(next.yMin, next.yMax); }
+            catch (RuntimeException | Error ex) { next.close(); throw ex; }
+            Model previousModel = uploadedCombinedModel;
+            VertArrays previousArrays = vertArrays;
+            uploadedCombinedModel = next.model; vertArrays = next.arrays; deform = deforming;
+            try { if (previousArrays != null) previousArrays.close(); }
+            finally { if (previousModel != null) previousModel.close(); }
         });
     }
 
-    private RawModel transformModel(Level world) {
-        deform = false;
+    private long estimateBytes(HashMap<BakedRail, ArrayList<Matrix4f>> rails, boolean deforming,
+            HashMap<BakedRail, DeformInput> deformation) {
+        long bytes = 0;
+        long perPiece = deforming ? 0 : railModel.estimatedUploadBytes(RAIL_MAPPING);
+        for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : rails.entrySet()) {
+            long count;
+            if (deforming) {
+                DeformInput input = new DeformInput(entry.getKey());
+                deformation.put(entry.getKey(), input);
+                double length = input.rail.getLength() - ACCEPT_THRESHOLD;
+                double step = RailRepeatGeometry.step(length, input.interval);
+                // Upper bound includes all repeats, even those subsequently rejected by chunk position.
+                count = step > 0 ? (long) Math.ceil(length / step) : 0;
+                if (count > 0) count = Math.addExact(count, 1);
+                bytes = Math.addExact(bytes, Math.multiplyExact(count, input.model.estimatedUploadBytes(RAIL_MAPPING)));
+            } else {
+                count = entry.getValue().size();
+                bytes = Math.addExact(bytes, Math.multiplyExact(count, perPiece));
+            }
+        }
+        return bytes;
+    }
+
+    private RawModel transformModel(Level world, BuildSnapshot snapshot) {
         RawModel combinedModel = new RawModel();
 
-        for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
+        for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : snapshot.rails.entrySet()) {
             ArrayList<Matrix4f> railSpan = entry.getValue();
             for (Matrix4f pieceMat : railSpan) {
+                snapshot.checkCancelled();
                 final Vector3f lightPos = pieceMat.getTranslationPart();
                 final BlockPos lightBlockPos = new BlockPos(Mth.floor(lightPos.x()), Mth.floor(lightPos.y() + 0.1), Mth.floor(lightPos.z()));
                 final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, lightBlockPos), world.getBrightness(LightLayer.SKY, lightBlockPos));
@@ -97,10 +137,11 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         return  combinedModel;
     }
 
-    private void checkBoundingBox() {
+    private float[] bounds(BuildSnapshot snapshot) {
         float yMin = 256, yMax = -64;
-        for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : containingRails.entrySet()) {
+        for (Map.Entry<BakedRail, ArrayList<Matrix4f>> entry : snapshot.rails.entrySet()) {
             for (Matrix4f pieceMat : entry.getValue()) {
+                snapshot.checkCancelled();
                 final Vector3f lightPos = pieceMat.getTranslationPart();
                 yMin = Math.min(yMin, lightPos.y());
                 yMax = Math.max(yMax, lightPos.y());
@@ -108,25 +149,26 @@ public class MeshBuildingRailChunk extends RailChunkBase {
         }
 
         if (yMin > yMax) yMin = yMax;
-        setBoundingBox(yMin, yMax);
+        return new float[] {yMin, yMax};
     }
 
-    private RawModel transformModelDeform(Level world) {
-        deform = true;
+    private RawModel transformModelDeform(Level world, BuildSnapshot snapshot, Map<BakedRail, DeformInput> inputs) {
         RawModel combinedModel = new RawModel();
-        for (BakedRail bakedRail : containingRails.keySet()) {
-            Rail rail = bakedRail.rail;
-            RailModelProperties prop = bakedRail.getProperties();
-            RailExtraSupplier supplier = (RailExtraSupplier) rail;
-            boolean reverse = supplier.getRenderReversed();
-            float interval = prop.repeatInterval;
-            float yOffset = prop.yOffset;
-            RawModel railModel = prop.rawModel;
+        for (BakedRail bakedRail : snapshot.rails.keySet()) {
+            snapshot.checkCancelled();
+            DeformInput input = inputs.get(bakedRail);
+            Rail rail = input.rail;
+            boolean reverse = input.reverse;
+            float interval = input.interval;
+            float yOffset = input.yOffset;
+            RawModel railModel = input.model;
             final double length = rail.getLength() - ACCEPT_THRESHOLD;
-            final double ins = length / Math.max(1, Math.round(length / interval));
+            final double ins = RailRepeatGeometry.step(length, interval);
+            if (ins == 0) continue;
             final double halfIns = ins / 2;
 
-            for (double i = halfIns; i <= length ; i += ins) {
+            for (double i = halfIns; i <= length ; i = RailRepeatGeometry.advance(i, ins)) {
+                snapshot.checkCancelled();
                 Vec3 mid = rail.getPosition(i);
                 if (BakedRail.chunkIdFromWorldPos((int) mid.x, (int) mid.z) != chunkId) continue;
 
@@ -137,6 +179,7 @@ public class MeshBuildingRailChunk extends RailChunkBase {
                 RawModel rm = railModel.copy();
                 for (Map.Entry<MaterialProp, RawMesh> entry : rm.meshList.entrySet()) {
                     for (Vertex v : entry.getValue().vertices) {
+                        snapshot.checkCancelled();
                         Matrix4f mat = getLookAtMat(rail, transform(i, ins, interval, v.position.z(), reverse), yOffset, reverse);
                         v.position = mat.transform(new Vector3f(v.position.x(), v.position.y(), 0));
                         v.normal = mat.transform3(v.normal);
@@ -179,9 +222,35 @@ public class MeshBuildingRailChunk extends RailChunkBase {
 
     @Override
     public void close() {
-        if (vertArrays != null) vertArrays.close();
-        if (uploadedCombinedModel != null) uploadedCombinedModel.close();
-        vertArrays = null;
-        uploadedCombinedModel = null;
+        synchronized (lifecycleLock) {
+            cancelBuild();
+            VertArrays arrays = vertArrays; Model model = uploadedCombinedModel;
+            vertArrays = null; uploadedCombinedModel = null;
+            try { if (arrays != null) arrays.close(); }
+            finally { if (model != null) model.close(); }
+        }
+    }
+
+    private static final class DeformInput {
+        final Rail rail;
+        final RawModel model;
+        final float interval, yOffset;
+        final boolean reverse;
+        DeformInput(BakedRail bakedRail) {
+            rail = bakedRail.rail;
+            RailModelProperties prop = bakedRail.getProperties();
+            model = prop.rawModel; interval = prop.repeatInterval; yOffset = prop.yOffset;
+            reverse = ((RailExtraSupplier) rail).getRenderReversed();
+        }
+    }
+
+    private static final class UploadedMesh {
+        final Model model;
+        final VertArrays arrays;
+        final float yMin, yMax;
+        UploadedMesh(Model model, VertArrays arrays, float yMin, float yMax) {
+            this.model = model; this.arrays = arrays; this.yMin = yMin; this.yMax = yMax;
+        }
+        void close() { try { arrays.close(); } finally { model.close(); } }
     }
 }

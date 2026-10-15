@@ -21,12 +21,26 @@ public class VertArrays implements Closeable {
 
     public static VertArrays createAll(Model model, VertAttrMapping mapping, InstanceBuf instanceBuf) {
         VertArrays result = new VertArrays();
-        for (Mesh mesh : model.meshList) {
-            VertArray meshVertArray = new VertArray();
-            meshVertArray.create(mesh, mapping, instanceBuf);
-            result.meshList.add(meshVertArray);
+        try {
+            for (Mesh mesh : model.meshList) {
+                VertArray meshVertArray = new VertArray();
+                try {
+                    meshVertArray.create(mesh, mapping, instanceBuf);
+                    result.meshList.add(meshVertArray);
+                } catch (RuntimeException | Error ex) {
+                    closeOnFailure(meshVertArray, ex);
+                    throw ex;
+                }
+            }
+            return result;
+        } catch (RuntimeException | Error ex) {
+            for (VertArray meshVertArray : result.meshList) closeOnFailure(meshVertArray, ex);
+            throw ex;
         }
-        return result;
+    }
+
+    private static void closeOnFailure(VertArray vertexArray, Throwable failure) {
+        try { vertexArray.close(); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
     }
 
     public void replaceTexture(String oldTexture, ResourceLocation newTexture) {
@@ -47,11 +61,21 @@ public class VertArrays implements Closeable {
 
     public VertArrays copyForMaterialChanges() {
         VertArrays result = new VertArrays();
-        for (VertArray vertArray : meshList) {
-            VertArray newVertArray = vertArray.copyForMaterialChanges();
-            result.meshList.add(newVertArray);
+        try {
+            for (VertArray vertArray : meshList) {
+                VertArray newVertArray = vertArray.copyForMaterialChanges();
+                try {
+                    result.meshList.add(newVertArray);
+                } catch (RuntimeException | Error ex) {
+                    closeOnFailure(newVertArray, ex);
+                    throw ex;
+                }
+            }
+            return result;
+        } catch (RuntimeException | Error ex) {
+            for (VertArray vertArray : result.meshList) closeOnFailure(vertArray, ex);
+            throw ex;
         }
-        return result;
     }
 
     public void setMatixProcess(Function<Matrix4f, Matrix4f> matrixProcess) {
@@ -62,8 +86,14 @@ public class VertArrays implements Closeable {
 
     @Override
     public void close() {
+        Throwable failure = null;
         for (VertArray mesh : meshList) {
-            mesh.close();
+            try { mesh.close(); } catch (RuntimeException | Error ex) {
+                if (failure == null) failure = ex;
+                else if (failure != ex) failure.addSuppressed(ex);
+            }
         }
+        if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+        if (failure != null) throw (Error) failure;
     }
 }

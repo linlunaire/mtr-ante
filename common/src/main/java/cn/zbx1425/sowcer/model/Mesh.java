@@ -21,7 +21,13 @@ public class Mesh implements Closeable {
 
     @Override
     public void close() {
-        vertBuf.close();
-        indexBuf.close();
+        Throwable failure = null;
+        try { vertBuf.close(); } catch (RuntimeException | Error ex) { failure = ex; }
+        try { indexBuf.close(); } catch (RuntimeException | Error ex) {
+            if (failure == null) failure = ex;
+            else if (failure != ex) failure.addSuppressed(ex);
+        }
+        if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+        if (failure != null) throw (Error) failure;
     }
 }
