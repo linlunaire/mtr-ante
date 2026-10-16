@@ -3,6 +3,7 @@ package cn.zbx1425.mtrsteamloco.block;
 import cn.zbx1425.mtrsteamloco.Main;
 import mtr.block.BlockNode;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockGetter;
 import mtr.mappings.EntityBlockMapper;
 import net.minecraft.world.level.block.RenderShape;
 import org.jetbrains.annotations.NotNull;
@@ -23,6 +24,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import mtr.packet.PacketTrainDataGuiServer;
 import cn.zbx1425.mtrsteamloco.data.RailExtraSupplier;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +39,12 @@ public class BlockDirectNode extends BlockNode implements EntityBlockMapper {
     @Override
     public RenderShape getRenderShape(@NotNull BlockState blockState) {
         return RenderShape.ENTITYBLOCK_ANIMATED;
+    }
+
+    @Override
+    public VoxelShape getOcclusionShape(BlockState state, BlockGetter world, BlockPos pos) {
+        // The inherited shape is a selection outline, not an opaque face of the rendered node.
+        return Shapes.empty();
     }
 
     @Override

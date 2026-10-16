@@ -1,0 +1,17 @@
+def commonProject = project(':common')
+def clientStateClasses = commonProject.layout.buildDirectory.dir('classes/clientStateRegression')
+def compileClientState = commonProject.tasks.register('compileClientStateRegression', JavaCompile) {
+    dependsOn commonProject.tasks.named('classes')
+    source rootProject.file('tests/client-state/ClientStateRegressionCheck.java')
+    classpath = commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+    destinationDirectory = clientStateClasses
+    options.compilerArgs = ['-proc:none']
+}
+commonProject.tasks.register('checkClientStateRegression', JavaExec) {
+    group = 'verification'
+    description = 'Checks client configuration round trips and exactly-once frame submission at counting render endpoints.'
+    dependsOn compileClientState
+    classpath = files(clientStateClasses) + commonProject.sourceSets.main.output + commonProject.configurations.compileClasspath
+    mainClass = 'cn.zbx1425.mtrsteamloco.compatibility.ClientStateRegressionCheck'
+}
+commonProject.tasks.named('check') { dependsOn 'checkClientStateRegression' }

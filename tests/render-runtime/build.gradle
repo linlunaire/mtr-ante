@@ -1,0 +1,82 @@
+plugins {
+    id 'architectury-plugin' version '3.4.164'
+    id 'dev.architectury.loom' version '1.11.458'
+}
+version = '1'
+loom { silentMojangMappingsLicense() }
+architectury {
+    minecraft = '1.21.1'
+    platformSetupLoomIde()
+    neoForge()
+}
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.architectury.dev/' }
+    maven { url = 'https://maven.parchmentmc.org/' }
+    maven { url = 'https://neoforged.forgecdn.net/releases' }
+    maven { url = 'https://maven.neoforged.net/releases' }
+}
+def mode = (findProperty('probeMode') ?: 'shader').toString()
+if (!(mode in ['shader', 'node', 'plain'])) throw new GradleException('probeMode must be shader, node or plain')
+def probeName = (findProperty('probeName') ?: mode).toString()
+if (!(probeName ==~ /[a-zA-Z0-9-]+/)) throw new GradleException('Invalid probeName')
+def requiredFile = { String key ->
+    if (!project.hasProperty(key)) throw new GradleException("Specify -P${key}=<local file>")
+    def result = file(project.property(key))
+    if (!result.isFile()) throw new GradleException("Missing ${key}: ${result}")
+    result
+}
+def mtr = requiredFile('mtrTestJar')
+def ylte = requiredFile('ylteTestJar')
+def extraMods = []
+['irisTestJar', 'sodiumTestJar', 'clothConfigTestJar', 'moreCullingTestJar'].each { key ->
+    if (project.hasProperty(key)) extraMods.add(requiredFile(key))
+}
+def shaderPack = mode == 'shader' ? requiredFile('shaderPack') : null
+if (mode == 'shader' && !project.hasProperty('irisTestJar')) throw new GradleException('shader mode requires irisTestJar')
+def diagnostics = file('../../build/diagnostics/render-runtime')
+def clientDir = new File(diagnostics, "client-${probeName}")
+def evidenceDir = new File(diagnostics, "evidence-${probeName}")
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.1'
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment 'org.parchmentmc.data:parchment-1.21.1:2024.11.17@zip'
+    }
+    neoForge "net.neoforged:neoforge:${findProperty('probeNeoForgeVersion') ?: '21.1.252'}"
+    modImplementation 'dev.architectury:architectury-neoforge:13.0.11'
+    modImplementation files(mtr, ylte)
+}
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-proc:none']
+}
+loom.runs {
+    client {
+        client()
+        runDir = projectDir.toPath().relativize(clientDir.toPath()).toString()
+        vmArg "-Dylte.render.mode=${mode}"
+        vmArg "-Dylte.render.moreCulling=${project.hasProperty('moreCullingTestJar')}"
+        vmArg "-Dylte.render.evidence=${evidenceDir.absolutePath}"
+    }
+}
+tasks.named('runClient') {
+    doFirst {
+        def modsDir = new File(clientDir, 'mods')
+        // Dedicated fixture only: stale optional mods must not contaminate another case.
+        if (modsDir.isDirectory() && modsDir.listFiles().any { it.name.endsWith('.jar') && !(it.name in extraMods*.name) })
+            throw new GradleException('Use a fresh probeName when changing optional mods')
+        copy { from extraMods; into modsDir }
+        def config = new File(clientDir, 'config/iris.properties')
+        config.parentFile.mkdirs()
+        config.text = "enableShaders=${mode == 'shader'}\nshaderPack=${shaderPack?.name ?: ''}\n"
+        if (shaderPack != null) copy { from shaderPack; into new File(clientDir, 'shaderpacks') }
+        evidenceDir.mkdirs()
+    }
+    doLast {
+        def log = new File(clientDir, 'logs/latest.log').getText('UTF-8')
+        if (!log.contains('RENDER_RUNTIME_PASS:') || log.contains('RENDER_RUNTIME_FAIL:') || log.contains('Error executing task on Server'))
+            throw new GradleException('Render runtime regression failed; inspect the isolated log and evidence PNGs')
+    }
+}

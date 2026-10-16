@@ -90,7 +90,9 @@ public class VertAttrState {
                     } else {
                         ShaderInstance shaderInstance = RenderSystem.getShader();
                         if (shaderInstance != null && shaderInstance.MODEL_VIEW_MATRIX != null) {
-                            shaderInstance.MODEL_VIEW_MATRIX.set(nowMatrix.asMoj());
+                            // PoseStack/model transforms do not include RenderSystem's main-camera rotation.
+                            shaderInstance.MODEL_VIEW_MATRIX.set(new org.joml.Matrix4f(RenderSystem.getModelViewMatrix())
+                                    .mul(nowMatrix.asMoj()));
                             if (useCustomShader) {
                                 shaderInstance.MODEL_VIEW_MATRIX.upload();
                             } else {

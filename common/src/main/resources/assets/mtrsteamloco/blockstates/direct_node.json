@@ -1,7 +1,7 @@
 {
 	"variants": {
 		"": { 
-			"model": "minecraft:block/stone"
+			"model": "mtrsteamloco:block/direct_node_placeholder"
 		}
 	}
 }

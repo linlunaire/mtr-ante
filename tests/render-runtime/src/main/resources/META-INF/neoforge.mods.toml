@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+[[mods]]
+modId="ylte_render_regression"
+version="1"
+displayName="YLTE isolated render regression"
+[[mixins]]
+config="render-regression.mixins.json"

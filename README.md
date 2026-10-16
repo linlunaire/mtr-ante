@@ -1,44 +1,107 @@
-# YLTE（Yanling Transit Expansion）
+<div align="center">
+  <img src="common/src/main/resources/icon.png" alt="YLTE icon" width="128">
 
-YLTE 是 ANTE 的 Minecraft 1.21.1 维护版，为 YanlingMTR / MTR 提供自定义模型、脚本渲染、装饰物和轨道工具。当前版本为 `1.1.2`，支持 Fabric 与 NeoForge。
+  <h1>YLTE</h1>
+  <p><strong>Yanling Transit Expansion</strong></p>
+  <p>Custom models, scripted rendering and rail tools for your Minecraft railway.</p>
 
-本分支使用 Java。旧 Java 26.2 版在 [26.2](https://github.com/linlunaire/mtr-ante/tree/26.2)，独立 Kotlin 版在 [master](https://github.com/linlunaire/mtr-ante/tree/master)；后续 26.2 开发已迁入 [YanlingMTR](https://github.com/linlunaire/YanlingMTR/tree/master/ante)。
+  <p>
+    <a href="#whats-new"><img src="https://img.shields.io/badge/YLTE-1.1.3-A77AE5?style=flat-square" alt="YLTE 1.1.3"></a>
+    <img src="https://img.shields.io/badge/Minecraft-1.21.1-62A854?style=flat-square" alt="Minecraft 1.21.1">
+    <img src="https://img.shields.io/badge/Loaders-Fabric%20%2B%20NeoForge-546E7A?style=flat-square" alt="Fabric and NeoForge">
+    <img src="https://img.shields.io/badge/Java-21-E58A2B?style=flat-square" alt="Java 21">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-327E88?style=flat-square" alt="MIT license"></a>
+  </p>
+  <p>
+    <a href="https://github.com/linlunaire/mtr-ante/actions/workflows/build.yml?query=branch%3A1.21.1"><img src="https://github.com/linlunaire/mtr-ante/actions/workflows/build.yml/badge.svg?branch=1.21.1" alt="1.21.1 build status"></a>
+  </p>
+  <p>
+    <a href="#download--install">Download &amp; install</a> &nbsp;·&nbsp;
+    <a href="#whats-new">What's new</a> &nbsp;·&nbsp;
+    <a href="#build-from-source">Build</a> &nbsp;·&nbsp;
+    <a href="https://github.com/linlunaire/mtr-ante/issues">Report an issue</a> &nbsp;·&nbsp;
+    <a href="https://github.com/linlunaire/YanlingMTR/tree/1.21.1">YanlingMTR</a>
+  </p>
+</div>
 
-## 安装
+---
 
-使用 Java 21，推荐搭配 [YanlingMTR 1.0.3](https://github.com/linlunaire/YanlingMTR/tree/1.21.1)。加载器接受 MTR `1.21.1-3.3.4` 及以上兼容版本。Fabric 需要 Fabric API 和 Architectury API；NeoForge 需要 Architectury API。
+YLTE continues [Aphrodite's Nemo's Transit Expansion (ANTE)](https://github.com/aphrodite281/mtr-ante) for **Minecraft 1.21.1**. It adds custom models, JavaScript rendering, decorative objects and track-building tools to YanlingMTR / MTR.
 
-用 YLTE JAR 替换原 ANTE，不要同时安装。模组保留 `mtrsteamloco` 标识、资源命名空间、Java／脚本接口、`ANTE_FLAG`、`ANTE-Data` 存档键及网络协议，既有资源包组名和动态资源包 ID 不变。
+## 🛠️ Make the railway your own
 
-客户端与服务端应一起更新。升级前备份存档、配置和资源包，并先在副本中检查列车与脚本。1.21.1 和 26.2 的模组文件不能混用。
+| Models & scripting | Building & track tools |
+| :--- | :--- |
+| Load custom train, rail and decoration models. | Shape track connections with direct nodes and rail tools. |
+| Add JavaScript-driven rendering and behavior. | Place and transform decorative objects around stations. |
+| Use existing ANTE resource packs and script interfaces. | Edit track geometry, cant and model placement. |
 
-## 1.1.2 更新
+## Download & install
 
-限制轨道异步构建和待上传积压，补全原生缓冲区异常清理、区块卸载取消及 VAO 释放。原有资源包、脚本接口和协议 11 保持不变。崩溃证据、诊断参数和同世界对照方法见 [轨道内存修复](docs/rail-memory-2026-10-14.md)；自动检查不替代连续传送与实际显卡渲染验收。
+Download **`YLTE-1.21.1`** from the Artifacts section of a successful [1.21.1 build](https://github.com/linlunaire/mtr-ante/actions/workflows/build.yml?query=branch%3A1.21.1). GitHub requires sign-in to download workflow artifacts.
 
-### 1.1.1
+Use **Java 21** with [YanlingMTR 1.0.4](https://github.com/linlunaire/YanlingMTR/tree/1.21.1), and place the matching JARs in `mods/`:
 
-修复中文搜索缺少拼音库的问题，保留全拼和首字母搜索；修复字符串配置编码、直接节点编辑、列车配置 ID 顺序、路线工具和手持装饰物的修改保存，并补充服务端编辑权限与目标检查。
+| Loader | Required dependencies | Mod file |
+| :--- | :--- | :--- |
+| Fabric | YanlingMTR · [Fabric API](https://modrinth.com/mod/fabric-api) · [Architectury API](https://modrinth.com/mod/architectury-api) | `YLTE-fabric-1.1.3-1.21.1.jar` |
+| NeoForge | YanlingMTR · [Architectury API](https://modrinth.com/mod/architectury-api) | `YLTE-neoforge-1.1.3-1.21.1.jar` |
 
-新写入的字符串配置可能使用 `YLTE-SM1:` 编码，旧版无法完整读取；此前已损坏或丢失的数据仍需从备份恢复。旧版本修复和定向测试命令见 [维护记录](docs/maintenance-history.md)，原生客户端检查见 [1.21.1 维护检查](https://github.com/linlunaire/YanlingMTR/blob/1.21.1/docs/health-review-2026-10-11.md)。
+Replace the old ANTE JAR and update clients and servers together. The loader accepts MTR compatibility versions from `1.21.1-3.3.4`; YanlingMTR is the maintained companion build used here.
 
-## 构建
+> [!IMPORTANT]
+> Back up worlds, configuration and resource packs before upgrading. YLTE retains the `mtrsteamloco` ID, resource namespaces, Java/script interfaces, `ANTE_FLAG`, `ANTE-Data` save key and protocol 11. Resource-pack groups and dynamic pack IDs are also retained.
 
-使用 JDK 21，先构建相邻的 `Minecraft-Transit-Railway-1.21.1`，再在本仓库运行：
+## What's new
 
-```powershell
-.\gradlew.bat build --console=plain
+**1.1.3 · October 16, 2026**
+
+- Fixed rails becoming invisible with Iris shaders while their shadows remained visible.
+- Fixed More Culling hiding block faces beneath direct nodes.
+- Fixed client slider limits and step sizes resetting after a restart.
+- Fixed custom raw-model draw calls being skipped or replayed across frames.
+
+<details>
+<summary>Previous updates</summary>
+
+- **1.1.2** — Bounded asynchronous rail builds and pending uploads; fixed native-buffer cleanup, chunk-unload cancellation and VAO disposal. See the [rail memory notes](docs/rail-memory-2026-10-14.md).
+- **1.1.1** — Fixed pinyin search, string configuration encoding, direct-node editing, train configuration IDs, route-tool and held-decoration persistence, and server-side edit validation.
+
+String values written with `YLTE-SM1:` require the newer decoder. Previously lost or corrupted data still requires a backup. Earlier changes and targeted checks are in the [maintenance history](docs/maintenance-history.md).
+
+</details>
+
+## Build from source
+
+Use **JDK 21** and the included Gradle 8.14.5 wrapper. Place the [YanlingMTR `1.21.1` checkout](https://github.com/linlunaire/YanlingMTR/tree/1.21.1) next to this repository:
+
+```text
+workspace/
+├── Minecraft-Transit-Railway-1.21.1/
+└── mtr-ante/
 ```
 
-自定义 MTR 路径使用 `-PmtrProjectDir=<路径>`。构建会检查 Minecraft 版本和开发 JAR，并在兼容性检查通过后导出：
+Build YanlingMTR first, then YLTE:
 
-- `build/release/YLTE-fabric-1.1.2-1.21.1.jar`
-- `build/release/YLTE-neoforge-1.1.2-1.21.1.jar`
+```powershell
+cd ../Minecraft-Transit-Railway-1.21.1
+.\gradlew.bat build
+cd ../mtr-ante
+.\gradlew.bat build
+```
 
-CI 固定依赖提交，不自动发布。每次分发维护更新时递增 `gradle.properties` 的 `mod_version` 并重新构建。历史产物位于 `build/release/archive/`，该目录会被 `clean` 清除，不是永久备份。Modrinth 手动上传资料保存在 `modrinth/`，YLTE 使用独立项目。
+On Linux or macOS, use `./gradlew` instead. For a different MTR location, pass `-PmtrProjectDir=<path>` as a single argument.
 
-## 上游与许可证
+The build checks the Minecraft version and development JARs, runs compatibility checks and writes both loader JARs to **`build/release/`**. CI uses a pinned YanlingMTR commit. Older local builds are retained under `build/release/archive/`, which is removed by `clean`.
 
-基于 Aphrodite281 的 [ANTE](https://github.com/aphrodite281/mtr-ante) 和 Zbx1425 的 [Nemo's Transit Expansion](https://github.com/zbx1425/mtr-nte)，保留 [MIT License](LICENSE) 与原作者署名。
+## 📚 Documentation & support
 
-拼音库及词典见 [Pinyin-notices.txt](common/src/main/resources/licenses/Pinyin-notices.txt)，脚本运行库见 [Graal-runtime-notices.txt](common/src/main/resources/licenses/Graal-runtime-notices.txt)。
+Read the [feature documentation](docs/README.md), [maintenance history](docs/maintenance-history.md) and [rendering regression instructions](tests/render-runtime/README.md). These technical notes are currently in Chinese. Report problems in [Issues](https://github.com/linlunaire/mtr-ante/issues), including mod versions, logs and reproduction steps; include rendering mods and shader packs for visual issues.
+
+This is the standalone Java **1.21.1** line. Current **26.2** development lives in [YanlingMTR's `ante/` module](https://github.com/linlunaire/YanlingMTR/tree/master/ante); the earlier [Java 26.2](https://github.com/linlunaire/mtr-ante/tree/26.2) and [standalone Kotlin](https://github.com/linlunaire/mtr-ante/tree/master) branches remain separate. Their builds are not interchangeable with 1.21.1.
+
+## Credits & license
+
+Based on **Aphrodite281's [ANTE](https://github.com/aphrodite281/mtr-ante)** and **Zbx1425's [Nemo's Transit Expansion](https://github.com/zbx1425/mtr-nte)**. Maintained by **linlunaire** as an independent community continuation.
+
+The [MIT License](LICENSE) and original author credits are retained. Bundled font, pinyin and scripting runtime notices are included in the source tree and JAR: [Noto OFL](common/src/main/resources/licenses/Noto-OFL-1.1.txt), [pinyin libraries and data](common/src/main/resources/licenses/Pinyin-notices.txt), and [Graal runtime](common/src/main/resources/licenses/Graal-runtime-notices.txt).

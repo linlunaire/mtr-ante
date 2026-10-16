@@ -320,9 +320,9 @@ public class ClientConfig {
         public void init(JsonObject configObject) {
             JsonObject entryObject = configObject.getAsJsonObject(key);
             if (entryObject == null) return;
-            min = getOrDefault(configObject, "min", JsonElement::getAsFloat, min);
-            max = getOrDefault(configObject, "max", JsonElement::getAsFloat, max);
-            step = getOrDefault(configObject, "step", JsonElement::getAsInt, step);
+            min = getOrDefault(entryObject, "min", JsonElement::getAsFloat, min);
+            max = getOrDefault(entryObject, "max", JsonElement::getAsFloat, max);
+            step = getOrDefault(entryObject, "step", JsonElement::getAsInt, step);
             JsonArray modesArray = entryObject.getAsJsonArray("modes");
             if (modesArray == null) return;
             int [] modes = new int[quantity];

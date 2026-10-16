@@ -45,7 +45,7 @@ public class DrawScheduler {
 
     public void commit(BufferSourceProxy vertexConsumers, DrawContext drawContext) {
         if (!drawContext.drawWithBlaze && !shaderManager.isReady()) return;
-        if (clusterDrawCalls.isEmpty()) return;
+        if (clusterDrawCalls.isEmpty() && blazeDrawCalls.isEmpty()) return;
         if (drawContext.drawWithBlaze) {
             for (ClusterDrawCall drawCall : clusterDrawCalls)
                 drawCall.model.enqueueOpaqueBlaze(vertexConsumers, drawCall.pose, drawCall.light, drawCall.overlay, drawContext);
@@ -71,6 +71,7 @@ public class DrawScheduler {
             GlStateTracker.restore();
         }
         clusterDrawCalls.clear();
+        blazeDrawCalls.clear();
     }
 
     public void commitRaw(DrawContext drawContext) {
