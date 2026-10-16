@@ -19,7 +19,7 @@
     <a href="#download--install">Download &amp; install</a> &nbsp;·&nbsp;
     <a href="#whats-new">What's new</a> &nbsp;·&nbsp;
     <a href="#build-from-source">Build</a> &nbsp;·&nbsp;
-    <a href="https://github.com/linlunaire/mtr-ante/issues">Report an issue</a> &nbsp;·&nbsp;
+    <a href="https://github.com/linlunaire/YanlingMTR/issues">Report an issue</a> &nbsp;·&nbsp;
     <a href="https://github.com/linlunaire/YanlingMTR/tree/1.21.1">YanlingMTR</a>
   </p>
 </div>
@@ -96,7 +96,7 @@ The build checks the Minecraft version and development JARs, runs compatibility 
 
 ## 📚 Documentation & support
 
-Read the [feature documentation](docs/README.md), [maintenance history](docs/maintenance-history.md) and [rendering regression instructions](tests/render-runtime/README.md). These technical notes are currently in Chinese. Report problems in [Issues](https://github.com/linlunaire/mtr-ante/issues), including mod versions, logs and reproduction steps; include rendering mods and shader packs for visual issues.
+Read the [feature documentation](docs/README.md), [maintenance history](docs/maintenance-history.md) and [rendering regression instructions](tests/render-runtime/README.md). These technical notes are currently in Chinese. Report YLTE problems in the shared [YanlingMTR issue tracker](https://github.com/linlunaire/YanlingMTR/issues), including mod versions, logs and reproduction steps; include rendering mods and shader packs for visual issues.
 
 This is the standalone Java **1.21.1** line. Current **26.2** development lives in [YanlingMTR's `ante/` module](https://github.com/linlunaire/YanlingMTR/tree/master/ante); the earlier [Java 26.2](https://github.com/linlunaire/mtr-ante/tree/26.2) and [standalone Kotlin](https://github.com/linlunaire/mtr-ante/tree/master) branches remain separate. Their builds are not interchangeable with 1.21.1.
 
